@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác Thực Kết Quả OCR - Ví Xinh</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <span class="logo-badge">👛</span>
+                <span>Ví Xinh</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/">Trang Chủ</a></li>
+                <li><a href="/groups">Ví Nhóm & Chia Tiền</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h1 class="page-title">🔍 Màn Hình Xác Thực Kết Quả OCR</h1>
+            <p class="page-subtitle">Kiểm tra thông tin hệ thống vừa bóc tách được và chỉnh sửa nếu cần trước khi lưu vào CSDL</p>
+        </div>
+
+        <div class="grid-2">
+            <!-- Left: Receipt Image Preview & OCR Raw Text -->
+            <div class="card">
+                <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">🖼️ Ảnh Hóa Đơn Đã Quét</h2>
+                <div style="background: #f1f5f9; border-radius: var(--radius-md); overflow: hidden; text-align: center; max-height: 420px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+                    <img id="review-image" src="" alt="Ảnh hóa đơn" style="max-width: 100%; max-height: 400px; object-fit: contain;">
+                </div>
+
+                <details style="margin-top: 1rem;">
+                    <summary style="font-weight: 600; cursor: pointer; color: var(--primary);">Xem văn bản thô (OCR Raw Text)</summary>
+                    <pre id="review-raw-text" style="background: #0f172a; color: #f8fafc; padding: 1rem; border-radius: var(--radius-sm); font-size: 0.85rem; margin-top: 0.5rem; overflow-x: auto; max-height: 200px;"></pre>
+                </details>
+            </div>
+
+            <!-- Right: Editable Form with Extracted Values -->
+            <div class="card">
+                <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">📝 Thông Tin Trích Xuất (Có thể chỉnh sửa)</h2>
+                <form id="verify-form" onsubmit="handleConfirmTransaction(event)">
+                    <div class="form-group">
+                        <label class="form-label">Tên Cơ Sở / Cửa Hàng (Merchant)</label>
+                        <input type="text" id="verify-merchant" class="form-control" required>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Tổng Tiền (VNĐ)</label>
+                            <input type="number" id="verify-amount" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ngày Giao Dịch</label>
+                            <input type="date" id="verify-date" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Danh Mục</label>
+                        <select id="verify-category" class="form-control">
+                            <option value="Ăn uống">🍔 Ăn uống</option>
+                            <option value="Mua sắm">🛍️ Mua sắm siêu thị</option>
+                            <option value="Đi lại">🚗 Di chuyển / Xăng xe</option>
+                            <option value="Giải trí">🎬 Giải trí</option>
+                            <option value="Khác">📦 Khác</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Gán Vào Ví</label>
+                        <select id="verify-group-id" class="form-control">
+                            <option value="">Ví Cá Nhân</option>
+                            <option value="1">Ví Nhóm (Nhóm 05 - Ví Xinh)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Ghi Chú</label>
+                        <textarea id="verify-notes" class="form-control" rows="2" placeholder="Ghi chú thêm..."></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <a href="/" class="btn btn-secondary" style="flex: 1;">Hủy Bỏ</a>
+                        <button type="submit" class="btn btn-primary" style="flex: 2;">Xác Nhận & Lưu Dữ Liệu</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Đồ Án Thực Tập Chuyên Môn - Màn Hình Xác Thực OCR (Ví Xinh)</p>
+    </footer>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Load data from sessionStorage if redirected from upload
+        document.addEventListener('DOMContentLoaded', () => {
+            const dataStr = sessionStorage.getItem('ocr_result');
+            if (dataStr) {
+                const data = JSON.parse(dataStr);
+                document.getElementById('verify-merchant').value = data.merchant_name || '';
+                document.getElementById('verify-amount').value = data.amount || 0;
+                document.getElementById('verify-date').value = data.transaction_date || '';
+                document.getElementById('review-raw-text').textContent = data.raw_text || '(Không có văn bản thô)';
+                if (data.image_url) {
+                    document.getElementById('review-image').src = data.image_url;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

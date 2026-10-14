@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ví Nhóm & Chia Tiền - Ví Xinh</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <span class="logo-badge">👛</span>
+                <span>Ví Xinh</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/">Trang Chủ</a></li>
+                <li><a href="/groups" class="active">Ví Nhóm & Chia Tiền</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h1 class="page-title">👥 Quản Lý Ví Nhóm & Chia Tiền (Split Bill)</h1>
+            <p class="page-subtitle">Minh bạch chi phí chung cho nhóm bạn, phòng trọ hoặc chuyến du lịch (Phụ trách: Lê Thị Dịu)</p>
+        </div>
+
+        <div class="grid-2">
+            <!-- Left: Group Info & Members -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="font-size: 1.25rem; font-weight: 700;">Nhóm 05 - Ví Xinh</h2>
+                    <span class="badge badge-group">Đang hoạt động</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Ví chi tiêu chung phục vụ đồ án thực tập chuyên môn và các hoạt động nhóm 05 thành viên.
+                </p>
+
+                <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem;">Danh sách 05 thành viên:</h3>
+                <div id="member-checkbox-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <!-- Sẽ render tự động qua JS -->
+                </div>
+            </div>
+
+            <!-- Right: Split Bill Calculator -->
+            <div class="card">
+                <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">⚡ Tính Toán Chia Tiền Nhanh</h2>
+                <form id="split-form" onsubmit="calculateSplit(event)">
+                    <div class="form-group">
+                        <label class="form-label">Tổng Số Tiền Cần Chia (VNĐ)</label>
+                        <input type="number" id="split-amount-input" class="form-control" placeholder="Ví dụ: 250000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Người Thanh Toán Trước (Payer)</label>
+                        <select id="split-payer-select" class="form-control">
+                            <option value="1">Nguyễn Thúy Hiền</option>
+                            <option value="2">Lê Thị Dịu</option>
+                            <option value="3">Lê Tiến Quân</option>
+                            <option value="4">Lê Ngọc Duy</option>
+                            <option value="5">Nguyễn Việt Anh</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Thực Hiện Chia Đều</button>
+                </form>
+
+                <!-- Calculation Result Display -->
+                <div id="split-result" style="display: none; margin-top: 1.5rem; padding: 1.25rem; background: #eef2ff; border-radius: var(--radius-md);">
+                    <h4 style="font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">Kết quả phân bổ:</h4>
+                    <div id="split-result-details"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Đồ Án Thực Tập Chuyên Môn - Quản Lý Ví Nhóm & Chia Tiền (Ví Xinh)</p>
+    </footer>
+
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGroupMembersUI();
+        });
+    </script>
+</body>
+</html>
