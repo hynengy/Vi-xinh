@@ -107,6 +107,9 @@
                 document.getElementById('verify-merchant').value = data.merchant_name || '';
                 document.getElementById('verify-amount').value = data.amount || 0;
                 document.getElementById('verify-date').value = data.transaction_date || '';
+                if (document.getElementById('verify-notes')) {
+                    document.getElementById('verify-notes').value = data.notes || '';
+                }
                 document.getElementById('review-raw-text').textContent = data.raw_text || '(Không có văn bản thô)';
                 if (data.image_url) {
                     document.getElementById('review-image').src = data.image_url;

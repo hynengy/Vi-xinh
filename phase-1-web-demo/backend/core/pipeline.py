@@ -44,6 +44,8 @@ class ProcessingPipeline:
             "merchant_name": parsed_data["merchant_name"],
             "transaction_date": parsed_data["transaction_date"],
             "amount": parsed_data["amount"],
+            "notes": parsed_data.get("notes", ""),
+            "breakdown": parsed_data.get("breakdown", []),
             "status": "ready_for_review"
         }
 

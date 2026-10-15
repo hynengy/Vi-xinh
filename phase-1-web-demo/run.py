@@ -7,6 +7,12 @@ Sử dụng:
 import sys
 from pathlib import Path
 
+# Đảm bảo in UTF-8 không lỗi trên console Windows
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Thêm thư mục hiện tại vào sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 

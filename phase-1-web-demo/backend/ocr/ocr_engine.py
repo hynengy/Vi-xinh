@@ -109,7 +109,8 @@ class OCREngine:
         try:
             # 1. Tiền xử lý ảnh
             stages = ImagePreprocessor.full_pipeline(image_path, save_stages_dir=save_stages_dir)
-            preprocessed_img = stages["final_binary"]
+            gray_img = stages["gray"]
+            binary_img = stages["final_binary"]
             pre_time_ms = round((time.time() - start_pre) * 1000, 2)
 
             start_ocr = time.time()
@@ -117,44 +118,54 @@ class OCREngine:
             confidences = []
             boxes = []
 
-            # 2. Gọi OCR Engine
+            # 2. Gọi OCR Engine (Dùng PSM 3 tự động nhận dạng bố cục bảng biểu / hóa đơn)
             if self.is_configured:
-                # Cấu hình OCR: psm 6 (khối văn bản đồng nhất) hoặc psm 4 (cột hóa đơn)
-                custom_config = r"--oem 3 --psm 6"
+                # PSM 3: Fully automatic page segmentation (chuẩn cho hóa đơn, bảng biểu)
+                custom_config = r"--oem 3 --psm 3"
 
                 try:
-                    # Đọc dữ liệu chi tiết (tọa độ và confidence)
+                    # Tesseract hoạt động tốt nhất trên ảnh Grayscale vì nó tự có thuật toán Otsu nội bộ
+                    raw_text = pytesseract.image_to_string(gray_img, lang=self.lang, config=custom_config).strip()
+                    target_img = gray_img
+                except Exception as lang_err:
+                    logger.warning(f"Thử lại với tiếng Anh/mặc định do: {lang_err}")
+                    raw_text = pytesseract.image_to_string(gray_img).strip()
+                    target_img = gray_img
+
+                # Nếu ảnh xám đọc được quá ít chữ (dưới 15 ký tự), thử ảnh nhị phân
+                if len(raw_text) < 15:
+                    try:
+                        text_bin = pytesseract.image_to_string(binary_img, lang=self.lang, config=custom_config).strip()
+                        if len(text_bin) > len(raw_text):
+                            raw_text = text_bin
+                            target_img = binary_img
+                    except Exception:
+                        pass
+
+                # Lấy chi tiết bounding boxes
+                try:
                     data = pytesseract.image_to_data(
-                        preprocessed_img,
+                        target_img,
                         lang=self.lang,
                         config=custom_config,
                         output_type=Output.DICT
                     )
-
-                    words = []
                     n_boxes = len(data["text"])
                     for i in range(n_boxes):
-                        text = data["text"][i].strip()
-                        conf = int(data["conf"][i])
-                        if text and conf > 0:
-                            words.append(text)
-                            confidences.append(conf)
+                        t = data["text"][i].strip()
+                        c = int(data["conf"][i])
+                        if t and c > 0:
+                            confidences.append(c)
                             boxes.append({
-                                "text": text,
+                                "text": t,
                                 "x": data["left"][i],
                                 "y": data["top"][i],
                                 "w": data["width"][i],
                                 "h": data["height"][i],
-                                "confidence": conf
+                                "confidence": c
                             })
-
-                    raw_text = pytesseract.image_to_string(
-                        preprocessed_img, lang=self.lang, config=custom_config
-                    ).strip()
-
-                except Exception as lang_err:
-                    logger.warning(f"Thử lại với tiếng Anh (eng) do: {lang_err}")
-                    raw_text = pytesseract.image_to_string(preprocessed_img).strip()
+                except Exception:
+                    pass
             else:
                 raw_text = (
                     "[TESSERACT CHƯA ĐƯỢC CÀI ĐẶT TRÊN MÁY]\n"
