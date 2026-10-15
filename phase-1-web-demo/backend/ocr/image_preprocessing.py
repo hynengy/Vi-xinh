@@ -49,6 +49,15 @@ class ImagePreprocessor:
         return False
 
     @staticmethod
+    def auto_scale(image: np.ndarray) -> np.ndarray:
+        """Chỉ phóng to nếu ảnh quá nhỏ (dưới 500px) tránh làm nhòe font chữ trên bảng biểu."""
+        h, w = image.shape[:2]
+        if max(h, w) < 500:
+            scale_factor = 2.0
+            return cv2.resize(image, (int(w * scale_factor), int(h * scale_factor)), interpolation=cv2.INTER_CUBIC)
+        return image
+
+    @staticmethod
     def to_grayscale(image: np.ndarray) -> np.ndarray:
         """Chuyển đổi ảnh màu RGB/BGR sang thang xám (Grayscale)."""
         if len(image.shape) == 2:
@@ -157,8 +166,9 @@ class ImagePreprocessor:
         6. Lọc nhiễu bảo toàn cạnh (Bilateral Denoise)
         7. Nhị phân hóa đen trắng thích nghi (Adaptive Threshold)
         """
-        # 1. Đọc ảnh
-        original = cls.read_image(image_path)
+        # 1. Đọc ảnh & Tự động nâng độ phân giải tối ưu nếu ảnh nhỏ
+        raw_img = cls.read_image(image_path)
+        original = cls.auto_scale(raw_img)
 
         # 2. Xoay thẳng
         deskewed, rotation_angle = cls.deskew(original)

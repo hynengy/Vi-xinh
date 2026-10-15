@@ -84,6 +84,30 @@
                         <textarea id="verify-notes" class="form-control" rows="2" placeholder="Ghi chú thêm..."></textarea>
                     </div>
 
+                    <!-- Line Items Table (Chi Tiết Các Dịch Vụ) -->
+                    <div id="line-items-card" style="margin-top: 1.5rem; display: none; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; background: #fafafa;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <label class="form-label" style="margin: 0; font-size: 1rem;">📋 Chi Tiết Các Dịch Vụ Đã Quét</label>
+                            <span class="badge badge-personal" id="item-count-badge">0 mục</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table style="margin-top: 0;">
+                                <thead>
+                                    <tr>
+                                        <th>Dịch Vụ</th>
+                                        <th>Tiêu Thụ</th>
+                                        <th>Thành Tiền (VNĐ)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="line-items-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top: 0.75rem; padding: 0.6rem 0.8rem; background: #e0e7ff; border-radius: var(--radius-sm); font-size: 0.85rem; color: #3730a3; font-weight: 600;" id="room-split-hint">
+                            👥 Chia đều cho phòng 5 người: ~0 đ/người
+                        </div>
+                    </div>
+
                     <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                         <a href="/" class="btn btn-secondary" style="flex: 1;">Hủy Bỏ</a>
                         <button type="submit" class="btn btn-primary" style="flex: 2;">Xác Nhận & Lưu Dữ Liệu</button>
@@ -114,8 +138,58 @@
                 if (data.image_url) {
                     document.getElementById('review-image').src = data.image_url;
                 }
+
+                // Render danh sách chi tiết các dịch vụ (Line Items)
+                const items = data.items || [];
+                const lineItemsCard = document.getElementById('line-items-card');
+                const tbody = document.getElementById('line-items-table-body');
+                const badge = document.getElementById('item-count-badge');
+                const splitHint = document.getElementById('room-split-hint');
+
+                if (items.length > 0 && tbody && lineItemsCard) {
+                    lineItemsCard.style.display = 'block';
+                    badge.textContent = `${items.length} dịch vụ`;
+
+                    tbody.innerHTML = items.map((it, idx) => `
+                        <tr>
+                            <td style="font-weight: 600;">
+                                <span style="font-size: 1.1rem; margin-right: 0.25rem;">${it.icon || '📦'}</span>
+                                ${it.name}
+                            </td>
+                            <td style="color: var(--text-muted); font-size: 0.85rem;">
+                                ${it.consumption || 'Trọn gói'}
+                            </td>
+                            <td>
+                                <input type="number" class="form-control item-price-input" 
+                                       value="${it.amount}" 
+                                       style="width: 130px; padding: 0.35rem 0.6rem; font-weight: 700; color: #b91c1c;"
+                                       onchange="recalcTotalFromItemInputs()">
+                            </td>
+                        </tr>
+                    `).join('');
+
+                    updateSplitHint(data.amount || 0);
+                }
             }
         });
+
+        function updateSplitHint(total) {
+            const splitHint = document.getElementById('room-split-hint');
+            if (splitHint) {
+                const perPerson = Math.round(total / 5);
+                splitHint.textContent = `👥 Chia đều cho phòng 5 người: ~${new Intl.NumberFormat('vi-VN').format(perPerson)} đ/người`;
+            }
+        }
+
+        function recalcTotalFromItemInputs() {
+            const inputs = document.querySelectorAll('.item-price-input');
+            let sum = 0;
+            inputs.forEach(inp => {
+                sum += parseFloat(inp.value) || 0;
+            });
+            document.getElementById('verify-amount').value = sum;
+            updateSplitHint(sum);
+        }
     </script>
 </body>
 </html>

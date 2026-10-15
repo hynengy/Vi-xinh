@@ -186,6 +186,105 @@ class ReceiptParser:
         return 0.0, []
 
     @classmethod
+    def extract_line_items(cls, lines: list[str]) -> List[Dict[str, Any]]:
+        """
+        Bóc tách chi tiết từng dịch vụ / món hàng (Line Items):
+        - Hỗ trợ bảng dịch vụ phòng trọ (Điện, Nước, Wifi, Máy giặt, Thang máy, Tiền phòng,...)
+        - Hỗ trợ các món hàng hóa đơn thông thường (Trà sữa, Cà phê, Bánh mì, Hàng siêu thị,...)
+        """
+        items = []
+        ignored_phrases = [
+            "thông báo", "kính gửi", "bảng tính", "tháng", "dịch vụ cũ",
+            "tiêu thụ", "số người", "stt", "hóa đơn", "địa chỉ", "thu ngân",
+            "cảm ơn", "hẹn gặp lại", "tong tien dv", "tổng tiền dv",
+            "chuyển vào stk", "chuyển stk", "hkd simple", "thành tiền"
+        ]
+
+        amt_pattern = re.compile(
+            r"(\d{1,3}(?:[.,]\d{3})+|\d{5,9}|\b0\b)\s*(?:[đ₫dD]|vn[dđ])?",
+            re.IGNORECASE
+        )
+
+        for line in lines:
+            line_lower = line.lower().strip()
+
+            # Nhận diện dòng Tiền Phòng
+            if ("tiền phòng" in line_lower or "tien phong" in line_lower) and not any(it["name"] == "Tiền phòng" for it in items):
+                matches = list(amt_pattern.finditer(line))
+                if matches:
+                    val = cls.parse_amount_str(matches[-1].group(1))
+                    if val and val >= 100_000:
+                        items.append({
+                            "name": "Tiền phòng",
+                            "amount": val,
+                            "consumption": "1 phòng / tháng",
+                            "icon": "🏠"
+                        })
+                continue
+
+            # Bỏ qua các dòng tiêu đề hoặc metadata
+            if any(p in line_lower for p in ignored_phrases):
+                continue
+
+            matches = list(amt_pattern.finditer(line))
+            if matches:
+                # Cột Thành Tiền ở bảng dịch vụ luôn là con số ở cuối dòng
+                last_m = matches[-1]
+                amt_val = cls.parse_amount_str(last_m.group(1))
+                if amt_val is None:
+                    if last_m.group(1) == "0":
+                        amt_val = 0.0
+                    else:
+                        continue
+
+                # Lấy tên dịch vụ (phần đứng trước số tiền)
+                raw_name = line[:last_m.start()].strip()
+                clean_name = re.sub(r"[|:;]", " ", raw_name).strip()
+                clean_name = re.sub(r"\b\d{3,6}\b", "", clean_name).strip()
+                clean_name = re.sub(r"^\d+[\.\-\)]\s*", "", clean_name).strip()
+
+                name_lower = clean_name.lower()
+                icon = "📦"
+                display_name = clean_name
+
+                # Nhận diện thông minh các dịch vụ tiền trọ & sinh hoạt
+                if "điện" in name_lower or "dien" in name_lower:
+                    display_name, icon = "Số điện", "⚡"
+                elif "nước" in name_lower or "nuoc" in name_lower:
+                    display_name, icon = "Số nước", "💧"
+                elif "wi" in name_lower or "mạng" in name_lower or "internet" in name_lower:
+                    display_name, icon = "Wifi", "📶"
+                elif any(k in name_lower for k in ["giặt", "gặt", "giat"]):
+                    display_name, icon = "Máy giặt", "🧺"
+                elif any(k in name_lower for k in ["vệ sinh", "tiện chang", "ve sinh"]):
+                    display_name, icon = "Vệ sinh, điện chung", "🧹"
+                elif "xe" in name_lower:
+                    display_name, icon = "Để xe", "🚗"
+                elif "thang máy" in name_lower or "thang may" in name_lower:
+                    display_name, icon = "Thang máy", "🛗"
+                elif any(c in name_lower for c in ["cà phê", "cafe", "coffee", "trà", "tea"]):
+                    icon = "☕"
+                elif any(c in name_lower for c in ["bánh", "food", "mì", "cơm"]):
+                    icon = "🍔"
+
+                # Trích xuất chỉ số tiêu thụ nếu có
+                consumption = ""
+                numbers_in_line = re.findall(r"\b\d+\b", line)
+                if len(numbers_in_line) >= 3 and ("điện" in name_lower or "nước" in name_lower):
+                    consumption = f"Tiêu thụ: {numbers_in_line[-2]} số"
+
+                # Tránh trùng lặp dịch vụ
+                if not any(it["name"] == display_name for it in items):
+                    items.append({
+                        "name": display_name,
+                        "amount": amt_val,
+                        "consumption": consumption,
+                        "icon": icon
+                    })
+
+        return items
+
+    @classmethod
     def parse_all(cls, raw_text: str) -> Dict[str, Any]:
         """Hàm chính thực thi toàn bộ logic bóc tách."""
         lines = cls.clean_text(raw_text)
@@ -193,11 +292,19 @@ class ReceiptParser:
         merchant = cls.extract_merchant(lines) if lines else "Khoản chi không xác định"
         date_str = cls.extract_date(raw_text)
         total_amount, breakdown = cls.extract_totals_breakdown(lines)
+        line_items = cls.extract_line_items(lines)
+
+        # Nếu tổng tiền bằng 0 nhưng có danh sách dịch vụ chi tiết, tự tính tổng từ các món
+        if total_amount == 0 and line_items:
+            total_amount = sum(it["amount"] for it in line_items)
 
         notes_parts = []
         if breakdown:
             for item in breakdown:
                 notes_parts.append(f"{item['label']}: {item['amount']:,.0f} đ")
+        elif line_items:
+            for item in line_items[:4]:
+                notes_parts.append(f"{item['name']}: {item['amount']:,.0f} đ")
 
         notes = "Chi tiết: " + " + ".join(notes_parts) if notes_parts else ""
 
@@ -206,6 +313,7 @@ class ReceiptParser:
             "transaction_date": date_str,
             "amount": total_amount,
             "breakdown": breakdown,
+            "items": line_items,
             "notes": notes,
             "raw_lines_count": len(lines),
             "status": "success"

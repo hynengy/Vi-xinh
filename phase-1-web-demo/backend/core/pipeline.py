@@ -46,6 +46,7 @@ class ProcessingPipeline:
             "amount": parsed_data["amount"],
             "notes": parsed_data.get("notes", ""),
             "breakdown": parsed_data.get("breakdown", []),
+            "items": parsed_data.get("items", []),
             "status": "ready_for_review"
         }
 
