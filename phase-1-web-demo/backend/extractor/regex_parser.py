@@ -45,8 +45,8 @@ class ReceiptParser:
             extra = " - Simple Stay" if "SIMPLE STAY" in full_text_upper else ""
             return f"Tiền trọ{room_no}{extra}"
 
-        # So khớp với các chuỗi thương hiệu lớn
-        for merchant in KNOWN_MERCHANTS:
+        # So khớp với các chuỗi thương hiệu lớn (ưu tiên tên dài hơn trước, ví dụ WINMART+ trước WINMART)
+        for merchant in sorted(KNOWN_MERCHANTS, key=len, reverse=True):
             if merchant in full_text_upper:
                 return merchant
 
@@ -152,7 +152,7 @@ class ReceiptParser:
                     for n in numbers:
                         val = cls.parse_amount_str(n)
                         # Loại trừ các con số nhỏ như chỉ số phòng (801, 5, 28)
-                        if val and val >= 50_000:
+                        if val and val >= 1_000:
                             # Đặt tên khoản
                             label = line.split(":")[0].strip() if ":" in line else line.strip()
                             label = re.sub(r"[\d.,đ₫|]", "", label).strip()
@@ -177,7 +177,7 @@ class ReceiptParser:
                 continue
             for match in AMOUNT_PATTERN.findall(line):
                 val = cls.parse_amount_str(match)
-                if val and val >= 50_000:
+                if val and val >= 1_000:
                     all_amounts.append(val)
 
         if all_amounts:
@@ -197,7 +197,8 @@ class ReceiptParser:
             "thông báo", "kính gửi", "bảng tính", "tháng", "dịch vụ cũ",
             "tiêu thụ", "số người", "stt", "hóa đơn", "địa chỉ", "thu ngân",
             "cảm ơn", "hẹn gặp lại", "tong tien dv", "tổng tiền dv",
-            "chuyển vào stk", "chuyển stk", "hkd simple", "thành tiền"
+            "chuyển vào stk", "chuyển stk", "hkd simple", "thành tiền",
+            "thanh tien", "tong cong", "tổng cộng", "tong tien", "total", "thanh toan"
         ]
 
         amt_pattern = re.compile(
@@ -207,6 +208,10 @@ class ReceiptParser:
 
         for line in lines:
             line_lower = line.lower().strip()
+
+            # Bỏ qua các dòng tổng tiền
+            if any(re.search(kw, line_lower) for kw in TOTAL_AMOUNT_KEYWORDS):
+                continue
 
             # Nhận diện dòng Tiền Phòng
             if ("tiền phòng" in line_lower or "tien phong" in line_lower) and not any(it["name"] == "Tiền phòng" for it in items):

@@ -7,10 +7,16 @@ import logging
 from typing import Dict, Any
 from pathlib import Path
 
-from ..ocr.ocr_engine import OCREngine
-from ..extractor.regex_parser import ReceiptParser
-from ..database.db_manager import DatabaseManager
-from .config import DB_PATH
+try:
+    from ..ocr.ocr_engine import OCREngine
+    from ..extractor.regex_parser import ReceiptParser
+    from ..database.db_manager import DatabaseManager
+    from .config import DB_PATH
+except (ImportError, ValueError):
+    from ocr.ocr_engine import OCREngine
+    from extractor.regex_parser import ReceiptParser
+    from database.db_manager import DatabaseManager
+    from core.config import DB_PATH
 
 logger = logging.getLogger(__name__)
 
