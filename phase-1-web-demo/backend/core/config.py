@@ -21,6 +21,6 @@ DB_PATH = DATA_DIR / "vixinh.sqlite3"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "bmp"}
 
 # Server Settings
-HOST = "127.0.0.1"
+HOST = "0.0.0.0"
 PORT = 5000
 DEBUG = True
