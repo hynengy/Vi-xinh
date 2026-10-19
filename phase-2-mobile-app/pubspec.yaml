@@ -1,0 +1,44 @@
+name: vi_xinh_mobile
+description: "Ví Xinh - Ứng Dụng Quản Lý Tài Chính Cá Nhân & Nhóm Sử Dụng Thị Giác Máy Tính & OCR On-Device"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI & Design System (Material 3 & Cupertino)
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.1.0
+  intl: ^0.19.0
+  fl_chart: ^0.66.0
+
+  # State Management
+  provider: ^6.1.2
+
+  # Camera & Google ML Kit On-Device OCR (Thành viên 1: Nguyễn Thúy Hiền)
+  camera: ^0.10.5+9
+  google_mlkit_text_recognition: ^0.11.0
+  image_picker: ^1.0.7
+
+  # Local SQLite Database & Sync (Thành viên 2: Lê Thị Dịu)
+  sqflite: ^2.3.2
+  path: ^1.9.0
+  shared_preferences: ^2.2.2
+  http: ^1.2.0
+
+  # Biometric Authentication (Face ID / Vân tay / Sinh trắc học)
+  local_auth: ^2.1.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

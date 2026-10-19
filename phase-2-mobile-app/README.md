@@ -1,57 +1,141 @@
-# 📱 GIAI ĐOẠN 2: ỨNG DỤNG DI ĐỘNG HOÀN CHỈNH "VÍ XINH" (MOBILE APP)
+# 📱 GIAI ĐOẠN 2: ỨNG DỤNG DI ĐỘNG HOÀN CHỈNH "VÍ XINH" (FLUTTER & GOOGLE ML KIT)
 
-> Phụ trách: **Cả 5 thành viên chuyển đổi từ Web sang Mobile theo phân công chi tiết.**
-
----
-
-## 🎯 1. Mục Tiêu Giai Đoạn 2
-- Xây dựng ứng dụng di động chính thức hoạt động trên Android & iOS (sử dụng **Flutter**).
-- Thay thế thư viện OCR trên Web bằng **Google ML Kit Text Recognition (On-Device)**:
-  - Tốc độ nhận diện tức thì (< 500ms).
-  - Không cần gửi ảnh lên server, đảm bảo tính bảo mật và hoạt động offline không cần internet.
-- Chụp ảnh hóa đơn trực tiếp bằng camera trên điện thoại với khung định vị thông minh (bounding guide).
+> Phụ trách: **Cả 5 thành viên chuyển đổi từ Web sang Mobile theo phân công đồ án.**
 
 ---
 
-## 👥 2. Phân Công Thành Viên Trong Giai Đoạn 2
+## 🎯 1. Tổng Quan Kiến Trúc Ứng Dụng Mobile
 
-| Thành Viên | Trách Nhiệm Giai Đoạn 2 |
-|:---|:---|
-| **Nguyễn Thúy Hiền** | Tích hợp thư viện `google_mlkit_text_recognition`, xây dựng module Camera Scan trên Flutter. |
-| **Lê Thị Dịu** | Thiết kế CSDL local trên di động (SQLite / Isar / Hive), xử lý đồng bộ dữ liệu ví nhóm khi có mạng. |
-| **Lê Tiến Quân** | Porting và tối ưu bộ thuật toán bóc tách Regex sang Dart, xử lý ngoại lệ hóa đơn chụp vội/nghiêng/mờ. |
-| **Lê Ngọc Duy** | Thiết kế giao diện Mobile chuẩn UI/UX Material 3 / iOS Cuppertino, các animation chuyển cảnh mượt mà. |
-| **Nguyễn Việt Anh** | Cấu hình build Android APK / iOS IPA, xử lý xung đột dependencies native code, test trên nhiều thiết bị thực. |
+Ứng dụng di động **Ví Xinh** được phát triển trên nền tảng **Flutter 3.x** đa nền tảng (Android & iOS), ứng dụng trực tiếp công nghệ **Google ML Kit Text Recognition on-device** cho tốc độ bóc tách tức thì (< 500ms) không cần gửi ảnh lên server.
 
----
-
-## 🛠️ 3. Các Package Flutter Dự Kiến Sử Dụng
-
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-
-  # 1. Camera & OCR (Thúy Hiền)
-  camera: ^0.10.5+9
-  google_mlkit_text_recognition: ^0.11.0
-  image_picker: ^1.0.7
-
-  # 2. Local Database & Sync (Thị Dịu)
-  sqflite: ^2.3.2
-  path: ^1.9.0
-
-  # 3. State Management & Navigation (Việt Anh & Ngọc Duy)
-  provider: ^6.1.2 # hoặc flutter_bloc
-  intl: ^0.19.0
-  fl_chart: ^0.66.0 # Vẽ biểu đồ chi tiêu
+```mermaid
+graph TD
+    A[Camera Mobile Scanner] -->|Chụp ảnh on-device| B[Google ML Kit Text Recognition]
+    B -->|Raw OCR Text| C[Dart Receipt Extractor Engine]
+    C -->|Bóc tách Tên quán, Ngày, Tổng tiền, Dịch vụ trọ| D[Màn Hình Review & Điều Chỉnh]
+    D -->|Lưu giao dịch| E[(SQLite Local Database - sqflite)]
+    E -->|Cập nhật số dư & công nợ| F[Dashboard & Ví Nhóm Phòng Trọ]
+    F -->|Chia tiền tự động| G[VietQR & Zalo Messenger Alert]
 ```
 
 ---
 
-## 🚀 4. Lộ Trình Triển Khai
-1. Khởi tạo dự án Flutter trong thư mục `mobile_src/`.
-2. Tạo widget Camera Scanner tích hợp Google ML Kit.
-3. Chuyển đổi bộ regex từ Python sang Dart.
-4. Lắp ráp giao diện Dashboard, Review và Ví nhóm trên Mobile.
-5. Kiểm thử thực tế trên các dòng máy Android và iPhone.
+## 📂 2. Cấu Trúc Mã Nguồn Mobile (`phase-2-mobile-app`)
+
+```
+phase-2-mobile-app/
+├── pubspec.yaml                 # Cấu hình dependencies: camera, google_mlkit, sqflite, provider
+├── README.md                    # Tài liệu kỹ thuật giai đoạn 2
+├── android/                     # Cấu hình Android native (AndroidManifest, permissions, ML Kit)
+└── lib/
+    ├── main.dart                # Điểm khởi chạy Flutter App & MultiProvider
+    ├── core/
+    │   ├── constants/
+    │   │   └── app_colors.dart  # Bảng màu Rose Gold & Gradients chuẩn thiết kế Ví Xinh
+    │   └── utils/
+    │       └── currency_formatter.dart # Định dạng tiền tệ VNĐ chuẩn xác
+    ├── models/
+    │   ├── transaction_model.dart # Cấu trúc giao dịch & LineItem dịch vụ phòng trọ
+    │   ├── user_model.dart        # Thông tin tài khoản người dùng
+    │   └── group_model.dart       # Cấu trúc ví nhóm, quỹ phòng & công nợ thành viên
+    ├── services/
+    │   ├── mlkit_ocr_service.dart # [Thành viên 1 - Thúy Hiền] Google ML Kit on-device
+    │   └── database_helper.dart   # [Thành viên 2 - Thị Dịu] SQLite sqflite local persistence
+    ├── extractor/
+    │   └── dart_receipt_extractor.dart # [Thành viên 3 - Tiến Quân] Porting thuật toán Regex sang Dart
+    ├── providers/
+    │   ├── wallet_provider.dart   # Quản lý số dư ví cá nhân, thu chi & giao dịch
+    │   └── group_provider.dart    # Quản lý số dư quỹ chi tiêu nhóm & nộp quỹ
+    └── screens/
+        ├── camera/
+        │   └── receipt_scanner_screen.dart # Camera scanner có khung định vị hóa đơn
+        ├── review/
+        │   └── review_receipt_screen.dart  # Màn hình review hóa đơn, chia nhanh N người / ví nhóm
+        ├── group/
+        │   └── group_wallet_screen.dart    # Quỹ phòng trọ, danh sách nợ & VietQR nhắc nợ
+        ├── profile/
+        │   └── profile_screen.dart         # Thông tin cá nhân, STK VietQR, bảo mật sinh trắc học
+        └── home/
+            └── dashboard_screen.dart       # Trang chủ Siêu Ứng Dụng Ví Xinh
+```
+
+---
+
+## 👥 3. Phân Công Trách Nhiệm Thành Viên Giai Đoạn 2
+
+| Thành Viên | Phụ Trách Kỹ Thuật | Module Hoàn Thành |
+|:---|:---|:---|
+| **Nguyễn Thúy Hiền** | Model OCR On-Device & Camera Scan | `services/mlkit_ocr_service.dart`, `screens/camera/receipt_scanner_screen.dart` |
+| **Lê Thị Dịu** | CSDL SQLite Local & Logic Quỹ Nhóm | `services/database_helper.dart`, `models/group_model.dart`, logic tính nợ phòng trọ |
+| **Lê Tiến Quân** | Regex Extractor Porting sang Dart | `extractor/dart_receipt_extractor.dart` (xử lý chuỗi cửa hàng, ngày tháng & mục tiền trọ) |
+| **Lê Ngọc Duy** | Thiết Kế Giao Diện UI/UX Flutter | `screens/home/dashboard_screen.dart`, `screens/review/review_receipt_screen.dart`, `core/constants/app_colors.dart` |
+| **Nguyễn Việt Anh** | Cấu hình Build, Providers & Pipeline | `pubspec.yaml`, `providers/wallet_provider.dart`, `main.dart`, xử lý dependencies |
+
+---
+
+## 🚀 4. Hướng Dẫn Cài Đặt & Chạy Thử Trên Android & iOS
+
+Ứng dụng được thiết kế kiến trúc chuẩn **Cross-Platform (Flutter)**, hỗ trợ 100% cả **Android** và **iOS** dùng chung một cơ sở mã nguồn (`lib/`).
+
+### Yêu cầu môi trường:
+- **Flutter SDK**: Phiên bản 3.10 trở lên.
+- **Dành cho Android**: Android Studio, Android SDK (minSdk 21+), JDK 11 hoặc 17.
+- **Dành cho iOS**: Máy Mac cài đặt macOS & Xcode 14+, CocoaPods (`sudo gem install cocoapods`).
+
+---
+
+### 🤖 A. Khởi chạy & Đóng gói trên Android
+
+```bash
+# 1. Di chuyển vào thư mục Mobile
+cd phase-2-mobile-app
+
+# 2. Cài đặt các thư viện Dart
+flutter pub get
+
+# 3. Chạy thử trên máy ảo Android hoặc điện thoại Android (cắm USB bật USB Debugging)
+flutter run -d android
+
+# 4. Xuất file cài đặt APK (để gửi và cài trực tiếp trên mọi máy Android)
+flutter build apk --release
+# File APK xuất ra tại: build/app/outputs/flutter-apk/app-release.apk
+
+# Hoặc xuất file Android App Bundle (.aab) để đẩy lên Google Play Store
+flutter build appbundle --release
+```
+
+---
+
+### 🍏 B. Khởi chạy & Đóng gói trên iOS (iPhone / iPad)
+
+Cấu hình quyền Camera (`NSCameraUsageDescription`), Thư viện ảnh (`NSPhotoLibraryUsageDescription`), Microphone (`NSMicrophoneUsageDescription`) và Podfile đã được cấu hình sẵn tại `ios/Runner/Info.plist` và `ios/Podfile`.
+
+```bash
+# 1. Di chuyển vào thư mục Mobile
+cd phase-2-mobile-app
+
+# 2. Cài đặt các thư viện Dart
+flutter pub get
+
+# 3. Cài đặt CocoaPods cho iOS
+cd ios
+pod install
+cd ..
+
+# 4. Chạy trên máy ảo iPhone Simulator hoặc iPhone cắm dây
+flutter run -d ios
+
+# 5. Mở dự án trong Xcode để ký chứng chỉ và xuất bản lên TestFlight / App Store
+open ios/Runner.xcworkspace
+# Trong Xcode: Chọn Product -> Archive -> Distribute App
+```
+
+---
+
+### 🌐 C. Dùng ngay không cần cài máy ảo (PWA - Cài màn hình chính cho cả iOS & Android)
+
+Bên cạnh mã nguồn native Flutter, bản Web Demo (`phase-1-web-demo`) cũng đã được tích hợp công nghệ **PWA (Progressive Web App)**:
+- **Trên iPhone (Safari):** Truy cập địa chỉ web -> Bấm nút **Chia sẻ (Share)** -> Chọn **"Thêm vào Màn hình chính" (Add to Home Screen)**.
+- **Trên Android (Chrome):** Truy cập địa chỉ web -> Bấm menu 3 chấm -> Chọn **"Cài đặt ứng dụng" (Install App)**.
+- Ứng dụng lập tức xuất hiện icon ngoài màn hình điện thoại, hoạt động độc lập toàn màn hình như ứng dụng tải từ App Store / Google Play.
+
