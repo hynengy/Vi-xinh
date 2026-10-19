@@ -1,0 +1,22 @@
+{
+  "name": "Ví Xinh - Quản Lý Tài Chính & Chia Tiền Nhóm",
+  "short_name": "Ví Xinh",
+  "description": "Ứng dụng quản lý tài chính thông minh sử dụng OCR bóc tách hóa đơn & chia tiền nhóm",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F9FD",
+  "theme_color": "#FF6584",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "assets/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

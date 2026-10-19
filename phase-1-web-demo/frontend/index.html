@@ -2,138 +2,877 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ví Xinh - Quản Lý Tài Chính & OCR Hóa Đơn</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ví Xinh - Quản Lý Tài Chính Thông Minh</title>
+    <meta name="description" content="Ví Xinh - Ứng dụng quản lý chi tiêu cá nhân & nhóm thông minh.">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#FF6584">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ví Xinh">
+    <link rel="apple-touch-icon" href="assets/logo.jpg">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.min.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👛</text></svg>">
 </head>
 <body>
-    <!-- Navigation Header -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="/" class="logo">
-                <span class="logo-badge">👛</span>
-                <span>Ví Xinh</span>
-            </a>
-            <ul class="nav-links">
-                <li><a href="/" class="active">Trang Chủ</a></li>
-                <li><a href="/groups">Ví Nhóm & Chia Tiền</a></li>
-            </ul>
-        </div>
-    </nav>
 
-    <!-- Main Container -->
-    <main class="container">
-        <div class="page-header">
-            <h1 class="page-title">Tổng Quan Quản Lý Chi Tiêu</h1>
-            <p class="page-subtitle">Hệ thống bóc tách hóa đơn tự động bằng Thị giác máy tính & OCR (Nhóm 05 - 23CN1)</p>
-        </div>
-
-        <!-- Metric Stat Cards -->
-        <div class="grid-3">
-            <div class="card stat-card">
-                <div class="stat-icon">💰</div>
-                <div>
-                    <div class="stat-label">Tổng Chi Tiêu</div>
-                    <div class="stat-value" id="stat-total-spent">0 đ</div>
-                </div>
-            </div>
-            <div class="card stat-card">
-                <div class="stat-icon">🧾</div>
-                <div>
-                    <div class="stat-label">Số Giao Dịch</div>
-                    <div class="stat-value" id="stat-tx-count">0</div>
-                </div>
-            </div>
-            <div class="card stat-card">
-                <div class="stat-icon">👥</div>
-                <div>
-                    <div class="stat-label">Ví Nhóm Hoạt Động</div>
-                    <div class="stat-value" id="stat-group-count">1</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Grid: Upload & Recent Transactions -->
-        <div class="grid-2">
-            <!-- Left: Receipt Upload Card -->
-            <div class="card">
-                <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">📷 Quét Hóa Đơn Mới (OCR)</h2>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">
-                    Tải ảnh hóa đơn giấy hoặc điện tử để hệ thống tự động bóc tách tên quán, ngày tháng và tổng tiền.
-                </p>
-
-                <div class="upload-zone" id="drop-zone" onclick="document.getElementById('receipt-input').click()">
-                    <div class="upload-icon">📤</div>
-                    <p style="font-weight: 700; color: var(--text-main);">Kéo thả hoặc nhấn để chọn ảnh hóa đơn</p>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Hỗ trợ JPG, PNG, WEBP (Tối đa 10MB)</p>
-                    <input type="file" id="receipt-input" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
-                </div>
-
-                <div id="upload-status" style="margin-top: 1rem; display: none; text-align: center;">
-                    <p style="color: var(--primary); font-weight: 600;">⏳ Đang xử lý ảnh & chạy mô hình OCR...</p>
-                </div>
+<!-- ===== LOGIN ===== -->
+<div class="login-page" id="loginPage">
+    <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+    <div class="login-box">
+        <div class="login-card">
+            <div class="login-logo">
+                <img src="assets/logo.jpg" alt="Ví Xinh">
+                <h1>Ví Xinh</h1>
+                <p>Quản lý chi tiêu thông minh</p>
             </div>
 
-            <!-- Right: Quick Expense Form -->
-            <div class="card">
-                <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">✍️ Thêm Giao Dịch Bằng Tay</h2>
-                <form id="manual-form" onsubmit="handleManualSubmit(event)">
-                    <div class="form-group">
-                        <label class="form-label">Tên Cửa Hàng / Nội Dung</label>
-                        <input type="text" id="manual-merchant" class="form-control" placeholder="Ví dụ: Circle K, Cà phê Highlands..." required>
+            <!-- Thanh chuyển đổi Đăng nhập / Đăng ký -->
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab-btn active" id="tabBtnLogin" onclick="switchAuthTab('login')">
+                    Đăng nhập
+                </button>
+                <button type="button" class="auth-tab-btn" id="tabBtnRegister" onclick="switchAuthTab('register')">
+                    Đăng ký
+                </button>
+            </div>
+
+            <!-- Form Đăng Nhập -->
+            <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+                <div class="input-group" id="emailGrp">
+                    <label class="auth-field-label" for="loginEmail">Tài khoản</label>
+                    <div class="input-inner">
+                        <input type="text" id="loginEmail" placeholder="Email hoặc SĐT" autocomplete="username" required>
+                        <i class="ri-user-3-line input-icon"></i>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group">
-                            <label class="form-label">Số Tiền (VNĐ)</label>
-                            <input type="number" id="manual-amount" class="form-control" placeholder="0" required>
+                    <p class="input-error-msg" id="loginEmailErr">Email hoặc SĐT chưa đúng</p>
+                </div>
+                <div class="input-group" id="pwGrp">
+                    <label class="auth-field-label" for="loginPw">Mật khẩu</label>
+                    <div class="input-inner">
+                        <input type="password" id="loginPw" placeholder="Mật khẩu" autocomplete="current-password" required>
+                        <i class="ri-lock-line input-icon"></i>
+                        <button type="button" class="pw-toggle" onclick="togglePw('loginPw')" title="Hiển thị mật khẩu"><i class="ri-eye-line"></i></button>
+                    </div>
+                    <p class="input-error-msg">Tối thiểu 6 ký tự</p>
+                </div>
+                <div class="login-extras">
+                    <label><input type="checkbox" id="rememberMeCheck" checked> Ghi nhớ</label>
+                    <a href="javascript:void(0)" onclick="openForgotPwModal()">Quên mật khẩu?</a>
+                </div>
+                <button type="submit" class="btn-login" id="loginBtn"><span id="loginBtnTxt">Đăng nhập</span></button>
+            </form>
+
+            <!-- Form Đăng Ký Tài Khoản -->
+            <form class="login-form" id="registerForm" onsubmit="handleRegister(event)" style="display:none">
+                <div class="input-group" id="regNameGrp">
+                    <label class="auth-field-label" for="regFullName">Họ và tên</label>
+                    <div class="input-inner">
+                        <input type="text" id="regFullName" placeholder="Họ và tên" required>
+                        <i class="ri-user-line input-icon"></i>
+                    </div>
+                </div>
+                <div class="input-group" id="regEmailGrp">
+                    <label class="auth-field-label" for="regEmail">Email</label>
+                    <div class="input-inner">
+                        <input type="email" id="regEmail" placeholder="Email" required>
+                        <i class="ri-mail-line input-icon"></i>
+                    </div>
+                </div>
+                <div class="input-group" id="regPhoneGrp">
+                    <label class="auth-field-label" for="regPhone">Số điện thoại</label>
+                    <div class="input-inner">
+                        <input type="tel" id="regPhone" placeholder="Số điện thoại" required>
+                        <i class="ri-phone-line input-icon"></i>
+                    </div>
+                </div>
+                <div class="input-group" id="regPwGrp">
+                    <label class="auth-field-label" for="regPw">Mật khẩu</label>
+                    <div class="input-inner">
+                        <input type="password" id="regPw" placeholder="Mật khẩu (từ 6 ký tự)" required minlength="6">
+                        <i class="ri-lock-line input-icon"></i>
+                        <button type="button" class="pw-toggle" onclick="togglePw('regPw')" title="Hiển thị mật khẩu"><i class="ri-eye-line"></i></button>
+                    </div>
+                </div>
+
+                <!-- Mã Kiểm Tra Bảo Mật (CAPTCHA) -->
+                <div class="captcha-box" id="captchaBox">
+                    <div class="captcha-header">
+                        <label class="auth-field-label" style="margin-bottom:0">Mã xác thực</label>
+                        <button type="button" class="btn-captcha-refresh" onclick="refreshCaptcha()" title="Tạo mã xác thực mới">
+                            <i class="ri-refresh-line"></i> Đổi mã
+                        </button>
+                    </div>
+                    <div class="captcha-body">
+                        <div class="captcha-canvas-wrap" title="Ký tự bảo mật">
+                            <canvas id="captchaCanvas" width="130" height="38"></canvas>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Ngày Giao Dịch</label>
-                            <input type="date" id="manual-date" class="form-control" required>
+                        <div class="captcha-input-wrap">
+                            <input type="text" id="regCaptchaInput" placeholder="Nhập mã" maxlength="5" required autocomplete="off">
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Loại Ví</label>
-                        <select id="manual-wallet-type" class="form-control">
-                            <option value="">Ví Cá Nhân</option>
-                            <option value="1">Ví Nhóm (Nhóm 05 - Ví Xinh)</option>
-                        </select>
+                    <p class="input-error-msg" id="captchaErrorMsg" style="display:none; color:#fca5a5; font-size:0.75rem; margin-top:0.4rem">Mã xác thực chưa đúng</p>
+                </div>
+
+                <button type="submit" class="btn-login" id="regBtn"><span id="regBtnTxt">Đăng ký</span></button>
+            </form>
+
+            <!-- Tài khoản mẫu hỗ trợ kiểm thử -->
+            <div class="auth-demo-bar">
+                <span class="auth-demo-caption">Tài khoản mẫu:</span>
+                <div class="auth-demo-chips">
+                    <button type="button" class="auth-demo-chip" onclick="quickFillAccount('hien@vixinh.vn','123456')">Nguyễn Thúy Hiền</button>
+                    <button type="button" class="auth-demo-chip" onclick="quickFillAccount('diu@vixinh.vn','123456')">Lê Thị Dịu</button>
+                    <button type="button" class="auth-demo-chip" onclick="quickFillAccount('duy@vixinh.vn','123456')">Lê Ngọc Duy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Khôi Phục Mật Khẩu -->
+<div class="modal-overlay" id="forgotPwModal">
+    <div class="modal-box-card">
+        <button type="button" class="modal-close-btn" onclick="closeForgotPwModal()" title="Đóng"><i class="ri-close-line"></i></button>
+        <div style="text-align:center; margin-bottom:1.2rem">
+            <h2 style="font-size:1.2rem; font-weight:800; color:#fff; margin-bottom:0.3rem">Khôi phục mật khẩu</h2>
+            <p style="font-size:0.78rem; color:rgba(255,255,255,0.7); line-height:1.4">
+                Nhập email hoặc SĐT để nhận mã OTP.
+            </p>
+        </div>
+        
+        <form class="login-form" id="forgotPwForm" onsubmit="handleResetPassword(event)">
+            <div class="input-group">
+                <label class="auth-field-label" for="forgotContact">Tài khoản</label>
+                <div class="input-inner">
+                    <input type="text" id="forgotContact" placeholder="Email hoặc SĐT" required>
+                    <i class="ri-user-3-line input-icon"></i>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label class="auth-field-label" for="forgotOtp">Mã OTP</label>
+                <div class="otp-group">
+                    <div class="input-inner" style="flex:1">
+                        <input type="text" id="forgotOtp" placeholder="6 chữ số OTP" maxlength="6" style="letter-spacing:3px; font-weight:700; text-align:center" required>
+                        <i class="ri-shield-keyhole-line input-icon"></i>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">Lưu Giao Dịch</button>
+                    <button type="button" class="btn-otp-action" id="btnSendForgotOtp" onclick="sendForgotOtpCode()">Gửi mã</button>
+                </div>
+            </div>
+            
+            <div id="forgotOtpDisplayBox" style="display:none; margin-bottom:0.8rem; padding:0.5rem 0.7rem; background:rgba(246,189,96,0.12); border:1px solid rgba(246,189,96,0.3); border-radius:var(--r-sm); font-size:0.75rem; color:#fff; text-align:center">
+                Mã OTP: <b id="forgotOtpDisplayVal" style="color:var(--gold); font-size:1.05rem; letter-spacing:2px; margin:0 0.4rem"></b>
+                <button type="button" onclick="autoFillForgotOtp()" style="background:var(--gold); color:#1a162b; border:none; border-radius:4px; padding:3px 8px; font-weight:700; cursor:pointer">Tự điền</button>
+            </div>
+            
+            <div class="input-group">
+                <label class="auth-field-label" for="forgotNewPw">Mật khẩu mới</label>
+                <div class="input-inner">
+                    <input type="password" id="forgotNewPw" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" minlength="6" required>
+                    <i class="ri-lock-line input-icon"></i>
+                    <button type="button" class="pw-toggle" onclick="togglePw('forgotNewPw')" title="Hiển thị mật khẩu"><i class="ri-eye-line"></i></button>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-login" id="btnResetPwSubmit" style="margin-top:0.3rem"><span id="btnResetPwTxt">Đổi mật khẩu</span></button>
+        </form>
+    </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div class="app-shell" id="app">
+
+    <!-- HOME -->
+    <div class="pv active" id="pgHome">
+        <header class="app-header">
+            <div class="hdr-top">
+                <div class="hdr-user" onclick="go('settings')" style="cursor:pointer" title="Cài đặt tài khoản">
+                    <div class="hdr-avatar"><img src="assets/logo.jpg" alt="" id="hdrAvatarImg"></div>
+                    <div><div class="hdr-greeting" id="greeting">Xin chào</div><div class="hdr-name" id="uName">Người dùng</div></div>
+                </div>
+                <div class="hdr-actions">
+                    <button class="hdr-btn" onclick="openNotificationModal()" title="Thông báo"><i class="ri-notification-3-line"></i><span class="dot"></span></button>
+                    <button class="hdr-btn" onclick="go('settings')" title="Cài đặt"><i class="ri-settings-3-line"></i></button>
+                    <button class="hdr-btn" onclick="handleLogout()" title="Đăng xuất"><i class="ri-logout-box-r-line"></i></button>
+                </div>
+            </div>
+        </header>
+
+        <div class="bal-sec">
+            <div class="bal-card">
+                <div class="bal-top"><div class="bal-label">Số dư ví</div><button class="bal-eye" onclick="toggleBal()"><i class="ri-eye-line" id="eyeIc"></i></button></div>
+                <div class="bal-amt" id="balAmt">8.250.000 ₫</div>
+                <div class="bal-row">
+                    <div class="bal-mini"><div class="bal-mini-lbl"><i class="ri-arrow-up-circle-fill" style="color:var(--success)"></i> Thu tháng</div><div class="bal-mini-val inc" id="mInc">+12.000.000 ₫</div></div>
+                    <div class="bal-mini"><div class="bal-mini-lbl"><i class="ri-arrow-down-circle-fill" style="color:var(--danger)"></i> Chi tháng</div><div class="bal-mini-val exp" id="mExp">-3.750.000 ₫</div></div>
+                </div>
+                <div class="bal-actions">
+                    <button class="bal-act" onclick="openModal('manual')"><div class="bal-act-ic bai-v"><i class="ri-edit-2-line"></i></div><span class="bal-act-lbl">Nhập tay</span></button>
+                    <button class="bal-act" onclick="openModal('camera')"><div class="bal-act-ic bai-r"><i class="ri-camera-lens-line"></i></div><span class="bal-act-lbl">Quét bill</span></button>
+                    <button class="bal-act" onclick="go('budget')"><div class="bal-act-ic bai-a"><i class="ri-funds-line"></i></div><span class="bal-act-lbl">Ngân sách</span></button>
+                    <button class="bal-act" onclick="go('savings')"><div class="bal-act-ic bai-m"><i class="ri-safe-2-line"></i></div><span class="bal-act-lbl">Tiết kiệm</span></button>
+                    <button class="bal-act" onclick="go('recurring')"><div class="bal-act-ic bai-s"><i class="ri-repeat-line"></i></div><span class="bal-act-lbl">Định kỳ</span></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="sec" style="margin-top:0.9rem">
+            <div class="promo" onclick="openModal('camera')">
+                <div class="promo-ic"><i class="ri-scan-2-line"></i></div>
+                <div><h3>Quét hóa đơn AI</h3><p>Nhận diện nhanh số tiền & nơi bán</p></div>
+            </div>
+        </div>
+
+        <div class="sec" style="margin-top:0.75rem">
+            <div class="group-preview-card" onclick="go('group')">
+                <div class="gpc-icon"><i class="ri-community-line"></i></div>
+                <div class="gpc-info">
+                    <div class="gpc-title" id="homeGroupTitle">Ví Nhóm & Quỹ Chung</div>
+                    <div class="gpc-sub">Quỹ: <strong id="homeFundBal">2.400.000 ₫</strong> · <span style="color:var(--primary);font-weight:700">Chi tiêu minh bạch</span></div>
+                </div>
+                <div class="gpc-arrow"><i class="ri-arrow-right-s-line"></i></div>
+            </div>
+        </div>
+
+        <div class="sec">
+            <div class="sec-hdr"><span class="sec-title">Tiện ích</span></div>
+            <div class="svc-grid">
+                <button class="svc-item" onclick="openModal('manual')"><div class="svc-ic si-1"><i class="ri-edit-2-line"></i></div><span class="svc-lbl">Nhập tay</span></button>
+                <button class="svc-item" onclick="openModal('camera')"><div class="svc-ic si-2"><i class="ri-camera-lens-line"></i></div><span class="svc-lbl">Quét bill</span></button>
+                <button class="svc-item" onclick="go('group')"><div class="svc-ic si-g"><i class="ri-community-line"></i></div><span class="svc-lbl">Ví nhóm</span></button>
+                <button class="svc-item" onclick="go('budget')"><div class="svc-ic si-4"><i class="ri-funds-line"></i></div><span class="svc-lbl">Ngân sách</span></button>
+                <button class="svc-item" onclick="go('stats')"><div class="svc-ic si-3"><i class="ri-bar-chart-grouped-line"></i></div><span class="svc-lbl">Thống kê</span></button>
+                <button class="svc-item" onclick="go('recurring')"><div class="svc-ic si-5"><i class="ri-repeat-line"></i></div><span class="svc-lbl">Định kỳ</span></button>
+                <button class="svc-item" onclick="go('savings')"><div class="svc-ic si-6"><i class="ri-safe-2-line"></i></div><span class="svc-lbl">Tiết kiệm</span></button>
+                <button class="svc-item" onclick="go('stats','cat')"><div class="svc-ic si-7"><i class="ri-pie-chart-line"></i></div><span class="svc-lbl">Danh mục</span></button>
+                <button class="svc-item" onclick="go('stats','cal')"><div class="svc-ic si-8"><i class="ri-calendar-check-line"></i></div><span class="svc-lbl">Lịch thu chi</span></button>
+            </div>
+        </div>
+
+        <div class="sec">
+            <div class="sec-hdr"><span class="sec-title">Biểu đồ thu chi</span><button class="sec-link" onclick="go('stats')">Chi tiết <i class="ri-arrow-right-s-line"></i></button></div>
+            <div class="chart-card">
+                <div class="chart-tabs">
+                    <button class="chart-tab active" onclick="swChart(this,'week')">Tuần</button>
+                    <button class="chart-tab" onclick="swChart(this,'month')">Tháng</button>
+                    <button class="chart-tab" onclick="swChart(this,'year')">Năm</button>
+                </div>
+                <div class="chart-area" id="chartArea"></div>
+                <div class="chart-sum">
+                    <div class="chart-s"><div class="chart-sv" style="color:var(--danger)" id="hExp">2.150.000 ₫</div><div class="chart-sl">Chi</div></div>
+                    <div class="chart-s"><div class="chart-sv" style="color:var(--success)" id="hInc">3.500.000 ₫</div><div class="chart-sl">Thu</div></div>
+                    <div class="chart-s"><div class="chart-sv" id="hTx">14</div><div class="chart-sl">Giao dịch</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sec">
+            <div class="sec-hdr"><span class="sec-title">Giao dịch gần đây</span><button class="sec-link" onclick="go('history')">Tất cả <i class="ri-arrow-right-s-line"></i></button></div>
+            <div id="homeTx"></div>
+        </div>
+        <div style="height:0.8rem"></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="pv" id="pgStats">
+        <div class="top-bar"><button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button><span class="top-title">Thống kê</span></div>
+        <div class="sec" style="margin-top:0.7rem">
+            <div class="pg-tabs" id="sTabs">
+                <button class="pg-tab active" onclick="swStat(this,'ov')">Tổng quan</button>
+                <button class="pg-tab" onclick="swStat(this,'cat')">Danh mục</button>
+                <button class="pg-tab" onclick="swStat(this,'cal')">Lịch</button>
+                <button class="pg-tab" onclick="swStat(this,'sav')">Tiết kiệm</button>
+            </div>
+        </div>
+        <div id="sOv" class="sec" style="margin-top:0.7rem">
+            <div class="st-row">
+                <div class="st-card"><div class="st-ic"><i class="ri-wallet-3-line" style="color:var(--success)"></i></div><div class="st-val" style="color:var(--success)" id="sI">12.000.000 ₫</div><div class="st-lbl">Thu T10</div></div>
+                <div class="st-card"><div class="st-ic"><i class="ri-shopping-cart-2-line" style="color:var(--danger)"></i></div><div class="st-val" style="color:var(--danger)" id="sE">3.750.000 ₫</div><div class="st-lbl">Chi T10</div></div>
+            </div>
+            <div class="st-row">
+                <div class="st-card"><div class="st-ic"><i class="ri-line-chart-line" style="color:var(--primary)"></i></div><div class="st-val" style="color:var(--primary)" id="sN">8.250.000 ₫</div><div class="st-lbl">Số dư</div></div>
+                <div class="st-card"><div class="st-ic"><i class="ri-file-list-3-line" style="color:var(--text2)"></i></div><div class="st-val" id="sC">14</div><div class="st-lbl">Giao dịch</div></div>
+            </div>
+            <div class="sec-hdr" style="margin-top:0.4rem"><span class="sec-title">Biểu đồ thu chi</span></div>
+            <div class="chart-card"><div class="chart-area" id="sChart" style="height:170px"></div></div>
+        </div>
+        <div id="sCat" class="sec hidden" style="margin-top:0.7rem">
+            <div class="sec-hdr"><span class="sec-title">Theo danh mục</span></div>
+            <div class="chart-card"><div class="pie-box" id="pie"></div></div>
+            <div class="sec-hdr" style="margin-top:0.7rem"><span class="sec-title">Chi tiết</span></div>
+            <div class="cat-list" id="catDet"></div>
+        </div>
+        <div id="sCal" class="sec hidden" style="margin-top:0.7rem">
+            <div class="chart-card">
+                <div class="cal-hdr"><div class="cal-nav"><button onclick="chMo(-1)"><i class="ri-arrow-left-s-line"></i></button></div><span class="cal-month" id="calMo">Tháng 10, 2026</span><div class="cal-nav"><button onclick="chMo(1)"><i class="ri-arrow-right-s-line"></i></button></div></div>
+                <div class="cal-grid" id="calG"></div>
+            </div>
+            <div class="sec-hdr" style="margin-top:0.7rem"><span class="sec-title" id="calDT">Chi tiết ngày</span></div>
+            <div id="calDTx"></div>
+        </div>
+        <div id="sSav" class="sec hidden" style="margin-top:0.7rem">
+            <div class="st-row">
+                <div class="st-card"><div class="st-ic"><i class="ri-safe-2-line" style="color:var(--primary)"></i></div><div class="st-val" style="color:var(--primary)" id="ssT">2.500.000 ₫</div><div class="st-lbl">Đã tiết kiệm</div></div>
+                <div class="st-card"><div class="st-ic"><i class="ri-flag-line" style="color:var(--amber)"></i></div><div class="st-val" id="ssG">3</div><div class="st-lbl">Mục tiêu</div></div>
+            </div>
+            <div id="ssList"></div>
+        </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="pv" id="pgHist">
+        <div class="top-bar"><button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button><span class="top-title">Lịch sử</span></div>
+        <div class="sec" style="margin-top:0.7rem" id="allTx"></div>
+    </div>
+
+    <!-- BUDGET -->
+    <div class="pv" id="pgBgt">
+        <div class="top-bar"><button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button><span class="top-title">Ngân sách</span></div>
+        <div class="sec" style="margin-top:0.7rem">
+            <div class="bgt-summary"><div class="bgt-circle" id="bgtC"></div><div class="bgt-pct" id="bgtP">45%</div><div class="bgt-lbl">Đã dùng</div>
+                <div class="bgt-info"><div class="bgt-info-item"><div class="bgt-info-val" style="color:var(--danger)" id="bgtU">3.750.000 ₫</div><div class="bgt-info-lbl">Đã chi</div></div><div class="bgt-info-item"><div class="bgt-info-val" style="color:var(--success)" id="bgtR">4.250.000 ₫</div><div class="bgt-info-lbl">Còn lại</div></div></div>
+            </div>
+            <div class="sec-hdr"><span class="sec-title">Theo danh mục</span><button class="btn btn-sm btn-o" onclick="togForm('bgtF')"><i class="ri-add-line"></i> Thêm</button></div>
+            <div class="i-form" id="bgtF">
+                <div class="f-row" style="margin-bottom:0.6rem"><div class="fg"><label class="fl">Danh mục</label><select class="fc" id="bfC"><option value="food">Ăn uống</option><option value="transport">Di chuyển</option><option value="shopping">Mua sắm</option><option value="entertainment">Giải trí</option><option value="health">Sức khỏe</option><option value="education">Học tập</option><option value="bills">Hoá đơn</option></select></div><div class="fg"><label class="fl">Hạn mức (₫)</label><input type="number" class="fc" id="bfA" placeholder="0"></div></div>
+                <button class="btn btn-p btn-sm btn-block" onclick="addBgt()">Lưu</button>
+            </div>
+            <div id="bgtL"></div>
+        </div>
+    </div>
+
+    <!-- SAVINGS -->
+    <div class="pv" id="pgSav">
+        <div class="top-bar"><button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button><span class="top-title">Tiết kiệm</span></div>
+        <div class="sec" style="margin-top:0.7rem">
+            <div class="sav-hero"><div class="sav-hero-ic"><i class="ri-safe-2-line"></i></div><div class="sav-hero-val" id="savT">2.500.000 ₫</div><div class="sav-hero-lbl">Đã tiết kiệm</div></div>
+            <div class="sec-hdr"><span class="sec-title">Mục tiêu</span><button class="btn btn-sm btn-o" onclick="togForm('savF')"><i class="ri-add-line"></i> Thêm</button></div>
+            <div class="i-form" id="savF">
+                <div class="fg"><label class="fl">Tên mục tiêu</label><input type="text" class="fc" id="sfN" placeholder="VD: Laptop mới..."></div>
+                <div class="f-row" style="margin-bottom:0.6rem"><div class="fg"><label class="fl">Mục tiêu (₫)</label><input type="number" class="fc" id="sfT" placeholder="0"></div><div class="fg"><label class="fl">Biểu tượng</label><select class="fc" id="sfI"><option value="laptop">Laptop / Công nghệ</option><option value="travel">Du lịch</option><option value="phone">Điện thoại</option><option value="house">Mua nhà</option><option value="study">Học tập</option><option value="car">Mua xe</option><option value="gift">Dự phòng</option></select></div></div>
+                <button class="btn btn-p btn-sm btn-block" onclick="addSav()"><i class="ri-check-line"></i> Lưu mục tiêu</button>
+            </div>
+            <div id="savL"></div>
+        </div>
+    </div>
+
+    <!-- RECURRING -->
+    <div class="pv" id="pgRec">
+        <div class="top-bar"><button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button><span class="top-title">Định kỳ</span></div>
+        <div class="sec" style="margin-top:0.7rem">
+            <div class="sec-hdr"><span class="sec-title">Danh sách</span><button class="btn btn-sm btn-o" onclick="togForm('recF')"><i class="ri-add-line"></i> Thêm</button></div>
+            <div class="i-form" id="recF">
+                <div class="fg"><label class="fl">Tên khoản</label><input type="text" class="fc" id="rfN" placeholder="VD: Tiền nhà..."></div>
+                <div class="f-row" style="margin-bottom:0.6rem"><div class="fg"><label class="fl">Số tiền (₫)</label><input type="number" class="fc" id="rfA" placeholder="0"></div><div class="fg"><label class="fl">Chu kỳ</label><select class="fc" id="rfF"><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly" selected>Hàng tháng</option></select></div></div>
+                <div class="fg"><label class="fl">Danh mục</label><select class="fc" id="rfC"><option value="bills">Hoá đơn</option><option value="food">Ăn uống</option><option value="transport">Di chuyển</option><option value="education">Học tập</option></select></div>
+                <button class="btn btn-p btn-sm btn-block" onclick="addRec()">Lưu</button>
+            </div>
+            <div id="recL"></div>
+        </div>
+    </div>
+
+    <!-- VÍ NHÓM & QUỸ PHÒNG TRỌ -->
+    <div class="pv" id="pgGroup">
+        <div class="top-bar">
+            <button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button>
+            <span class="top-title">Quỹ & Ví Nhóm</span>
+            <button class="hdr-btn" onclick="openFundModal()" title="Góp quỹ phòng"><i class="ri-hand-coin-line"></i></button>
+        </div>
+        <div class="sec" style="margin-top:0.7rem">
+            <!-- Thẻ Quỹ Chung Phòng Trọ -->
+            <div class="fund-card">
+                <div class="fund-top">
+                    <div>
+                        <div class="fund-badge"><i class="ri-community-line"></i> Quỹ Chi Tiêu Chung</div>
+                        <div class="fund-label">Số dư quỹ</div>
+                    </div>
+                    <span class="badge" style="background:#E6FCF5;color:#0CA678;font-weight:700">Hoạt động</span>
+                </div>
+                <div class="fund-bal" id="groupFundBal">2.400.000 ₫</div>
+                <div class="fund-desc">5 thành viên · 500.000 ₫/tháng chi phí sinh hoạt chung</div>
+                <div class="fund-btn-row">
+                    <button class="btn btn-p btn-sm" onclick="openFundModal()"><i class="ri-add-line"></i> Nộp quỹ</button>
+                    <button class="btn btn-s btn-sm" onclick="loadSampleRoomRentInvoice()"><i class="ri-file-upload-line"></i> Quét hóa đơn</button>
+                </div>
+            </div>
+
+            <!-- Tabs Ví Nhóm -->
+            <div class="pg-tabs" id="groupTabs" style="margin-top:0.85rem">
+                <button class="pg-tab active" onclick="swGroupTab(this,'bills')"><i class="ri-receipt-line"></i> Hóa đơn (<span id="gBillCount">2</span>)</button>
+                <button class="pg-tab" onclick="swGroupTab(this,'members')"><i class="ri-group-line"></i> Thành viên</button>
+                <button class="pg-tab" onclick="swGroupTab(this,'history')"><i class="ri-history-line"></i> Lịch sử quỹ</button>
+            </div>
+
+            <!-- Tab 1: Danh Sách Hóa Đơn Chia Tiền -->
+            <div id="gTabBills">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin:0.85rem 0 0.5rem">
+                    <span style="font-size:0.8rem;font-weight:700;color:var(--text)">Khoản chi gần đây</span>
+                    <button class="btn btn-sm btn-o" onclick="loadSampleRoomRentInvoice()"><i class="ri-file-text-line"></i> Mẫu tiền phòng</button>
+                </div>
+                <div id="groupBillsList"></div>
+            </div>
+
+            <!-- Tab 2: Danh Sách Thành Viên & Công Nợ -->
+            <div id="gTabMembers" class="hidden">
+                <div style="margin:0.85rem 0 0.5rem;font-size:0.8rem;font-weight:700;color:var(--text)">Thành viên phòng</div>
+                <div id="groupMembersList"></div>
+            </div>
+
+            <!-- Tab 3: Lịch Sử Biến Động Quỹ -->
+            <div id="gTabHistory" class="hidden">
+                <div style="margin:0.85rem 0 0.5rem;font-size:0.8rem;font-weight:700;color:var(--text)">Biến động quỹ</div>
+                <div id="groupFundHistory"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="pv" id="pgSettings">
+        <div class="top-bar">
+            <button class="back-btn" onclick="go('home')" title="Quay lại"><i class="ri-arrow-left-s-line"></i></button>
+            <span class="top-title">Cá nhân</span>
+            <button class="hdr-btn" onclick="handleLogout()" style="background:#FFF0F1;color:var(--danger)" title="Đăng xuất"><i class="ri-logout-box-r-line"></i></button>
+        </div>
+        <div class="sec" style="margin-top:0.7rem">
+            
+            <!-- Profile Hero (Minimalist & Clean) -->
+            <div class="profile-hero-v2">
+                <div class="ph2-avatar-wrap">
+                    <img src="assets/logo.jpg" alt="Avatar" class="ph2-avatar-img" id="profileAvatarImg">
+                    <label for="avatarFileInput" class="ph2-avatar-badge" title="Đổi ảnh đại diện">
+                        <i class="ri-camera-fill"></i>
+                        <input type="file" id="avatarFileInput" accept="image/*" style="display:none" onchange="uploadAvatar(event)">
+                    </label>
+                </div>
+                <div class="ph2-info">
+                    <div class="ph2-name-row">
+                        <h3 class="ph2-name" id="profileName">Nguyễn Thúy Hiền</h3>
+                        <span class="ph2-role-badge" id="profileGroupRole">Tài khoản chính</span>
+                    </div>
+                    <div class="ph2-meta" id="profileMeta">0912 345 678 · hien@vixinh.vn</div>
+                </div>
+                <button type="button" class="ph2-edit-btn" onclick="openEditProfileModal()" title="Chỉnh sửa thông tin">
+                    <i class="ri-pencil-line"></i>
+                </button>
+            </div>
+
+            <!-- VietQR / MB Bank Card -->
+            <div class="bank-card-clean" onclick="copyBankAccount()" title="Nhấn để sao chép số tài khoản">
+                <div class="bcc-icon"><i class="ri-qr-code-line"></i></div>
+                <div class="bcc-info">
+                    <div class="bcc-title">MB Bank · 0912 345 678</div>
+                    <div class="bcc-sub">NGUYEN THUY HIEN · Nhận quỹ & chia tiền</div>
+                </div>
+                <button type="button" class="bcc-copy-btn" title="Sao chép STK">
+                    <i class="ri-file-copy-line"></i>
+                </button>
+            </div>
+
+            <!-- Grouped Cupertino Settings Section 1: Tùy Chọn -->
+            <div class="setting-group-box">
+                <div class="sg-header">TÙY CHỌN BẢO MẬT & THÔNG BÁO</div>
+                
+                <div class="sg-item">
+                    <div class="sg-left">
+                        <div class="sg-icon sgi-bell"><i class="ri-notification-3-line"></i></div>
+                        <div class="sg-label">Nhắc hẹn chi tiêu định kỳ</div>
+                    </div>
+                    <label class="clean-switch">
+                        <input type="checkbox" checked id="prefRoomRemind">
+                        <span class="clean-slider"></span>
+                    </label>
+                </div>
+
+                <div class="sg-item">
+                    <div class="sg-left">
+                        <div class="sg-icon sgi-shield"><i class="ri-fingerprint-line"></i></div>
+                        <div class="sg-label">Bảo mật sinh trắc học (Face ID / Vân tay)</div>
+                    </div>
+                    <label class="clean-switch">
+                        <input type="checkbox" checked id="prefBiometric" onchange="toggleBiometricsWeb(event)">
+                        <span class="clean-slider"></span>
+                    </label>
+                </div>
+
+                <div class="sg-item">
+                    <div class="sg-left">
+                        <div class="sg-icon sgi-scan"><i class="ri-scan-2-line"></i></div>
+                        <div class="sg-label">Quét hóa đơn OCR</div>
+                    </div>
+                    <span class="sg-badge-green">On-Device Offline</span>
+                </div>
+            </div>
+
+            <!-- Grouped Cupertino Settings Section 2: Giao Diện -->
+            <div class="setting-group-box">
+                <div class="sg-header">GIAO DIỆN MÀU SẮC</div>
+                <div class="theme-pills">
+                    <button type="button" class="theme-pill active" data-theme="pink-gold" onclick="setTheme('pink-gold')">
+                        <span class="tp-dot" style="background:#FF6584"></span> Rose Gold
+                    </button>
+                    <button type="button" class="theme-pill" data-theme="violet" onclick="setTheme('violet')">
+                        <span class="tp-dot" style="background:#7C5CFC"></span> Tím
+                    </button>
+                    <button type="button" class="theme-pill" data-theme="dark" onclick="setTheme('dark')">
+                        <span class="tp-dot" style="background:#262135"></span> Chế độ tối
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grouped Cupertino Settings Section 3: Chuyển Tài Khoản -->
+            <div class="setting-group-box">
+                <div class="sg-header">CHUYỂN TÀI KHOẢN (THÀNH VIÊN)</div>
+                <div class="user-switch-pills">
+                    <button type="button" class="user-pill active" onclick="switchUser('hien@vixinh.vn')">
+                        <span class="up-avatar">👛</span> Thúy Hiền
+                    </button>
+                    <button type="button" class="user-pill" onclick="switchUser('diu@vixinh.vn')">
+                        <span class="up-avatar">🌸</span> Thị Dịu
+                    </button>
+                    <button type="button" class="user-pill" onclick="switchUser('duy@vixinh.vn')">
+                        <span class="up-avatar">👑</span> Ngọc Duy
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hệ Thống & Đăng Xuất -->
+            <div class="setting-group-box" style="margin-bottom:1.5rem">
+                <div class="sg-item" style="cursor:default">
+                    <div class="sg-left">
+                        <div class="sg-icon sgi-info"><i class="ri-information-line"></i></div>
+                        <div class="sg-label">Phiên bản ứng dụng</div>
+                    </div>
+                    <span class="sg-meta-txt">Ví Xinh v1.0.0</span>
+                </div>
+                <div class="sg-item" onclick="handleLogout()" style="cursor:pointer">
+                    <div class="sg-left">
+                        <div class="sg-icon sgi-logout"><i class="ri-logout-box-r-line"></i></div>
+                        <div class="sg-label" style="color:var(--danger);font-weight:700">Đăng xuất tài khoản</div>
+                    </div>
+                    <i class="ri-arrow-right-s-line" style="color:var(--danger)"></i>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== BOTTOM NAV ===== -->
+<nav class="bnav" id="bnav">
+    <button class="bnav-item active" data-pg="home" onclick="go('home')"><i class="ri-home-5-line ni"></i><span class="nl">Trang chủ</span></button>
+    <button class="bnav-item" data-pg="stats" onclick="go('stats')"><i class="ri-bar-chart-grouped-line ni"></i><span class="nl">Thống kê</span></button>
+    <button class="bnav-item nav-add" onclick="openModal('manual')"><div class="add-btn"><i class="ri-add-line"></i></div></button>
+    <button class="bnav-item" data-pg="budget" onclick="go('budget')"><i class="ri-funds-line ni"></i><span class="nl">Ngân sách</span></button>
+    <button class="bnav-item" data-pg="settings" onclick="go('settings')"><i class="ri-user-settings-line ni"></i><span class="nl">Cài đặt</span></button>
+</nav>
+
+<!-- ===== ADD MODAL ===== -->
+<div class="modal-bg" id="modal">
+    <div class="modal-box">
+        <div class="modal-handle"></div>
+        <div class="modal-hdr"><h2 class="modal-title">Thêm giao dịch</h2><button class="modal-x" onclick="closeModal()"><i class="ri-close-line"></i></button></div>
+        <div class="modal-body">
+            <div class="modal-tabs">
+                <button class="modal-tab active" id="tManual" onclick="swTab('manual')"><i class="ri-edit-2-line"></i> Nhập tay</button>
+                <button class="modal-tab" id="tCamera" onclick="swTab('camera')"><i class="ri-camera-line"></i> Chụp ảnh</button>
+                <button class="modal-tab" id="tUpload" onclick="swTab('upload')"><i class="ri-upload-cloud-line"></i> Tải ảnh</button>
+            </div>
+            <div id="fManual">
+                <div class="type-sel">
+                    <button class="type-btn e active" onclick="setType('expense',this)"><i class="ri-arrow-down-circle-line"></i> Chi tiêu</button>
+                    <button class="type-btn i" onclick="setType('income',this)"><i class="ri-arrow-up-circle-line"></i> Thu nhập</button>
+                </div>
+                <form id="txForm" onsubmit="saveTx(event)">
+                    <div class="fg"><label class="fl">Số tiền (₫)</label><input type="number" id="txAmt" class="fc" placeholder="0" required style="font-size:1.15rem;font-weight:800;text-align:center"></div>
+                    <div class="fg"><label class="fl">Danh mục</label>
+                        <div class="cat-sel" id="catSel">
+                            <button type="button" class="cat-chip sel" data-c="food" onclick="pickCat(this)"><i class="ri-restaurant-line"></i><span>Ăn uống</span></button>
+                            <button type="button" class="cat-chip" data-c="transport" onclick="pickCat(this)"><i class="ri-taxi-line"></i><span>Di chuyển</span></button>
+                            <button type="button" class="cat-chip" data-c="shopping" onclick="pickCat(this)"><i class="ri-shopping-bag-3-line"></i><span>Mua sắm</span></button>
+                            <button type="button" class="cat-chip" data-c="entertainment" onclick="pickCat(this)"><i class="ri-gamepad-line"></i><span>Giải trí</span></button>
+                            <button type="button" class="cat-chip" data-c="health" onclick="pickCat(this)"><i class="ri-heart-pulse-line"></i><span>Sức khỏe</span></button>
+                            <button type="button" class="cat-chip" data-c="education" onclick="pickCat(this)"><i class="ri-book-open-line"></i><span>Học tập</span></button>
+                            <button type="button" class="cat-chip" data-c="bills" onclick="pickCat(this)"><i class="ri-bill-line"></i><span>Hoá đơn</span></button>
+                            <button type="button" class="cat-chip" data-c="other" onclick="pickCat(this)"><i class="ri-archive-line"></i><span>Khác</span></button>
+                        </div>
+                    </div>
+                    <div class="f-row"><div class="fg"><label class="fl">Nơi chi</label><input type="text" id="txMer" class="fc" placeholder="VD: Highlands..." required></div><div class="fg"><label class="fl">Ngày</label><input type="date" id="txDate" class="fc" required></div></div>
+                    <div class="fg"><label class="fl">Ghi chú</label><input type="text" id="txNote" class="fc" placeholder="Thêm ghi chú..."></div>
+                    <button type="submit" class="btn btn-p btn-block" style="margin-top:0.4rem"><i class="ri-check-line"></i> Lưu</button>
                 </form>
             </div>
-        </div>
+            <!-- TAB CHỤP ẢNH: CHỈ CÓ CAMERA VIEW VÀ NÚT CHỤP, KHÔNG CÓ KHUNG TẢI ẢNH -->
+            <div id="fCamera" class="hidden">
+                <div class="cam-box" id="camBox">
+                    <video id="camV" autoplay playsinline></video>
+                    <div class="cam-frame"></div>
+                    <div class="cam-hint"><i class="ri-scan-2-line"></i> Căn hóa đơn vào khung</div>
+                </div>
+                <canvas id="camC" style="display:none"></canvas>
+                <button id="capBtn" class="btn btn-p btn-block" onclick="capPhoto()"><i class="ri-camera-lens-line"></i> Chụp ảnh</button>
+                <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
+                    <button type="button" class="btn btn-sm btn-s" style="flex:1;font-size:0.75rem" onclick="loadSampleRealReceipt()"><i class="ri-cup-line" style="color:var(--primary)"></i> Cafe 145.000 ₫</button>
+                    <button type="button" class="btn btn-sm btn-s" style="flex:1;font-size:0.75rem" onclick="loadSampleRoomRentInvoice()"><i class="ri-home-wifi-line" style="color:#059669"></i> Tiền phòng 4.500.000 ₫</button>
+                </div>
+                <button type="button" onclick="swTab('upload')" style="background:none;border:none;color:var(--text3);font-size:0.72rem;cursor:pointer;margin-top:0.5rem;display:block;width:100%;text-align:center"><i class="ri-upload-cloud-line"></i> Chọn ảnh từ máy</button>
+            </div>
+            <!-- TAB TẢI ẢNH -->
+            <div id="fUpload" class="hidden">
+                <div class="upload" id="dropZone" onclick="document.getElementById('fileIn').click()">
+                    <div class="upload-ic"><i class="ri-scan-2-line"></i></div>
+                    <div class="upload-txt">Tải ảnh lên</div>
+                    <div class="upload-sub">JPG, PNG, WEBP</div>
+                    <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="handleFile(event)">
+                </div>
+                <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
+                    <button type="button" class="btn btn-sm btn-s" style="flex:1;font-size:0.75rem" onclick="loadSampleRealReceipt()"><i class="ri-cup-line" style="color:var(--primary)"></i> Cafe 145.000 ₫</button>
+                    <button type="button" class="btn btn-sm btn-s" style="flex:1;font-size:0.75rem" onclick="loadSampleRoomRentInvoice()"><i class="ri-home-wifi-line" style="color:#059669"></i> Tiền phòng 4.500.000 ₫</button>
+                </div>
+            </div>
+            <!-- KẾT QUẢ QUÉT ẢNH & OCR -->
+            <div id="photoResult" class="hidden">
+                <div class="upload-preview" id="previewA"><img id="previewI" src="" alt="Hóa đơn"></div>
+                <div id="ocrSt" class="hidden" style="text-align:center;padding:1rem;color:var(--primary);font-weight:600">
+                    <span class="spinner" style="border-color:rgba(244,91,138,0.25);border-top-color:var(--primary)"></span>
+                    <p style="margin-top:0.4rem;font-size:0.78rem">Đang đọc hóa đơn...</p>
+                </div>
+                <div id="ocrData" class="hidden" style="background:var(--bg);border-radius:var(--r-md);padding:0.75rem;margin-top:0.5rem">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+                        <span style="font-size:0.78rem;color:var(--text3)">Nơi chi:</span>
+                        <strong style="font-size:0.88rem" id="ocrMer">Highlands Coffee</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+                        <span style="font-size:0.78rem;color:var(--text3)">Tổng tiền:</span>
+                        <strong style="font-size:1.1rem;color:var(--danger)" id="ocrAmt">145.000 ₫</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="font-size:0.78rem;color:var(--text3)">Danh mục:</span>
+                        <span class="badge" id="ocrCatBadge" style="background:#FFF9EB;color:#D49A2B;font-size:0.72rem;font-weight:700"><i class="ri-restaurant-line"></i> Ăn uống</span>
+                    </div>
 
-        <!-- Recent Transactions Table -->
-        <div class="card" style="margin-top: 2rem;">
-            <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">🕒 Lịch Sử Giao Dịch Gần Đây</h2>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Ngày</th>
-                            <th>Cửa Hàng / Khoản Chi</th>
-                            <th>Danh Mục</th>
-                            <th>Loại Ví</th>
-                            <th>Số Tiền</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transaction-list">
-                        <tr>
-                            <td colspan="5" style="text-align: center; color: var(--text-muted);">Đang tải dữ liệu...</td>
-                        </tr>
-                    </tbody>
-                </table>
+                    <!-- 3 CHẾ ĐỘ PHÂN BỔ: CÁ NHÂN | CHIA TIỀN | QUỸ CHUNG -->
+                    <div style="margin-top:0.6rem;padding-top:0.55rem;border-top:1px solid var(--border)">
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.3rem;margin-bottom:0.5rem">
+                            <button type="button" class="scope-chip active" id="btnScopeP" onclick="setBillScope('personal')">
+                                <i class="ri-user-3-line"></i> Cá nhân
+                            </button>
+                            <button type="button" class="scope-chip" id="btnScopeS" onclick="setBillScope('split')">
+                                <i class="ri-scales-3-line"></i> Chia tiền
+                            </button>
+                            <button type="button" class="scope-chip" id="btnScopeF" onclick="setBillScope('fund')">
+                                <i class="ri-funds-box-line"></i> Quỹ chung
+                            </button>
+                        </div>
+                        
+                        <!-- 1. CÁ NHÂN -->
+                        <div id="scopePersonalBox" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.6rem 0.75rem">
+                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem">
+                                <span style="color:var(--text2)">Lưu vào ví:</span>
+                                <strong style="color:var(--danger);font-size:0.95rem" id="personalSaveAmt">145.000 ₫</strong>
+                            </div>
+                        </div>
+
+                        <!-- 2. CHIA TIỀN -->
+                        <div id="scopeSplitBox" class="hidden" style="display:flex;flex-direction:column;gap:0.4rem">
+                            <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.55rem 0.75rem">
+                                <div style="display:flex;justify-content:space-between;align-items:center">
+                                    <span style="font-size:0.78rem;font-weight:600;color:var(--text)">Số người:</span>
+                                    <div class="split-stepper">
+                                        <button type="button" class="split-step-btn" onclick="changeSplitCount(-1)"><i class="ri-subtract-line"></i></button>
+                                        <span class="split-step-val" id="splitCountDisp">4</span>
+                                        <button type="button" class="split-step-btn" onclick="changeSplitCount(1)"><i class="ri-add-line"></i></button>
+                                    </div>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.35rem;padding-top:0.35rem;border-top:1px dashed var(--border);font-size:0.78rem">
+                                    <span style="color:var(--text2)">Mỗi người:</span>
+                                    <strong style="font-size:0.92rem;color:var(--primary)" id="splitPerPersonDisp">36.250 ₫</strong>
+                                </div>
+                            </div>
+
+                            <!-- 2 LỰA CHỌN THANH TOÁN -->
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem">
+                                <div class="split-option-card active" id="optSplitMineOnly" onclick="setSplitPayRole('mine_only')" style="flex-direction:column;padding:0.55rem 0.65rem">
+                                    <div style="display:flex;align-items:center;gap:0.3rem">
+                                        <input type="radio" name="splitPayRole" value="mine_only" checked style="margin:0">
+                                        <strong style="font-size:0.75rem;color:var(--text)">Chỉ phần tôi</strong>
+                                    </div>
+                                    <div style="font-size:0.72rem;color:var(--primary);font-weight:700;margin-top:0.25rem" class="roleMyShareTxt">36.250 ₫</div>
+                                </div>
+
+                                <div class="split-option-card" id="optSplitAdvanceAll" onclick="setSplitPayRole('advance_all')" style="flex-direction:column;padding:0.55rem 0.65rem">
+                                    <div style="display:flex;align-items:center;gap:0.3rem">
+                                        <input type="radio" name="splitPayRole" value="advance_all" style="margin:0">
+                                        <strong style="font-size:0.75rem;color:var(--text)">Bao cả bàn</strong>
+                                    </div>
+                                    <div style="font-size:0.68rem;color:var(--text3);margin-top:0.25rem">Thu lại: <strong id="roleCollectOthersTxt" style="color:var(--danger)">108.750 ₫</strong></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. TRÍCH QUỸ CHUNG -->
+                        <div id="scopeFundBox" class="hidden" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.6rem 0.75rem">
+                            <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.35rem">
+                                <span style="font-size:0.75rem;color:var(--text3)">Chọn quỹ:</span>
+                                <select class="fc" id="fundSelectBox" onchange="updateFundSelection()" style="padding:0.25rem 0.4rem;font-size:0.75rem;flex:1">
+                                    <option value="couple">Quỹ Cặp Đôi (1.850.000 ₫)</option>
+                                    <option value="travel">Quỹ Du Lịch (3.200.000 ₫)</option>
+                                    <option value="room" selected>Quỹ Chi Tiêu Chung (2.400.000 ₫)</option>
+                                </select>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;padding-top:0.3rem;border-top:1px dashed var(--border)">
+                                <span style="color:var(--text2)">Số dư sau chi:</span>
+                                <strong style="color:var(--success)" id="fundAfterBalance">1.950.000 ₫</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button id="ocrSave" class="btn btn-p btn-block hidden" style="margin-top:0.55rem" onclick="saveOcr()">
+                    <i class="ri-check-line"></i> <span id="ocrSaveBtnTxt">Lưu vào Ví (145.000 ₫)</span>
+                </button>
+                <button id="ocrRetake" class="btn btn-s btn-block hidden" style="margin-top:0.35rem" onclick="retakePhoto()">
+                    <i class="ri-refresh-line"></i> Quét lại
+                </button>
             </div>
         </div>
-    </main>
+    </div>
+</div>
 
-    <!-- Footer -->
-    <footer>
-        <p>Đồ Án Thực Tập Chuyên Môn - Xây dựng ứng dụng quản lý tài chính "Ví Xinh" sử dụng Thị giác máy tính & OCR</p>
-        <p style="margin-top: 0.25rem;">Thành viên nhóm: Thúy Hiền - Thị Dịu - Tiến Quân - Ngọc Duy - Việt Anh</p>
-    </footer>
+<!-- ===== QR & SPLIT REMINDER MODAL ===== -->
+<div class="modal-bg" id="qrModal">
+    <div class="modal-box" style="max-width:380px">
+        <div class="modal-handle"></div>
+        <div class="modal-hdr"><h2 class="modal-title">Chia tiền & VietQR</h2><button class="modal-x" onclick="closeQrModal()"><i class="ri-close-line"></i></button></div>
+        <div class="modal-body" style="text-align:center" id="qrModalBody">
+            <!-- Render động nội dung QR và thông tin chuyển khoản -->
+        </div>
+    </div>
+</div>
 
-    <script src="js/app.js"></script>
+<!-- ===== MODAL GÓP QUỸ PHÒNG TRỌ ===== -->
+<div class="modal-bg" id="fundModal">
+    <div class="modal-box" style="max-width:380px">
+        <div class="modal-handle"></div>
+        <div class="modal-hdr"><h2 class="modal-title">Góp Quỹ Phòng</h2><button class="modal-x" onclick="closeFundModal()"><i class="ri-close-line"></i></button></div>
+        <div class="modal-body">
+            <form id="fundForm" onsubmit="handleFundContribution(event)">
+                <div class="fg">
+                    <label class="fl">Người nộp</label>
+                    <select class="fc" id="fundPayerSelect">
+                        <option value="1">Nguyễn Thúy Hiền (Trưởng phòng)</option>
+                        <option value="2">Lê Thị Dịu</option>
+                        <option value="3">Lê Ngọc Duy</option>
+                        <option value="4">Lê Tiến Quân</option>
+                        <option value="5">Nguyễn Việt Anh</option>
+                    </select>
+                </div>
+                <div class="fg">
+                    <label class="fl">Số tiền (₫)</label>
+                    <input type="number" id="fundAmountInput" class="fc" value="500000" required style="font-size:1.15rem;font-weight:800;text-align:center">
+                    <div style="display:flex;gap:0.3rem;margin-top:0.4rem">
+                        <button type="button" class="btn btn-sm btn-s" style="flex:1" onclick="document.getElementById('fundAmountInput').value=200000">200.000 ₫</button>
+                        <button type="button" class="btn btn-sm btn-s" style="flex:1" onclick="document.getElementById('fundAmountInput').value=500000">500.000 ₫</button>
+                        <button type="button" class="btn btn-sm btn-s" style="flex:1" onclick="document.getElementById('fundAmountInput').value=1000000">1.000.000 ₫</button>
+                    </div>
+                </div>
+                <div class="fg">
+                    <label class="fl">Ghi chú</label>
+                    <input type="text" id="fundNoteInput" class="fc" value="Quỹ phòng T10">
+                </div>
+                <button type="submit" class="btn btn-p btn-block" style="margin-top:0.4rem"><i class="ri-check-line"></i> Nộp quỹ</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL CHỈNH SỬA THÔNG TIN CÁ NHÂN ===== -->
+<div class="modal-bg" id="editProfileModal">
+    <div class="modal-box" style="max-width:380px">
+        <div class="modal-handle"></div>
+        <div class="modal-hdr">
+            <h2 class="modal-title">Chỉnh sửa thông tin</h2>
+            <button class="modal-x" onclick="closeEditProfileModal()"><i class="ri-close-line"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="profileForm" onsubmit="saveProfile(event)">
+                <div class="fg">
+                    <label class="fl">Họ và tên</label>
+                    <input type="text" id="setUserName" class="fc" placeholder="Họ và tên" required>
+                </div>
+                <div class="fg">
+                    <label class="fl">Số điện thoại</label>
+                    <input type="tel" id="setUserPhone" class="fc" placeholder="Số điện thoại" required>
+                </div>
+                <div class="fg">
+                    <label class="fl">Địa chỉ Email</label>
+                    <input type="email" id="setUserEmail" class="fc" placeholder="Email" required>
+                </div>
+                <button type="submit" class="btn btn-p btn-block" style="margin-top:0.6rem">
+                    <i class="ri-check-line"></i> Lưu thay đổi
+                </button>
+            </form>
+        </div>
+    </div>
+<!-- ===== MODAL TRUNG TÂM THÔNG BÁO ===== -->
+<div class="modal-bg" id="notifModal">
+    <div class="modal-box" style="max-width:420px">
+        <div class="modal-handle"></div>
+        <div class="modal-hdr">
+            <h2 class="modal-title" style="display:flex;align-items:center;gap:0.4rem;font-size:1.05rem">
+                <i class="ri-notification-3-line" style="color:var(--primary)"></i> Trung Tâm Thông Báo
+            </h2>
+            <button class="modal-x" onclick="closeNotificationModal()"><i class="ri-close-line"></i></button>
+        </div>
+        <div class="modal-body" style="padding:0.75rem 1rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+                <span style="font-size:0.78rem;color:var(--text3);font-weight:600">Thông báo mới nhất</span>
+                <button type="button" class="btn btn-s btn-sm" style="font-size:0.72rem;padding:0.2rem 0.5rem" onclick="markAllNotifsRead()">Đọc tất cả</button>
+            </div>
+            <div id="notifList" style="display:flex;flex-direction:column;gap:0.6rem">
+                <!-- item 1: Quỹ nhóm -->
+                <div class="notif-item" style="display:flex;gap:0.65rem;padding:0.65rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);cursor:pointer" onclick="closeNotificationModal();go('group')">
+                    <div style="width:36px;height:36px;border-radius:10px;background:#e0e7ff;color:#4338ca;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ri-community-line" style="font-size:1.1rem"></i></div>
+                    <div style="flex:1">
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <strong style="font-size:0.83rem;color:var(--text)">Nhắc đóng quỹ nhóm</strong>
+                            <span class="notif-dot" style="width:7px;height:7px;border-radius:50%;background:var(--primary)"></span>
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px">Đến kỳ đóng quỹ sinh hoạt chung tháng này. Bấm để nộp ngay.</div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+                            <span style="font-size:0.68rem;color:var(--text3)">15 phút trước</span>
+                            <span style="font-size:0.7rem;color:var(--primary);font-weight:700">Nộp ngay →</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- item 2: Ngân sách -->
+                <div class="notif-item" style="display:flex;gap:0.65rem;padding:0.65rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);cursor:pointer">
+                    <div style="width:36px;height:36px;border-radius:10px;background:#fef3c7;color:#d97706;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ri-alert-line" style="font-size:1.1rem"></i></div>
+                    <div style="flex:1">
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <strong style="font-size:0.83rem;color:var(--text)">Cảnh báo ngân sách Ăn uống</strong>
+                            <span class="notif-dot" style="width:7px;height:7px;border-radius:50%;background:var(--primary)"></span>
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px">Bạn đã tiêu 82% hạn mức ngân sách Ăn uống trong tháng.</div>
+                        <div style="font-size:0.68rem;color:var(--text3);margin-top:4px">2 giờ trước</div>
+                    </div>
+                </div>
+                <!-- item 3: Nhắc quét hóa đơn -->
+                <div class="notif-item" style="display:flex;gap:0.65rem;padding:0.65rem;background:var(--card);border-radius:12px;border:1px solid var(--border);cursor:pointer" onclick="closeNotificationModal();openModal('camera')">
+                    <div style="width:36px;height:36px;border-radius:10px;background:#d1fae5;color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ri-qr-scan-2-line" style="font-size:1.1rem"></i></div>
+                    <div style="flex:1">
+                        <strong style="font-size:0.83rem;color:var(--text)">Nhắc quét hóa đơn tối nay ✨</strong>
+                        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px">Đừng quên quét hóa đơn các khoản chi trong ngày để sổ sách luôn chính xác.</div>
+                        <div style="font-size:0.68rem;color:var(--text3);margin-top:4px">Hôm qua 21:00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-box" id="toastBox"></div>
+<script src="js/app.js"></script>
 </body>
 </html>
