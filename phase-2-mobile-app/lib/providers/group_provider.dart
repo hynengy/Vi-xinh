@@ -9,6 +9,7 @@ class GroupProvider with ChangeNotifier {
   bool _isLoading = false;
 
   GroupModel? get group => _group;
+  GroupModel? get currentGroup => _group;
   bool get isLoading => _isLoading;
 
   Future<void> loadGroupDetail(int groupId) async {

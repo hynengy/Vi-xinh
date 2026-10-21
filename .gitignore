@@ -72,14 +72,24 @@ yarn-error.log*
 
 # Flutter / Mobile (Phase 2)
 .dart_tool/
+**/.dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
 build/
+**/build/
 ios/Flutter/App.framework
 ios/Flutter/Flutter.framework
 .gradle/
 **/.gradle/
+.kotlin/
+**/.kotlin/
+local.properties
+**/local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
 
 # Tests & Caches
 .pytest_cache/

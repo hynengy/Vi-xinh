@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ví Xinh - Quản Lý Tài Chính Thông Minh</title>
     <meta name="description" content="Ví Xinh - Ứng dụng quản lý chi tiêu cá nhân & nhóm thông minh.">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=2.0.5">
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#FF6584">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -62,6 +62,19 @@
                     <a href="javascript:void(0)" onclick="openForgotPwModal()">Quên mật khẩu?</a>
                 </div>
                 <button type="submit" class="btn-login" id="loginBtn"><span id="loginBtnTxt">Đăng nhập</span></button>
+                <div class="bio-auth-divider">
+                    <span>hoặc đăng nhập bằng</span>
+                </div>
+                <div class="bio-auth-buttons">
+                    <button type="button" class="btn-bio-login" id="btnFingerprintLogin" onclick="handleFingerprintLogin()" title="Đăng nhập bằng Vân tay">
+                        <span class="bio-icon-glow bio-glow-finger"><i class="ri-fingerprint-line"></i></span>
+                        <span>Vân tay</span>
+                    </button>
+                    <button type="button" class="btn-bio-login" id="btnFaceIdLogin" onclick="handleFaceIdLogin()" title="Đăng nhập bằng Face ID">
+                        <span class="bio-icon-glow bio-glow-face"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block"><path d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v2M16 20h2a2 2 0 0 0 2-2v-2M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 0 0 5 0"/></svg></span>
+                        <span>Face ID</span>
+                    </button>
+                </div>
             </form>
 
             <!-- Form Đăng Ký Tài Khoản -->
@@ -117,16 +130,6 @@
 
                 <button type="submit" class="btn-login" id="regBtn"><span id="regBtnTxt">Đăng ký</span></button>
             </form>
-
-            <!-- Tài khoản mẫu hỗ trợ kiểm thử -->
-            <div class="auth-demo-bar">
-                <span class="auth-demo-caption">Tài khoản mẫu:</span>
-                <div class="auth-demo-chips">
-                    <button type="button" class="auth-demo-chip" onclick="quickFillAccount('hien@vixinh.vn','123456')">Nguyễn Thúy Hiền</button>
-                    <button type="button" class="auth-demo-chip" onclick="quickFillAccount('diu@vixinh.vn','123456')">Lê Thị Dịu</button>
-                    <button type="button" class="auth-demo-chip" onclick="quickFillAccount('duy@vixinh.vn','123456')">Lê Ngọc Duy</button>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -193,7 +196,7 @@
                     <div><div class="hdr-greeting" id="greeting">Xin chào</div><div class="hdr-name" id="uName">Người dùng</div></div>
                 </div>
                 <div class="hdr-actions">
-                    <button class="hdr-btn" onclick="openNotificationModal()" title="Thông báo"><i class="ri-notification-3-line"></i><span class="dot"></span></button>
+                    <button class="hdr-btn" onclick="openNotificationModal()" title="Thông báo"><i class="ri-notification-3-line"></i><span class="dot" id="hdrNotifDot"></span></button>
                     <button class="hdr-btn" onclick="go('settings')" title="Cài đặt"><i class="ri-settings-3-line"></i></button>
                     <button class="hdr-btn" onclick="handleLogout()" title="Đăng xuất"><i class="ri-logout-box-r-line"></i></button>
                 </div>
@@ -323,8 +326,41 @@
 
     <!-- HISTORY -->
     <div class="pv" id="pgHist">
-        <div class="top-bar"><button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button><span class="top-title">Lịch sử</span></div>
-        <div class="sec" style="margin-top:0.7rem" id="allTx"></div>
+        <div class="top-bar">
+            <button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button>
+            <span class="top-title">Lịch Sử Giao Dịch</span>
+        </div>
+        <div class="sec" style="margin-top:0.7rem">
+            <!-- Search & Filter Card -->
+            <div class="hist-filter-card" style="background:var(--card);border-radius:var(--r-lg);padding:0.75rem;box-shadow:var(--sh-card);margin-bottom:0.75rem;border:1px solid var(--border)">
+                <div style="position:relative;display:flex;align-items:center;margin-bottom:0.55rem">
+                    <i class="ri-search-line" style="position:absolute;left:10px;color:var(--text3);font-size:0.95rem"></i>
+                    <input type="text" id="txSearchInput" class="fc" style="padding-left:32px;padding-right:28px;height:36px;font-size:0.8rem;border-radius:18px" placeholder="Tìm theo tên quán, món ăn, số tiền..." oninput="filterTransactions()">
+                    <button type="button" id="btnClearTxSearch" style="position:absolute;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;display:none;font-size:0.9rem" onclick="clearTxSearch()"><i class="ri-close-circle-fill"></i></button>
+                </div>
+                <div style="display:flex;gap:0.35rem;overflow-x:auto;padding-bottom:0.2rem;align-items:center">
+                    <button type="button" class="hist-filter-pill active" data-type="all" onclick="setHistFilterType('all', this)">Tất cả</button>
+                    <button type="button" class="hist-filter-pill" data-type="expense" onclick="setHistFilterType('expense', this)">Khoản chi</button>
+                    <button type="button" class="hist-filter-pill" data-type="income" onclick="setHistFilterType('income', this)">Khoản thu</button>
+                    <select id="histCatSelect" class="fc" style="width:auto;height:28px;padding:0.1rem 0.5rem;font-size:0.7rem;border-radius:14px;background:var(--bg);margin-left:auto" onchange="filterTransactions()">
+                        <option value="all">Tất cả danh mục</option>
+                        <option value="food">Ăn uống</option>
+                        <option value="transport">Di chuyển</option>
+                        <option value="shopping">Mua sắm</option>
+                        <option value="entertainment">Giải trí</option>
+                        <option value="health">Sức khỏe</option>
+                        <option value="education">Học tập</option>
+                        <option value="bills">Hóa đơn</option>
+                        <option value="other">Khác</option>
+                    </select>
+                </div>
+                <div id="histSummaryBar" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.55rem;padding-top:0.45rem;border-top:1px solid var(--divider);font-size:0.72rem;color:var(--text3)">
+                    <span id="histCountTxt">14 giao dịch</span>
+                    <span id="histAmtTxt">Chi: <strong style="color:var(--danger)">-3.750.000 ₫</strong> · Thu: <strong style="color:var(--success)">+12.000.000 ₫</strong></span>
+                </div>
+            </div>
+            <div id="allTx"></div>
+        </div>
     </div>
 
     <!-- BUDGET -->
@@ -458,12 +494,12 @@
                 </button>
             </div>
 
-            <!-- VietQR / MB Bank Card -->
-            <div class="bank-card-clean" onclick="copyBankAccount()" title="Nhấn để sao chép số tài khoản">
+            <!-- Tài khoản nhận tiền (Chỉ hiển thị khi người dùng tự cấu hình, mặc định ẩn) -->
+            <div id="userBankCard" class="bank-card-clean" onclick="copyBankAccount()" style="display:none;margin-bottom:1.2rem" title="Nhấn để sao chép số tài khoản">
                 <div class="bcc-icon"><i class="ri-qr-code-line"></i></div>
                 <div class="bcc-info">
-                    <div class="bcc-title">MB Bank · 0912 345 678</div>
-                    <div class="bcc-sub">NGUYEN THUY HIEN · Nhận quỹ & chia tiền</div>
+                    <div class="bcc-title" id="userBankTitle">Chưa liên kết ngân hàng</div>
+                    <div class="bcc-sub" id="userBankSub">Nhận quỹ & chia tiền</div>
                 </div>
                 <button type="button" class="bcc-copy-btn" title="Sao chép STK">
                     <i class="ri-file-copy-line"></i>
@@ -488,10 +524,27 @@
                 <div class="sg-item">
                     <div class="sg-left">
                         <div class="sg-icon sgi-shield"><i class="ri-fingerprint-line"></i></div>
-                        <div class="sg-label">Bảo mật sinh trắc học (Face ID / Vân tay)</div>
+                        <div>
+                            <div class="sg-label">Xác thực Vân tay</div>
+                            <div class="sg-sub" id="fingerprintStatusTxt" style="font-size:0.7rem;color:var(--text3)">Chưa kích hoạt</div>
+                        </div>
                     </div>
                     <label class="clean-switch">
-                        <input type="checkbox" checked id="prefBiometric" onchange="toggleBiometricsWeb(event)">
+                        <input type="checkbox" id="prefFingerprint" onchange="handleFingerprintToggle(event)">
+                        <span class="clean-slider"></span>
+                    </label>
+                </div>
+
+                <div class="sg-item">
+                    <div class="sg-left">
+                        <div class="sg-icon sgi-shield" style="background:#f5f3ff;color:#7c3aed"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block"><path d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v2M16 20h2a2 2 0 0 0 2-2v-2M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 0 0 5 0"/></svg></div>
+                        <div>
+                            <div class="sg-label">Xác thực Face ID</div>
+                            <div class="sg-sub" id="faceIdStatusTxt" style="font-size:0.7rem;color:var(--text3)">Chưa kích hoạt</div>
+                        </div>
+                    </div>
+                    <label class="clean-switch">
+                        <input type="checkbox" id="prefFaceId" onchange="handleFaceIdToggle(event)">
                         <span class="clean-slider"></span>
                     </label>
                 </div>
@@ -502,38 +555,6 @@
                         <div class="sg-label">Quét hóa đơn OCR</div>
                     </div>
                     <span class="sg-badge-green">On-Device Offline</span>
-                </div>
-            </div>
-
-            <!-- Grouped Cupertino Settings Section 2: Giao Diện -->
-            <div class="setting-group-box">
-                <div class="sg-header">GIAO DIỆN MÀU SẮC</div>
-                <div class="theme-pills">
-                    <button type="button" class="theme-pill active" data-theme="pink-gold" onclick="setTheme('pink-gold')">
-                        <span class="tp-dot" style="background:#FF6584"></span> Rose Gold
-                    </button>
-                    <button type="button" class="theme-pill" data-theme="violet" onclick="setTheme('violet')">
-                        <span class="tp-dot" style="background:#7C5CFC"></span> Tím
-                    </button>
-                    <button type="button" class="theme-pill" data-theme="dark" onclick="setTheme('dark')">
-                        <span class="tp-dot" style="background:#262135"></span> Chế độ tối
-                    </button>
-                </div>
-            </div>
-
-            <!-- Grouped Cupertino Settings Section 3: Chuyển Tài Khoản -->
-            <div class="setting-group-box">
-                <div class="sg-header">CHUYỂN TÀI KHOẢN (THÀNH VIÊN)</div>
-                <div class="user-switch-pills">
-                    <button type="button" class="user-pill active" onclick="switchUser('hien@vixinh.vn')">
-                        <span class="up-avatar">👛</span> Thúy Hiền
-                    </button>
-                    <button type="button" class="user-pill" onclick="switchUser('diu@vixinh.vn')">
-                        <span class="up-avatar">🌸</span> Thị Dịu
-                    </button>
-                    <button type="button" class="user-pill" onclick="switchUser('duy@vixinh.vn')">
-                        <span class="up-avatar">👑</span> Ngọc Duy
-                    </button>
                 </div>
             </div>
 
@@ -604,32 +625,32 @@
                     <button type="submit" class="btn btn-p btn-block" style="margin-top:0.4rem"><i class="ri-check-line"></i> Lưu</button>
                 </form>
             </div>
-            <!-- TAB CHỤP ẢNH: CHỈ CÓ CAMERA VIEW VÀ NÚT CHỤP, KHÔNG CÓ KHUNG TẢI ẢNH -->
+            <!-- TAB CHỤP ẢNH: HỖ TRỢ CAMERA TRỰC TIẾP TRÊN ĐIỆN THOẠI & WEBCAM -->
             <div id="fCamera" class="hidden">
-                <div class="cam-box" id="camBox">
+                <input type="file" id="mobileCamIn" accept="image/*" capture="environment" style="display:none" onchange="handleFile(event)">
+                <div class="cam-box" id="camBox" onclick="handleCamBoxClick()">
                     <video id="camV" autoplay playsinline></video>
-                    <div class="cam-frame"></div>
-                    <div class="cam-hint"><i class="ri-scan-2-line"></i> Căn hóa đơn vào khung</div>
+                    <div class="cam-frame" id="camFrame"></div>
+                    <div class="cam-hint" id="camHint"><i class="ri-scan-2-line"></i> Căn hóa đơn vào khung</div>
+                    <div id="camFallbackBox" class="cam-fallback-box" style="display:none">
+                        <div class="cam-fallback-icon"><i class="ri-camera-3-fill"></i></div>
+                        <div class="cam-fallback-title">Mở Camera iPhone / Android</div>
+                        <div class="cam-fallback-sub">Chạm vào đây để mở máy ảnh chụp hóa đơn thật</div>
+                        <button type="button" class="btn btn-sm btn-p" style="margin-top:0.6rem;pointer-events:none"><i class="ri-camera-lens-line"></i> Bấm để chụp ngay</button>
+                    </div>
                 </div>
                 <canvas id="camC" style="display:none"></canvas>
-                <button id="capBtn" class="btn btn-p btn-block" onclick="capPhoto()"><i class="ri-camera-lens-line"></i> Chụp ảnh</button>
-                <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
-                    <button type="button" class="btn btn-sm btn-s" style="flex:1;font-size:0.75rem" onclick="loadSampleRealReceipt()"><i class="ri-cup-line" style="color:var(--primary)"></i> Cafe 145.000 ₫</button>
-                    <button type="button" class="btn btn-sm btn-s" style="flex:1;font-size:0.75rem" onclick="loadSampleRoomRentInvoice()"><i class="ri-home-wifi-line" style="color:#059669"></i> Tiền phòng 4.500.000 ₫</button>
+                <div style="margin-top:0.75rem">
+                    <button id="capBtn" class="btn btn-p btn-block" onclick="capPhoto()"><i class="ri-camera-lens-line"></i> Chụp ảnh hóa đơn</button>
                 </div>
-                <button type="button" onclick="swTab('upload')" style="background:none;border:none;color:var(--text3);font-size:0.72rem;cursor:pointer;margin-top:0.5rem;display:block;width:100%;text-align:center"><i class="ri-upload-cloud-line"></i> Chọn ảnh từ máy</button>
             </div>
             <!-- TAB TẢI ẢNH -->
             <div id="fUpload" class="hidden">
                 <div class="upload" id="dropZone" onclick="document.getElementById('fileIn').click()">
-                    <div class="upload-ic"><i class="ri-scan-2-line"></i></div>
-                    <div class="upload-txt">Tải ảnh lên</div>
-                    <div class="upload-sub">JPG, PNG, WEBP</div>
+                    <div class="upload-ic"><i class="ri-upload-cloud-line"></i></div>
+                    <div class="upload-txt">Chọn ảnh từ thư viện / Tải lên</div>
+                    <div class="upload-sub">Hỗ trợ JPG, PNG, WEBP từ thiết bị</div>
                     <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="handleFile(event)">
-                </div>
-                <div style="display:flex;gap:0.4rem;margin-top:0.5rem">
-                    <button type="button" class="btn btn-sm btn-s" style="flex:1;font-size:0.75rem" onclick="loadSampleRealReceipt()"><i class="ri-cup-line" style="color:var(--primary)"></i> Cafe 145.000 ₫</button>
-                    <button type="button" class="btn btn-sm btn-s" style="flex:1;font-size:0.75rem" onclick="loadSampleRoomRentInvoice()"><i class="ri-home-wifi-line" style="color:#059669"></i> Tiền phòng 4.500.000 ₫</button>
                 </div>
             </div>
             <!-- KẾT QUẢ QUÉT ẢNH & OCR -->
@@ -648,10 +669,33 @@
                         <span style="font-size:0.78rem;color:var(--text3)">Tổng tiền:</span>
                         <strong style="font-size:1.1rem;color:var(--danger)" id="ocrAmt">145.000 ₫</strong>
                     </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
                         <span style="font-size:0.78rem;color:var(--text3)">Danh mục:</span>
                         <span class="badge" id="ocrCatBadge" style="background:#FFF9EB;color:#D49A2B;font-size:0.72rem;font-weight:700"><i class="ri-restaurant-line"></i> Ăn uống</span>
                     </div>
+
+                    <!-- DANH SÁCH TỪNG MÓN BÓC TÁCH ĐƯỢC -->
+                    <div id="ocrItemsBox" style="margin-top:0.5rem;padding:0.55rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r-md)">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+                            <span style="font-size:0.75rem;font-weight:700;color:var(--text)"><i class="ri-cup-line" style="color:var(--primary)"></i> Từng món trên bill:</span>
+                            <span id="ocrItemsCountBadge" style="font-size:0.68rem;color:var(--primary);font-weight:700">0 món</span>
+                        </div>
+                        <div id="ocrItemsList" style="display:flex;flex-direction:column;gap:0.3rem;max-height:140px;overflow-y:auto">
+                            <!-- Render danh sách từng món -->
+                        </div>
+                    </div>
+
+                    <!-- XEM TOÀN VĂN HÓA ĐƠN OCR (KHÔNG THIẾU 1 CHỮ) -->
+                    <details id="ocrRawDetails" style="margin-top:0.45rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.4rem 0.6rem">
+                        <summary style="font-size:0.72rem;font-weight:700;color:var(--primary);cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+                            <span><i class="ri-file-text-line"></i> Toàn văn hóa đơn (OCR gốc)</span>
+                            <span style="font-size:0.65rem;color:var(--text3);font-weight:normal">Chạm để xem</span>
+                        </summary>
+                        <div style="margin-top:0.4rem">
+                            <pre id="ocrRawTextContent" style="padding:0.5rem;background:#0d1117;color:#c9d1d9;border-radius:var(--r-sm);font-size:0.7rem;line-height:1.4;max-height:150px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;font-family:monospace"></pre>
+                            <button type="button" class="btn btn-sm btn-s" style="margin-top:0.35rem;width:100%;font-size:0.7rem;padding:0.3rem" onclick="copyFullOcrText()"><i class="ri-file-copy-line"></i> Sao chép toàn bộ chữ</button>
+                        </div>
+                    </details>
 
                     <!-- 3 CHẾ ĐỘ PHÂN BỔ: CÁ NHÂN | CHIA TIỀN | QUỸ CHUNG -->
                     <div style="margin-top:0.6rem;padding-top:0.55rem;border-top:1px solid var(--border)">
@@ -677,7 +721,18 @@
 
                         <!-- 2. CHIA TIỀN -->
                         <div id="scopeSplitBox" class="hidden" style="display:flex;flex-direction:column;gap:0.4rem">
-                            <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.55rem 0.75rem">
+                            <!-- CHỌN CHẾ ĐỘ: CHIA ĐỀU HOẶC CHIA THEO MÓN -->
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem">
+                                <button type="button" class="btn btn-sm btn-p" id="btnSplitModeEqual" style="font-size:0.72rem;padding:0.4rem 0.3rem" onclick="setSplitMode('equal')">
+                                    <i class="ri-equal-line"></i> Chia đều
+                                </button>
+                                <button type="button" class="btn btn-sm btn-s" id="btnSplitModeItem" style="font-size:0.72rem;padding:0.4rem 0.3rem" onclick="setSplitMode('item')">
+                                    <i class="ri-cup-line"></i> Chia theo món
+                                </button>
+                            </div>
+
+                            <!-- 2.A CHIA ĐỀU -->
+                            <div id="splitEqualContainer" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.55rem 0.75rem">
                                 <div style="display:flex;justify-content:space-between;align-items:center">
                                     <span style="font-size:0.78rem;font-weight:600;color:var(--text)">Số người:</span>
                                     <div class="split-stepper">
@@ -692,8 +747,22 @@
                                 </div>
                             </div>
 
-                            <!-- 2 LỰA CHỌN THANH TOÁN -->
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem">
+                            <!-- 2.B CHIA THEO MÓN / TỪNG CỐC -->
+                            <div id="splitItemContainer" class="hidden" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.55rem 0.65rem">
+                                <div style="font-size:0.72rem;color:var(--text3);margin-bottom:0.4rem">Chọn ai uống cốc nào / ăn món nào:</div>
+                                <div id="splitItemsAssignList" style="display:flex;flex-direction:column;gap:0.35rem;max-height:160px;overflow-y:auto">
+                                    <!-- Render các món kèm dropdown chọn người -->
+                                </div>
+                                <div id="splitItemsMemberSummary" style="margin-top:0.45rem;padding-top:0.4rem;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:0.25rem">
+                                    <!-- Tổng kết tiền từng người -->
+                                </div>
+                                <button type="button" class="btn btn-sm btn-p btn-block" style="margin-top:0.45rem;font-size:0.75rem" onclick="openItemizedSplitQrModal()">
+                                    <i class="ri-qr-code-line"></i> Tạo mã VietQR từng người
+                                </button>
+                            </div>
+
+                            <!-- 2 LỰA CHỌN THANH TOÁN (CHO CHIA ĐỀU) -->
+                            <div id="splitRoleCards" style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem">
                                 <div class="split-option-card active" id="optSplitMineOnly" onclick="setSplitPayRole('mine_only')" style="flex-direction:column;padding:0.55rem 0.65rem">
                                     <div style="display:flex;align-items:center;gap:0.3rem">
                                         <input type="radio" name="splitPayRole" value="mine_only" checked style="margin:0">
@@ -809,12 +878,22 @@
                     <label class="fl">Địa chỉ Email</label>
                     <input type="email" id="setUserEmail" class="fc" placeholder="Email" required>
                 </div>
+                <div class="fg">
+                    <label class="fl">Ngân hàng nhận tiền (Tùy chọn)</label>
+                    <input type="text" id="setUserBankName" class="fc" placeholder="VD: Vietcombank, Techcombank... (để trống nếu không dùng)">
+                </div>
+                <div class="fg">
+                    <label class="fl">Số tài khoản nhận tiền (Tùy chọn)</label>
+                    <input type="text" id="setUserBankAccount" class="fc" placeholder="Số tài khoản (để trống nếu không dùng)">
+                </div>
                 <button type="submit" class="btn btn-p btn-block" style="margin-top:0.6rem">
                     <i class="ri-check-line"></i> Lưu thay đổi
                 </button>
             </form>
         </div>
     </div>
+</div>
+
 <!-- ===== MODAL TRUNG TÂM THÔNG BÁO ===== -->
 <div class="modal-bg" id="notifModal">
     <div class="modal-box" style="max-width:420px">
@@ -827,52 +906,194 @@
         </div>
         <div class="modal-body" style="padding:0.75rem 1rem">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
-                <span style="font-size:0.78rem;color:var(--text3);font-weight:600">Thông báo mới nhất</span>
-                <button type="button" class="btn btn-s btn-sm" style="font-size:0.72rem;padding:0.2rem 0.5rem" onclick="markAllNotifsRead()">Đọc tất cả</button>
+                <span style="font-size:0.78rem;color:var(--text3);font-weight:600" id="notifCountLabel">Thông báo mới nhất</span>
+                <div style="display:flex;gap:0.35rem">
+                    <button type="button" class="btn btn-s btn-sm" id="btnMarkAllRead" style="font-size:0.7rem;padding:0.2rem 0.5rem" onclick="markAllNotifsRead()">Đọc tất cả</button>
+                    <button type="button" class="btn btn-s btn-sm" id="btnClearAllNotifs" style="font-size:0.7rem;padding:0.2rem 0.5rem;color:var(--danger)" onclick="clearAllNotifs()">Xóa tất cả</button>
+                </div>
             </div>
-            <div id="notifList" style="display:flex;flex-direction:column;gap:0.6rem">
-                <!-- item 1: Quỹ nhóm -->
-                <div class="notif-item" style="display:flex;gap:0.65rem;padding:0.65rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);cursor:pointer" onclick="closeNotificationModal();go('group')">
-                    <div style="width:36px;height:36px;border-radius:10px;background:#e0e7ff;color:#4338ca;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ri-community-line" style="font-size:1.1rem"></i></div>
-                    <div style="flex:1">
-                        <div style="display:flex;justify-content:space-between;align-items:center">
-                            <strong style="font-size:0.83rem;color:var(--text)">Nhắc đóng quỹ nhóm</strong>
-                            <span class="notif-dot" style="width:7px;height:7px;border-radius:50%;background:var(--primary)"></span>
-                        </div>
-                        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px">Đến kỳ đóng quỹ sinh hoạt chung tháng này. Bấm để nộp ngay.</div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
-                            <span style="font-size:0.68rem;color:var(--text3)">15 phút trước</span>
-                            <span style="font-size:0.7rem;color:var(--primary);font-weight:700">Nộp ngay →</span>
-                        </div>
+            <div id="notifList" style="display:flex;flex-direction:column;gap:0.6rem;max-height:60vh;overflow-y:auto;padding-right:2px">
+                <!-- Rendered dynamically by renderNotifications() -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL CHI TIẾT GIAO DỊCH ===== -->
+<div class="modal-bg" id="txDetailModal">
+    <div class="modal-box" style="max-width:380px">
+        <div class="modal-handle"></div>
+        <div class="modal-hdr">
+            <h2 class="modal-title" style="display:flex;align-items:center;gap:0.4rem;font-size:1.05rem">
+                <i class="ri-file-list-3-line" style="color:var(--primary)"></i> Chi Tiết Giao Dịch
+            </h2>
+            <button class="modal-x" onclick="closeTxDetailModal()"><i class="ri-close-line"></i></button>
+        </div>
+        <div class="modal-body" style="padding:0.6rem 1.2rem 1.6rem">
+            <div style="text-align:center;padding:0.75rem 0;border-bottom:1px solid var(--divider);margin-bottom:0.9rem">
+                <div style="font-size:1.75rem;font-weight:900" id="tdAmt">-145.000 ₫</div>
+                <div style="font-size:0.95rem;font-weight:700;color:var(--text);margin-top:0.2rem" id="tdName">Highlands Coffee</div>
+                <div style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:var(--r-pill);font-size:0.7rem;font-weight:700;margin-top:0.4rem" id="tdCatBadge">
+                    <i class="ri-cup-line"></i> Ăn uống
+                </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.65rem;font-size:0.78rem">
+                <div style="display:flex;justify-content:space-between">
+                    <span style="color:var(--text3)">Thời gian giao dịch:</span>
+                    <strong id="tdTime">20/10/2026 10:15</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                    <span style="color:var(--text3)">Phạm vi sổ sách:</span>
+                    <strong id="tdScope">Ví cá nhân</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                    <span style="color:var(--text3)">Ghi chú:</span>
+                    <span id="tdNote" style="color:var(--text2);text-align:right;max-width:210px">Không có</span>
+                </div>
+            </div>
+            <div style="margin-top:1.25rem;display:flex;gap:0.5rem">
+                <button type="button" class="btn btn-s btn-block" style="color:var(--danger);border-color:rgba(255,90,121,0.3)" onclick="confirmDeleteCurrentTx()">
+                    <i class="ri-delete-bin-line"></i> Xóa giao dịch
+                </button>
+                <button type="button" class="btn btn-p btn-block" onclick="closeTxDetailModal()">
+                    <i class="ri-check-line"></i> Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL NẠP TIẾT KIỆM (HEO ĐẤT) ===== -->
+<div class="modal-bg" id="savingsDepositModal">
+    <div class="modal-box" style="max-width:380px">
+        <div class="modal-handle"></div>
+        <div class="modal-hdr">
+            <h2 class="modal-title" style="display:flex;align-items:center;gap:0.4rem;font-size:1.05rem">
+                <i class="ri-safe-2-line" style="color:var(--primary)"></i> Tích Lũy Tiết Kiệm
+            </h2>
+            <button class="modal-x" onclick="closeSavingsDepositModal()"><i class="ri-close-line"></i></button>
+        </div>
+        <div class="modal-body" style="padding:0.75rem 1.2rem 1.6rem">
+            <div style="background:var(--bg);border-radius:12px;padding:0.8rem;margin-bottom:0.9rem;border:1px solid var(--border)">
+                <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.45rem">
+                    <div id="sdGoalIcon" style="font-size:1.4rem">🐷</div>
+                    <div>
+                        <div id="sdGoalName" style="font-weight:700;font-size:0.88rem;color:var(--text)">Mục tiêu tiết kiệm</div>
+                        <div style="font-size:0.7rem;color:var(--text3)">Mục tiêu: <strong id="sdGoalTarget">15.000.000 ₫</strong></div>
                     </div>
                 </div>
-                <!-- item 2: Ngân sách -->
-                <div class="notif-item" style="display:flex;gap:0.65rem;padding:0.65rem;background:var(--bg);border-radius:12px;border:1px solid var(--border);cursor:pointer">
-                    <div style="width:36px;height:36px;border-radius:10px;background:#fef3c7;color:#d97706;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ri-alert-line" style="font-size:1.1rem"></i></div>
-                    <div style="flex:1">
-                        <div style="display:flex;justify-content:space-between;align-items:center">
-                            <strong style="font-size:0.83rem;color:var(--text)">Cảnh báo ngân sách Ăn uống</strong>
-                            <span class="notif-dot" style="width:7px;height:7px;border-radius:50%;background:var(--primary)"></span>
-                        </div>
-                        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px">Bạn đã tiêu 82% hạn mức ngân sách Ăn uống trong tháng.</div>
-                        <div style="font-size:0.68rem;color:var(--text3);margin-top:4px">2 giờ trước</div>
-                    </div>
+                <div class="sav-bar" style="margin-bottom:0.25rem"><div class="sav-bar-fill" id="sdGoalBar" style="width:20%;background:var(--primary)"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.68rem">
+                    <span id="sdGoalCurrent">Đã có: 2.500.000 ₫</span>
+                    <span id="sdGoalPercent" style="font-weight:700;color:var(--primary)">20%</span>
                 </div>
-                <!-- item 3: Nhắc quét hóa đơn -->
-                <div class="notif-item" style="display:flex;gap:0.65rem;padding:0.65rem;background:var(--card);border-radius:12px;border:1px solid var(--border);cursor:pointer" onclick="closeNotificationModal();openModal('camera')">
-                    <div style="width:36px;height:36px;border-radius:10px;background:#d1fae5;color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ri-qr-scan-2-line" style="font-size:1.1rem"></i></div>
-                    <div style="flex:1">
-                        <strong style="font-size:0.83rem;color:var(--text)">Nhắc quét hóa đơn tối nay ✨</strong>
-                        <div style="font-size:0.75rem;color:var(--text2);margin-top:2px">Đừng quên quét hóa đơn các khoản chi trong ngày để sổ sách luôn chính xác.</div>
-                        <div style="font-size:0.68rem;color:var(--text3);margin-top:4px">Hôm qua 21:00</div>
-                    </div>
+            </div>
+
+            <div class="fg">
+                <label class="fl">Số tiền muốn nạp (₫)</label>
+                <input type="number" id="sdAmountInput" class="fc" placeholder="VD: 200000" style="font-size:1.15rem;font-weight:800;color:var(--primary)" required>
+            </div>
+
+            <!-- Quick amount chips -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.35rem;margin-bottom:1.1rem">
+                <button type="button" class="btn btn-s btn-sm" style="font-size:0.72rem;padding:0.35rem" onclick="setQuickDepositAmt(50000)">+50k</button>
+                <button type="button" class="btn btn-s btn-sm" style="font-size:0.72rem;padding:0.35rem" onclick="setQuickDepositAmt(100000)">+100k</button>
+                <button type="button" class="btn btn-s btn-sm" style="font-size:0.72rem;padding:0.35rem" onclick="setQuickDepositAmt(200000)">+200k</button>
+                <button type="button" class="btn btn-s btn-sm" style="font-size:0.72rem;padding:0.35rem" onclick="setQuickDepositAmt(500000)">+500k</button>
+                <button type="button" class="btn btn-s btn-sm" style="font-size:0.72rem;padding:0.35rem" onclick="setQuickDepositAmt(1000000)">+1.000k</button>
+                <button type="button" class="btn btn-s btn-sm" style="font-size:0.72rem;padding:0.35rem" onclick="setQuickDepositAmt(2000000)">+2.000k</button>
+            </div>
+
+            <button type="button" class="btn btn-p btn-block" onclick="confirmSavingsDeposit()">
+                <i class="ri-check-line"></i> Xác Nhận Nạp Tiền
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL XÁC THỰC SINH TRẮC HỌC (FACE ID / VÂN TAY THẬT) ===== -->
+<div class="modal-bg" id="biometricModal">
+    <div class="modal-box" style="max-width:350px;text-align:center">
+        <div class="modal-handle"></div>
+        <div style="padding:1.3rem 1.2rem 1.6rem">
+            <!-- Biometric Scanner Viewport (Camera thật hoặc Cảm biến chạm giữ) -->
+            <div class="bio-scan-wrapper" id="bioScanWrap">
+                <div class="bio-scan-pulse"></div>
+                
+                <!-- Video Stream nhận diện khuôn mặt thật -->
+                <video id="bioFaceVideo" autoplay playsinline muted style="display:none"></video>
+                <img id="bioFacePhotoPreview" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:30px;position:absolute;inset:0;z-index:1" alt="Face preview">
+                <canvas id="bioFaceCanvas" style="display:none"></canvas>
+                <input type="file" id="bioFaceFileInput" accept="image/*" capture="user" style="display:none" onchange="handleBioFaceFile(event)">
+                
+                <!-- HUD Khung ngắm khuôn mặt thật -->
+                <div class="face-cam-overlay" id="bioFaceOverlay" style="display:none">
+                    <span class="hud-corner top-left"></span>
+                    <span class="hud-corner top-right"></span>
+                    <span class="hud-corner bottom-left"></span>
+                    <span class="hud-corner bottom-right"></span>
+                    <div class="hud-scanner-grid"></div>
                 </div>
+
+                <!-- Cảm biến vân tay hoặc Icon nhận diện -->
+                <div class="bio-scan-core" id="bioScanCore">
+                    <i class="ri-fingerprint-line" id="bioScanIcon"></i>
+                </div>
+                
+                <div class="bio-scan-laser" id="bioScanLaser"></div>
+
+                <!-- Nút chuyển camera (trước / sau) cho điện thoại -->
+                <button type="button" class="btn-flip-cam" id="btnFlipBioCam" onclick="flipBioCamera(event)" style="display:none" title="Chuyển camera">
+                    <i class="ri-camera-switch-line"></i>
+                </button>
+            </div>
+            
+            <h3 id="bioModalTitle" style="font-size:1.1rem;font-weight:800;color:var(--text);margin-top:1.15rem;margin-bottom:0.35rem">
+                Xác thực Face ID / Vân tay
+            </h3>
+            <p id="bioModalDesc" style="font-size:0.78rem;color:var(--text3);line-height:1.4;margin-bottom:0.9rem">
+                Chạm và giữ cảm biến vân tay hoặc nhìn thẳng vào camera
+            </p>
+
+            <!-- Thanh tiến trình quét sinh trắc học thời gian thực -->
+            <div class="bio-progress-container" id="bioProgressContainer" style="display:none">
+                <div class="bio-progress-track">
+                    <div class="bio-progress-fill" id="bioProgressFill"></div>
+                </div>
+                <div class="bio-progress-meta">
+                    <span id="bioProgressStep">Đang khởi tạo cảm biến...</span>
+                    <span id="bioProgressPercent" style="font-weight:800">0%</span>
+                </div>
+            </div>
+
+            <!-- Dòng thông báo trạng thái nhận diện -->
+            <div id="bioModalStatus" style="font-size:0.75rem;font-weight:700;color:var(--primary);margin-top:0.7rem;margin-bottom:0.9rem;min-height:22px">
+                <span class="spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span> Đang chờ nhận diện...
+            </div>
+
+            <!-- Nút chụp ảnh chân dung thật mở camera Safari iOS (khi chạy HTTP) -->
+            <button type="button" class="btn btn-p btn-block" id="btnSnapFacePhoto" onclick="document.getElementById('bioFaceFileInput').click()" style="display:none;margin-bottom:0.55rem;background:linear-gradient(135deg, #7c3aed, #a855f7)">
+                <i class="ri-camera-fill"></i> Mở Camera iPhone Chụp Mặt Thật
+            </button>
+
+            <!-- Nút chuyển sang HTTPS cho Safari -->
+            <button type="button" class="btn btn-s btn-block" id="btnSwitchHttps" onclick="switchToHttps()" style="display:none;margin-bottom:0.55rem;font-size:0.75rem;color:#7c3aed;border-color:rgba(124,58,237,0.3)">
+                <i class="ri-lock-line"></i> Bật HTTPS để mở video trực tiếp
+            </button>
+
+            <div style="display:flex;gap:0.5rem">
+                <button type="button" class="btn btn-s btn-block" onclick="closeBiometricModal(false)">
+                    Hủy bỏ
+                </button>
+                <button type="button" class="btn btn-p btn-block" id="btnConfirmBioNow" onclick="handleBioManualConfirm()" style="display:none">
+                    <i class="ri-shield-check-line"></i> Xác thực ngay
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <div class="toast-box" id="toastBox"></div>
-<script src="js/app.js"></script>
+<script src="js/app.js?v=2.0.7"></script>
 </body>
 </html>

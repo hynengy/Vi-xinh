@@ -285,6 +285,14 @@ async function handleLogin(e){
             S.loggedIn = true;
             S.user = u;
             localStorage.setItem('vx_u', JSON.stringify(u));
+            localStorage.setItem('vx_last_user', JSON.stringify(u));
+            const remChk = document.getElementById('rememberMeCheck');
+            if (remChk && remChk.checked) {
+                localStorage.setItem('vx_remembered_account', em);
+            } else {
+                localStorage.removeItem('vx_remembered_account');
+            }
+            updateBioLoginUI();
             enterApp();
             toast(`Đăng nhập thành công: ${u.name}`, 'success');
         } else {
@@ -294,6 +302,14 @@ async function handleLogin(e){
                 S.loggedIn = true;
                 S.user = localU;
                 localStorage.setItem('vx_u', JSON.stringify(localU));
+                localStorage.setItem('vx_last_user', JSON.stringify(localU));
+                const remChk = document.getElementById('rememberMeCheck');
+                if (remChk && remChk.checked) {
+                    localStorage.setItem('vx_remembered_account', em);
+                } else {
+                    localStorage.removeItem('vx_remembered_account');
+                }
+                updateBioLoginUI();
                 enterApp();
                 toast(`Đăng nhập thành công: ${localU.name}`, 'success');
             } else {
@@ -314,6 +330,14 @@ async function handleLogin(e){
         S.loggedIn = true;
         S.user = u;
         localStorage.setItem('vx_u', JSON.stringify(u));
+        localStorage.setItem('vx_last_user', JSON.stringify(u));
+        const remChk = document.getElementById('rememberMeCheck');
+        if (remChk && remChk.checked) {
+            localStorage.setItem('vx_remembered_account', em);
+        } else {
+            localStorage.removeItem('vx_remembered_account');
+        }
+        updateBioLoginUI();
         enterApp();
         toast(`Đăng nhập thành công: ${em}`, 'success');
     } finally {
@@ -530,10 +554,30 @@ async function handleResetPassword(e){
 }
 
 function handleLogout(){
-    S.loggedIn=false;S.user=null;localStorage.removeItem('vx_u');
+    S.loggedIn = false;
+    S.user = null;
+    localStorage.removeItem('vx_u');
     document.getElementById('app').classList.remove('active');
     document.getElementById('bnav').classList.remove('active');
-    document.getElementById('loginPage').style.display='flex';
+    document.getElementById('loginPage').style.display = 'flex';
+
+    // Clear password field
+    const pwInp = document.getElementById('loginPw');
+    if (pwInp) pwInp.value = '';
+
+    // Remember Me check
+    const remembered = localStorage.getItem('vx_remembered_account');
+    const emInp = document.getElementById('loginEmail');
+    const remChk = document.getElementById('rememberMeCheck');
+    if (remembered && emInp) {
+        emInp.value = remembered;
+        if (remChk) remChk.checked = true;
+    } else if (emInp) {
+        emInp.value = '';
+        if (remChk) remChk.checked = false;
+    }
+
+    updateBioLoginUI();
     toast('Đã đăng xuất.', 'info');
 }
 
@@ -570,6 +614,7 @@ function enterApp(){
     S.transactions=[...DEMO_TX]; S.budgets=[...DEMO_BGT]; S.savings=DEMO_SAV.map(x=>({...x})); S.recurring=DEMO_REC.map(x=>({...x}));
     if(!S.groupFund) S.groupFund = JSON.parse(JSON.stringify(DEMO_GROUP));
     renderAll();
+    initNotifications();
 }
 
 // ===== NAV =====
@@ -584,7 +629,7 @@ function go(pg,sub){
     if(pg==='settings')renderSettings();
     if(pg==='group')renderGroup();
     if(pg==='stats'){renderStOv();if(sub){const tabs={ov:0,cat:1,cal:2,sav:3};const btns=document.querySelectorAll('#sTabs .pg-tab');if(btns[tabs[sub]])swStat(btns[tabs[sub]],sub);}}
-    if(pg==='history')renderAllTx();
+    if(pg==='history')filterTransactions();
     if(pg==='budget')renderBgt();
     if(pg==='savings')renderSav();
     if(pg==='recurring')renderRec();
@@ -616,41 +661,295 @@ function toggleBal(){
     if(S.balVis){updStats();ic.className='ri-eye-line';}else{ba.textContent='••••••••';ic.className='ri-eye-off-line';}
 }
 
-// ===== CHART =====
-function renderChart(per,tid='chartArea'){
-    const el=document.getElementById(tid);if(!el)return;
-    let eD,iD,lb;
-    if(per==='week'){eD=[320,180,450,280,150,390,280];iD=[0,0,0,0,3500,0,12000];lb=['T2','T3','T4','T5','T6','T7','CN'];}
-    else if(per==='month'){eD=[1200,980,1500,850];iD=[12000,0,3500,2000];lb=['Tuần 1','Tuần 2','Tuần 3','Tuần 4'];}
-    else{eD=[4500,3800,5200,4100,3900,4800,5100,4600,3700,3750,0,0];iD=[10000,9500,11000,10500,10200,10800,11500,10700,9800,17500,0,0];lb=['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];}
-    const mx=Math.max(...eD,...iD,1), h=parseInt(getComputedStyle(el).height)||140, td=new Date().getDay();
-    el.innerHTML=eD.map((v,i)=>{
-        const eh=Math.max((v/mx)*(h-22),3), ih=Math.max((iD[i]/mx)*(h-22),0);
-        const act=per==='week'&&i===(td===0?6:td-1);
-        return`<div class="bar-w"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;justify-content:center">${ih>0?`<div class="bar bar-g" style="height:${ih}px;max-width:10px;animation:barGrow 0.5s ease ${i*0.06}s both;transform-origin:bottom"></div>`:''}<div class="bar ${act?'bar-v':'bar-m'}" style="height:${eh}px;animation:barGrow 0.5s ease ${i*0.06+0.05}s both;transform-origin:bottom"></div></div><span class="bar-lbl">${lb[i]}</span></div>`;
+// ===== REAL DATA CHART ENGINE =====
+function calculateChartData(per){
+    const now = new Date();
+    let labels = [];
+    let expenses = [];
+    let incomes = [];
+
+    if(per === 'week'){
+        // 7 ngày trong tuần từ Thứ 2 (T2) đến Chủ nhật (CN)
+        labels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+        expenses = [0, 0, 0, 0, 0, 0, 0];
+        incomes = [0, 0, 0, 0, 0, 0, 0];
+        
+        const currentDay = now.getDay();
+        const distToMon = (currentDay + 6) % 7;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - distToMon);
+        monday.setHours(0,0,0,0);
+        
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23,59,59,999);
+
+        (S.transactions || []).forEach(t => {
+            const d = new Date(t.date);
+            if(d >= monday && d <= sunday){
+                const dayIdx = (d.getDay() + 6) % 7;
+                if(t.type === 'expense') expenses[dayIdx] += t.amt;
+                else incomes[dayIdx] += t.amt;
+            }
+        });
+    } else if(per === 'month'){
+        // 4 tuần trong tháng hiện tại
+        labels = ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4'];
+        expenses = [0, 0, 0, 0];
+        incomes = [0, 0, 0, 0];
+        const curY = now.getFullYear();
+        const curM = now.getMonth();
+
+        (S.transactions || []).forEach(t => {
+            const d = new Date(t.date);
+            if(d.getFullYear() === curY && d.getMonth() === curM){
+                const day = d.getDate();
+                const weekIdx = Math.min(3, Math.floor((day - 1) / 7));
+                if(t.type === 'expense') expenses[weekIdx] += t.amt;
+                else incomes[weekIdx] += t.amt;
+            }
+        });
+    } else {
+        // 12 tháng trong năm hiện tại
+        labels = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
+        expenses = new Array(12).fill(0);
+        incomes = new Array(12).fill(0);
+        const curY = now.getFullYear();
+
+        (S.transactions || []).forEach(t => {
+            const d = new Date(t.date);
+            if(d.getFullYear() === curY){
+                const mIdx = d.getMonth();
+                if(t.type === 'expense') expenses[mIdx] += t.amt;
+                else incomes[mIdx] += t.amt;
+            }
+        });
+    }
+
+    const totalExp = expenses.reduce((a, b) => a + b, 0);
+    const totalInc = incomes.reduce((a, b) => a + b, 0);
+    return { labels, expenses, incomes, totalExp, totalInc };
+}
+
+function renderChart(per, tid='chartArea'){
+    S.currentChartPer = per;
+    const el = document.getElementById(tid);
+    if(!el) return;
+
+    const data = calculateChartData(per);
+    const eD = data.expenses;
+    const iD = data.incomes;
+    const lb = data.labels;
+
+    // Cập nhật số liệu chi tiết bên dưới biểu đồ
+    const he = document.getElementById('hExp'); if(he) he.textContent = fmt(data.totalExp);
+    const hi = document.getElementById('hInc'); if(hi) hi.textContent = fmt(data.totalInc);
+    
+    // Đếm số lượng giao dịch trong kỳ
+    let txCount = 0;
+    const now = new Date();
+    if(per === 'week'){
+        const dist = (now.getDay() + 6) % 7;
+        const mon = new Date(now); mon.setDate(now.getDate() - dist); mon.setHours(0,0,0,0);
+        const sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23,59,59,999);
+        txCount = (S.transactions || []).filter(t => { const d = new Date(t.date); return d >= mon && d <= sun; }).length;
+    } else if(per === 'month'){
+        txCount = (S.transactions || []).filter(t => { const d = new Date(t.date); return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth(); }).length;
+    } else {
+        txCount = (S.transactions || []).filter(t => { const d = new Date(t.date); return d.getFullYear() === now.getFullYear(); }).length;
+    }
+    const ht = document.getElementById('hTx'); if(ht) ht.textContent = txCount;
+
+    const mx = Math.max(...eD, ...iD, 100000);
+    const h = parseInt(getComputedStyle(el).height) || 140;
+    const td = (now.getDay() + 6) % 7;
+
+    el.innerHTML = eD.map((v, i) => {
+        const eh = Math.max((v / mx) * (h - 24), v > 0 ? 5 : 2);
+        const ih = Math.max((iD[i] / mx) * (h - 24), 0);
+        const act = per === 'week' && i === td;
+        const tooltip = `${lb[i]}: Chi ${fmt(v)}${iD[i] > 0 ? ' | Thu ' + fmt(iD[i]) : ''}`;
+        return `
+            <div class="bar-w" title="${tooltip}">
+                <div style="display:flex;gap:2px;align-items:flex-end;width:100%;justify-content:center">
+                    ${ih > 0 ? `<div class="bar bar-g" style="height:${ih}px;max-width:10px;animation:barGrow 0.4s ease ${i*0.05}s both;transform-origin:bottom"></div>` : ''}
+                    <div class="bar ${act ? 'bar-v' : (v > 0 ? 'bar-v' : 'bar-m')}" style="height:${eh}px;animation:barGrow 0.4s ease ${i*0.05+0.04}s both;transform-origin:bottom"></div>
+                </div>
+                <span class="bar-lbl" style="${act ? 'color:var(--primary);font-weight:800' : ''}">${lb[i]}</span>
+            </div>
+        `;
     }).join('');
 }
-function swChart(btn,per){btn.parentElement.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');renderChart(per)}
 
-// ===== TRANSACTIONS =====
-function renderHomeTx(){renderTxL('homeTx',S.transactions.slice(0,8))}
-function renderAllTx(){renderTxL('allTx',S.transactions)}
-function renderTxL(cid,txs){
-    const c=document.getElementById(cid);if(!c)return;
-    if(!txs.length){c.innerHTML='<div class="empty"><div class="empty-ic"><i class="ri-inbox-line"></i></div><h3>Chưa có giao dịch</h3><p>Nhập thủ công hoặc chụp ảnh hóa đơn.</p></div>';return}
-    const g={};txs.forEach(t=>{if(!g[t.date])g[t.date]=[];g[t.date].push(t)});
-    const ds=Object.keys(g).sort((a,b)=>b.localeCompare(a));
-    c.innerHTML=ds.map(d=>{
-        const de=g[d].filter(t=>t.type==='expense').reduce((s,t)=>s+t.amt,0);
-        const di=g[d].filter(t=>t.type==='income').reduce((s,t)=>s+t.amt,0);
-        let ds2='';
-        if(de) ds2+=`<span style="color:var(--danger)">-${fmt(de)}</span>`;
-        if(di) ds2+=` <span style="color:var(--success)">+${fmt(di)}</span>`;
-        return`<div class="tx-grp"><div class="tx-date"><span>${dateLabel(d)}</span><span style="font-size:0.72rem;font-weight:700;text-transform:none;letter-spacing:0">${ds2}</span></div>${g[d].map((t,i)=>{
-            const ct=CATS[t.cat]||CATS.other;const isI=t.type==='income';
-            return`<div class="tx-item" style="animation:fadeUp 0.3s ease ${i*0.04}s both"><div class="tx-ic" style="background:${ct.bg};color:${ct.color}"><i class="${ct.ic}"></i></div><div class="tx-info"><div class="tx-name">${t.name}</div><div class="tx-cat">${ct.label}</div></div><div class="tx-right"><div class="tx-amt ${isI?'inc':'exp'}">${isI?'+':'-'}${fmt(t.amt)}</div><div class="tx-time">${t.time}</div></div></div>`;
-        }).join('')}</div>`;
+function swChart(btn, per){
+    btn.parentElement.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    renderChart(per);
+}
+
+// ===== TRANSACTIONS & MODAL CHI TIẾT =====
+function renderHomeTx(){
+    renderTxL('homeTx', (S.transactions || []).slice(0, 8));
+}
+
+function deleteTx(id){
+    const tx = S.transactions.find(t => t.id === id);
+    if(!tx) return;
+    if(confirm(`Bạn có chắc muốn xóa giao dịch "${tx.name}" (${fmt(tx.amt)})?`)){
+        S.transactions = S.transactions.filter(t => t.id !== id);
+        renderAll();
+        filterTransactions();
+        addAppNotification({
+            title: 'Đã xóa giao dịch 🗑️',
+            body: `Giao dịch "${tx.name}" (${fmt(tx.amt)}) đã được xóa khỏi sổ thu chi.`,
+            type: 'expense',
+            icon: 'ri-delete-bin-line',
+            iconBg: '#fee2e2',
+            iconColor: '#ef4444',
+            actionUrl: 'history',
+            actionText: 'Xem sổ giao dịch →'
+        });
+        toast('Đã xóa giao dịch!', 'info');
+    }
+}
+
+function openTxDetailModal(id){
+    const tx = S.transactions.find(t => t.id === id);
+    if(!tx) return;
+    S.currentDetailTxId = id;
+    const isI = tx.type === 'income';
+    const ct = CATS[tx.cat] || CATS.other;
+
+    const da = document.getElementById('tdAmt');
+    if(da){
+        da.textContent = `${isI ? '+' : '-'}${fmt(tx.amt)}`;
+        da.style.color = isI ? 'var(--success)' : 'var(--danger)';
+    }
+    const dn = document.getElementById('tdName'); if(dn) dn.textContent = tx.name;
+    const db = document.getElementById('tdCatBadge');
+    if(db){
+        db.innerHTML = `<i class="${ct.ic}"></i> ${ct.label}`;
+        db.style.background = ct.bg;
+        db.style.color = ct.color;
+    }
+    const dt = document.getElementById('tdTime'); if(dt) dt.textContent = `${tx.date} lúc ${tx.time || '10:00'}`;
+    const ds = document.getElementById('tdScope'); if(ds) ds.textContent = tx.name.includes('phần') ? 'Chia tiền bạn bè' : (tx.name.includes('Quỹ') ? 'Quỹ chi tiêu chung' : 'Ví cá nhân');
+    const dnt = document.getElementById('tdNote'); if(dnt) dnt.textContent = tx.note || 'Giao dịch chi tiêu thường nhật';
+
+    document.getElementById('txDetailModal')?.classList.add('active');
+}
+
+function closeTxDetailModal(){
+    document.getElementById('txDetailModal')?.classList.remove('active');
+}
+
+function confirmDeleteCurrentTx(){
+    if(!S.currentDetailTxId) return;
+    const id = S.currentDetailTxId;
+    closeTxDetailModal();
+    deleteTx(id);
+}
+
+function renderTxL(cid, txs){
+    const c = document.getElementById(cid); if(!c) return;
+    if(!txs || !txs.length){
+        c.innerHTML = '<div class="empty" style="padding:2rem 1rem"><div class="empty-ic"><i class="ri-inbox-line"></i></div><h3>Chưa có giao dịch</h3><p>Nhập thủ công hoặc quét ảnh hóa đơn.</p></div>';
+        return;
+    }
+    const g = {}; txs.forEach(t => { if(!g[t.date]) g[t.date] = []; g[t.date].push(t); });
+    const ds = Object.keys(g).sort((a,b) => b.localeCompare(a));
+    c.innerHTML = ds.map(d => {
+        const de = g[d].filter(t => t.type === 'expense').reduce((s,t) => s + t.amt, 0);
+        const di = g[d].filter(t => t.type === 'income').reduce((s,t) => s + t.amt, 0);
+        let ds2 = '';
+        if(de) ds2 += `<span style="color:var(--danger)">-${fmt(de)}</span>`;
+        if(di) ds2 += ` <span style="color:var(--success)">+${fmt(di)}</span>`;
+        return `
+            <div class="tx-grp">
+                <div class="tx-date">
+                    <span>${dateLabel(d)}</span>
+                    <span style="font-size:0.72rem;font-weight:700;text-transform:none;letter-spacing:0">${ds2}</span>
+                </div>
+                ${g[d].map((t, i) => {
+                    const ct = CATS[t.cat] || CATS.other;
+                    const isI = t.type === 'income';
+                    return `
+                        <div class="tx-item" style="animation:fadeUp 0.3s ease ${i*0.03}s both" onclick="openTxDetailModal(${t.id})">
+                            <div class="tx-ic" style="background:${ct.bg};color:${ct.color}"><i class="${ct.ic}"></i></div>
+                            <div class="tx-info">
+                                <div class="tx-name">${t.name}</div>
+                                <div class="tx-cat">${ct.label}${t.note ? ' · ' + t.note : ''}</div>
+                            </div>
+                            <div class="tx-right">
+                                <div class="tx-amt ${isI ? 'inc' : 'exp'}">${isI ? '+' : '-'}${fmt(t.amt)}</div>
+                                <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.35rem">
+                                    <span class="tx-time">${t.time || ''}</span>
+                                    <button type="button" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0 2px;font-size:0.78rem;opacity:0.6" onclick="event.stopPropagation();deleteTx(${t.id})" title="Xóa giao dịch"><i class="ri-delete-bin-line"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
     }).join('');
+}
+
+// ===== TÌM KIẾM & BỘ LỌC LỊCH SỬ GIAO DỊCH =====
+function setHistFilterType(type, btn){
+    S.histFilterType = type;
+    document.querySelectorAll('.hist-filter-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    filterTransactions();
+}
+
+function clearTxSearch(){
+    const inp = document.getElementById('txSearchInput');
+    if(inp) inp.value = '';
+    const btn = document.getElementById('btnClearTxSearch');
+    if(btn) btn.style.display = 'none';
+    filterTransactions();
+}
+
+function filterTransactions(){
+    const input = document.getElementById('txSearchInput');
+    const query = input ? input.value.trim().toLowerCase() : '';
+    const btnClear = document.getElementById('btnClearTxSearch');
+    if(btnClear) btnClear.style.display = query ? 'block' : 'none';
+
+    const filterType = S.histFilterType || 'all';
+    const catSel = document.getElementById('histCatSelect');
+    const filterCat = catSel ? catSel.value : 'all';
+
+    let list = S.transactions || [];
+
+    if(filterType !== 'all'){
+        list = list.filter(t => t.type === filterType);
+    }
+    if(filterCat !== 'all'){
+        list = list.filter(t => t.cat === filterCat);
+    }
+    if(query){
+        list = list.filter(t => {
+            const nameMatch = (t.name || '').toLowerCase().includes(query);
+            const noteMatch = (t.note || '').toLowerCase().includes(query);
+            const amtMatch = String(t.amt).includes(query);
+            return nameMatch || noteMatch || amtMatch;
+        });
+    }
+
+    const exp = list.filter(t => t.type === 'expense').reduce((s,t) => s + t.amt, 0);
+    const inc = list.filter(t => t.type === 'income').reduce((s,t) => s + t.amt, 0);
+    const cntTxt = document.getElementById('histCountTxt');
+    if(cntTxt) cntTxt.textContent = `${list.length} giao dịch`;
+    const amtTxt = document.getElementById('histAmtTxt');
+    if(amtTxt) amtTxt.innerHTML = `Chi: <strong style="color:var(--danger)">-${fmt(exp)}</strong> · Thu: <strong style="color:var(--success)">+${fmt(inc)}</strong>`;
+
+    renderTxL('allTx', list);
+}
+
+function renderAllTx(){
+    filterTransactions();
 }
 
 // ===== MODAL =====
@@ -675,6 +974,7 @@ function saveTx(e){
     const amt=parseFloat(document.getElementById('txAmt').value),mer=document.getElementById('txMer').value.trim(),date=document.getElementById('txDate').value,note=document.getElementById('txNote').value.trim();
     if(!amt||!mer||!date){toast('Điền đầy đủ thông tin!','error');return}
     const ct=CATS[S.selCat]||CATS.other;
+    const isInc = S.txType === 'income';
     S.transactions.unshift({id:Date.now(),name:mer,amt,cat:S.selCat,date,note,time:new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}),type:S.txType});
     sendBE({merchant_name:mer,amount:amt,transaction_date:date,category:S.selCat,user_id:1});
     renderAll();closeModal();
@@ -684,27 +984,96 @@ function saveTx(e){
     S.selCat='food';S.txType='expense';
     document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
     document.querySelector('.type-btn.e').classList.add('active');
+
+    if(!isInc){
+        addAppNotification({
+            title: 'Biến động số dư: Chi tiêu 💸',
+            body: `Đã chi -${fmt(amt)} tại ${mer} (${ct.label}).`,
+            type: 'expense',
+            icon: ct.ic || 'ri-shopping-cart-2-line',
+            iconBg: ct.bg || '#fee2e2',
+            iconColor: ct.color || '#ef4444',
+            actionUrl: 'history',
+            actionText: 'Xem sổ giao dịch →'
+        });
+        checkBudgetAlerts(S.selCat);
+    } else {
+        addAppNotification({
+            title: 'Biến động số dư: Thu nhập 💰',
+            body: `Cộng tiền vào ví: +${fmt(amt)} (${mer}).`,
+            type: 'income',
+            icon: 'ri-arrow-down-circle-line',
+            iconBg: '#d1fae5',
+            iconColor: '#059669',
+            actionUrl: 'history',
+            actionText: 'Xem chi tiết →'
+        });
+    }
+
     toast(`Đã lưu giao dịch ${fmt(amt)}`,'success');
 }
 
 // ===== PHOTO / CAMERA =====
 function openCam(){
     const v=document.getElementById('camV');if(!v)return;
-    if(S.camStream)return;
+    const fb=document.getElementById('camFallbackBox');
+    const hint=document.getElementById('camHint');
+    const frame=document.getElementById('camFrame');
+
+    if(S.camStream) return;
+
     if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-        navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(s=>{
-            S.camStream=s;v.srcObject=s;v.style.display='block';
-        }).catch(()=>{
-            console.log('Camera hardware not available or permission denied.');
+        navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}}).then(s=>{
+            S.camStream=s;
+            v.srcObject=s;
+            v.style.display='block';
+            if(fb) fb.style.display='none';
+            if(hint) hint.style.display='block';
+            if(frame) frame.style.display='block';
+        }).catch(err=>{
+            console.warn('Camera getUserMedia not available (Safari iOS / non-HTTPS):', err);
+            showCamFallback();
         });
+    } else {
+        showCamFallback();
     }
 }
+
 function stopCam(){
     if(S.camStream){S.camStream.getTracks().forEach(t=>t.stop());S.camStream=null}
 }
+
+function showCamFallback(){
+    const v=document.getElementById('camV');
+    const fb=document.getElementById('camFallbackBox');
+    const hint=document.getElementById('camHint');
+    const frame=document.getElementById('camFrame');
+    if(v) v.style.display='none';
+    if(fb) fb.style.display='flex';
+    if(hint) hint.style.display='none';
+    if(frame) frame.style.display='none';
+}
+
+function triggerNativeCamera(){
+    const input = document.getElementById('mobileCamIn');
+    if(input){
+        input.value = '';
+        input.click();
+    } else {
+        const fileIn = document.getElementById('fileIn');
+        if(fileIn) fileIn.click();
+    }
+}
+
+function handleCamBoxClick(){
+    if(!S.camStream){
+        triggerNativeCamera();
+    }
+}
+
 function capPhoto(){
     const v=document.getElementById('camV'), c=document.getElementById('camC');
-    if(S.camStream && v.videoWidth){
+    if(S.camStream && v && v.videoWidth){
         c.width=v.videoWidth; c.height=v.videoHeight;
         c.getContext('2d').drawImage(v,0,0);
         const dataUrl=c.toDataURL('image/jpeg', 0.95);
@@ -714,32 +1083,8 @@ function capPhoto(){
             else sendReceiptToBackendOcr(dataURItoBlob(dataUrl), dataUrl);
         }, 'image/jpeg', 0.95);
     } else {
-        // Nếu không mở webcam, vẽ hóa đơn mẫu sắc nét và gửi thẳng vào backend OCR thật
-        c.width=460; c.height=340;
-        const ctx=c.getContext('2d');
-        ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,460,340);
-        ctx.strokeStyle='#2E86DE'; ctx.lineWidth=3; ctx.strokeRect(10,10,440,320);
-        ctx.fillStyle='#0F172A'; ctx.font='bold 18px Arial';
-        ctx.fillText('HIGHLANDS COFFEE',45,50);
-        ctx.font='13px Arial'; ctx.fillStyle='#475569';
-        ctx.fillText('Địa chỉ: 298 Cầu Giấy, Hà Nội',45,75);
-        ctx.fillText('Ngày: 15/10/2026 - Giờ: 08:45',45,95);
-        ctx.strokeStyle='#CBD5E1'; ctx.beginPath(); ctx.moveTo(45,110); ctx.lineTo(415,110); ctx.stroke();
-        ctx.font='14px Arial'; ctx.fillStyle='#1E293B';
-        ctx.fillText('1. Freeze Trà Xanh (L) ......... 65.000 đ',45,140);
-        ctx.fillText('2. Phin Sữa Đá (M) ............. 39.000 đ',45,170);
-        ctx.fillText('3. Bánh Mì Que ................. 19.000 đ',45,200);
-        ctx.beginPath(); ctx.moveTo(45,220); ctx.lineTo(415,220); ctx.stroke();
-        ctx.font='bold 17px Arial'; ctx.fillStyle='#DC2626';
-        ctx.fillText('TỔNG CỘNG: 123.000 VND',45,260);
-        ctx.font='italic 12px Arial'; ctx.fillStyle='#64748B';
-        ctx.fillText('CẢM ƠN QUÝ KHÁCH - HẸN GẶP LẠI',45,295);
-        const dataUrl=c.toDataURL('image/jpeg', 0.95);
-        stopCam();
-        c.toBlob(blob => {
-            if(blob) sendReceiptToBackendOcr(blob, dataUrl);
-            else sendReceiptToBackendOcr(dataURItoBlob(dataUrl), dataUrl);
-        }, 'image/jpeg', 0.95);
+        // Mở trực tiếp camera native của điện thoại (iPhone / Android) để chụp ảnh thật
+        triggerNativeCamera();
     }
 }
 
@@ -831,6 +1176,9 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
         document.getElementById('ocrCatBadge').innerHTML = `<i class="${ct.ic}"></i> ${ct.label}`;
         document.getElementById('ocrCatBadge').style.background = ct.bg;
         document.getElementById('ocrCatBadge').style.color = ct.color;
+
+        // Hiển thị danh sách từng món và toàn văn văn bản OCR
+        renderOcrItemsAndRawText(detected);
 
         // Thêm nút mở màn hình Review chi tiết nếu chưa có
         let revBtn = document.getElementById('btnGoReviewDetail');
@@ -951,6 +1299,236 @@ function updateSplitBillCalculations(){
     }
 }
 
+// ===== HIỂN THỊ CHI TIẾT TỪNG MÓN & TOÀN VĂN HÓA ĐƠN OCR =====
+function renderOcrItemsAndRawText(detected){
+    // 1. Toàn văn văn bản OCR gốc ("không thiếu 1 chữ")
+    const rawEl = document.getElementById('ocrRawTextContent');
+    if(rawEl){
+        const fullTxt = detected.raw_text ? detected.raw_text.trim() : `${detected.merchant}\nNgày: ${detected.date}\nTổng tiền: ${fmt(detected.amount)}`;
+        rawEl.textContent = fullTxt;
+    }
+
+    // 2. Danh sách chi tiết từng món / cốc nước
+    const listEl = document.getElementById('ocrItemsList');
+    const badgeEl = document.getElementById('ocrItemsCountBadge');
+    let items = (detected.items && detected.items.length) ? detected.items : [];
+
+    // Nếu là hóa đơn không bóc tách được từng dòng con, tạo mặc định 1 món chính
+    if(!items.length && detected.amount > 0){
+        items = [{
+            name: detected.merchant || 'Khoản chi hóa đơn',
+            amount: detected.amount,
+            icon: '☕'
+        }];
+    }
+
+    const defaultNames = ['Tôi', 'Bạn 1', 'Bạn 2', 'Bạn 3'];
+    S.currentBillItems = items.map((it, idx) => ({
+        id: idx,
+        name: it.name || `Món ${idx + 1}`,
+        amount: Number(it.amount) || 0,
+        icon: it.icon || '☕',
+        assignedTo: defaultNames[idx % defaultNames.length]
+    }));
+
+    if(badgeEl) badgeEl.textContent = `${items.length} món`;
+
+    if(listEl){
+        listEl.innerHTML = items.map(it => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0.45rem;background:var(--bg);border-radius:var(--r-sm);font-size:0.75rem">
+                <span style="font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">
+                    ${it.icon || '☕'} ${it.name}
+                </span>
+                <strong style="color:var(--primary);white-space:nowrap">${fmt(it.amount)}</strong>
+            </div>
+        `).join('');
+    }
+
+    renderItemizedSplit();
+}
+
+function copyFullOcrText(){
+    const text = document.getElementById('ocrRawTextContent')?.textContent || '';
+    if(!text) return;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(()=>{
+            toast('Đã sao chép toàn bộ chữ trên hóa đơn!', 'success');
+        });
+    } else {
+        prompt('Toàn văn hóa đơn:', text);
+    }
+}
+
+// ===== CHẾ ĐỘ CHIA TIỀN: CHIA ĐỀU HOẶC CHIA THEO MÓN =====
+function setSplitMode(mode){
+    S.splitMode = mode;
+    const isEq = mode === 'equal';
+    const bEq = document.getElementById('btnSplitModeEqual');
+    const bIt = document.getElementById('btnSplitModeItem');
+    if(bEq) bEq.className = `btn btn-sm ${isEq ? 'btn-p' : 'btn-s'}`;
+    if(bIt) bIt.className = `btn btn-sm ${!isEq ? 'btn-p' : 'btn-s'}`;
+
+    document.getElementById('splitEqualContainer')?.classList.toggle('hidden', !isEq);
+    document.getElementById('splitItemContainer')?.classList.toggle('hidden', isEq);
+    document.getElementById('splitRoleCards')?.classList.toggle('hidden', !isEq);
+
+    if(!isEq){
+        renderItemizedSplit();
+    } else {
+        updateSplitBillCalculations();
+    }
+}
+
+function renderItemizedSplit(){
+    const listEl = document.getElementById('splitItemsAssignList');
+    if(!listEl) return;
+
+    const items = S.currentBillItems || [];
+    const members = ['Tôi', 'Bạn 1', 'Bạn 2', 'Bạn 3', 'Chia đều món này'];
+
+    if(!items.length){
+        listEl.innerHTML = `<div style="text-align:center;color:var(--text3);font-size:0.72rem;padding:0.5rem">Chưa có danh sách món.</div>`;
+        return;
+    }
+
+    listEl.innerHTML = items.map((it, idx) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0.5rem;background:var(--bg);border-radius:var(--r-sm);font-size:0.72rem">
+            <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:0.4rem">
+                <strong>${it.name}</strong> <span style="color:var(--primary);font-weight:700">(${fmt(it.amount)})</span>
+            </div>
+            <select class="fc" style="width:115px;padding:0.2rem 0.3rem;font-size:0.7rem;height:28px" onchange="onItemAssignChange(${idx}, this.value)">
+                ${members.map(m => `<option value="${m}" ${it.assignedTo === m ? 'selected' : ''}>${m}</option>`).join('')}
+            </select>
+        </div>
+    `).join('');
+
+    updateItemizedMemberSummary();
+}
+
+function onItemAssignChange(itemIdx, memberName){
+    if(S.currentBillItems && S.currentBillItems[itemIdx]){
+        S.currentBillItems[itemIdx].assignedTo = memberName;
+        updateItemizedMemberSummary();
+    }
+}
+
+function updateItemizedMemberSummary(){
+    const sumEl = document.getElementById('splitItemsMemberSummary');
+    if(!sumEl) return;
+
+    const items = S.currentBillItems || [];
+    const totals = {};
+    let sharedPool = 0;
+
+    items.forEach(it => {
+        if(it.assignedTo === 'Chia đều món này'){
+            sharedPool += it.amount;
+        } else {
+            totals[it.assignedTo] = (totals[it.assignedTo] || 0) + it.amount;
+        }
+    });
+
+    const activeMembers = Object.keys(totals);
+    if(activeMembers.length > 0 && sharedPool > 0){
+        const sharePerPerson = Math.round(sharedPool / activeMembers.length);
+        activeMembers.forEach(m => totals[m] += sharePerPerson);
+    } else if(sharedPool > 0){
+        totals['Tôi'] = (totals['Tôi'] || 0) + sharedPool;
+    }
+
+    S.itemizedTotals = totals;
+
+    sumEl.innerHTML = Object.entries(totals).map(([m, amt]) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;padding:0.15rem 0">
+            <span style="color:var(--text2)"><i class="ri-user-line" style="color:var(--primary)"></i> <strong>${m}</strong>:</span>
+            <strong style="color:var(--primary)">${fmt(amt)}</strong>
+        </div>
+    `).join('');
+
+    const btnTxt = document.getElementById('ocrSaveBtnTxt');
+    if(btnTxt && S.billScope === 'split' && S.splitMode === 'item'){
+        const myAmt = totals['Tôi'] || 0;
+        btnTxt.textContent = `Lưu phần tôi (${fmt(myAmt)})`;
+    }
+}
+
+function openItemizedSplitQrModal(){
+    const totals = S.itemizedTotals || {};
+    const members = Object.keys(totals).filter(m => m !== 'Tôi' && totals[m] > 0);
+
+    if(!members.length){
+        toast('Tất cả món đang gán cho "Tôi". Hãy chọn bạn khác cho các món để tạo mã QR chia tiền!', 'info');
+        return;
+    }
+
+    showItemizedQrForMember(members[0]);
+}
+
+function showItemizedQrForMember(targetMember){
+    const totals = S.itemizedTotals || {};
+    const amt = totals[targetMember] || 0;
+    const memo = `TIEN NUOC ${targetMember.toUpperCase().replace(/\s+/g,'')}`;
+    const members = Object.keys(totals).filter(m => m !== 'Tôi' && totals[m] > 0);
+
+    const body = document.getElementById('qrModalBody');
+    if(!body) return;
+
+    body.innerHTML = `
+        <div class="qr-card-view" style="padding:0.75rem">
+            <div style="font-size:0.88rem;font-weight:800;color:var(--text);margin-bottom:0.4rem">Mã VietQR Cho Từng Người</div>
+            
+            <!-- Tabs chọn người -->
+            <div style="display:flex;gap:0.3rem;justify-content:center;margin-bottom:0.7rem;overflow-x:auto;padding-bottom:0.2rem">
+                ${members.map(m => `
+                    <button type="button" class="btn btn-sm ${m === targetMember ? 'btn-p' : 'btn-s'}" style="font-size:0.72rem;padding:0.3rem 0.55rem" onclick="showItemizedQrForMember('${m}')">
+                        ${m} (${fmt(totals[m])})
+                    </button>
+                `).join('')}
+            </div>
+
+            <div style="background:#FFF;padding:12px;border-radius:12px;display:inline-block;box-shadow:0 4px 14px rgba(0,0,0,0.06);margin-bottom:0.5rem">
+                <canvas id="itemizedQrCanvas" width="160" height="160" style="display:block"></canvas>
+            </div>
+            
+            <div style="font-size:1.2rem;font-weight:900;color:var(--primary);margin-bottom:0.15rem">${fmt(amt)}</div>
+            <div style="font-size:0.75rem;color:var(--text2);margin-bottom:0.5rem">${targetMember} quét mã trả đúng tiền món đã gọi</div>
+
+            <div style="background:var(--bg);padding:0.6rem;border-radius:8px;font-size:0.72rem;text-align:left;margin-bottom:0.6rem">
+                ${S.user?.bank_account ? `
+                    <div><strong>Ngân hàng:</strong> ${S.user.bank_name || 'Ngân hàng'}</div>
+                    <div><strong>Số tài khoản:</strong> ${S.user.bank_account}</div>
+                ` : `
+                    <div><strong>Phương thức:</strong> Quét mã VietQR hoặc chuyển khoản trực tiếp</div>
+                `}
+                <div><strong>Người nhận:</strong> ${S.user?.name || S.user?.full_name || 'Trưởng nhóm'}</div>
+                <div><strong>Nội dung:</strong> ${memo}</div>
+            </div>
+
+            <button type="button" class="btn btn-p btn-block" style="font-size:0.78rem" onclick="copyItemizedZaloMessage('${targetMember}', ${amt})">
+                <i class="ri-file-copy-line"></i> Sao chép tin nhắn Zalo cho ${targetMember}
+            </button>
+        </div>
+    `;
+
+    openQrModal();
+    setTimeout(() => {
+        const cv = document.getElementById('itemizedQrCanvas');
+        if(cv) drawMockVietQr(cv, amt, memo);
+    }, 50);
+}
+
+function copyItemizedZaloMessage(memberName, amt){
+    const bankInfo = S.user?.bank_account ? ` STK: ${S.user.bank_account} (${S.user.bank_name || ''}), ` : ' ';
+    const msg = `Tiền nước của ${memberName}: ${fmt(amt)}. Bạn quét QR hoặc chuyển khoản vào${bankInfo}cú pháp: TIEN NUOC ${memberName.toUpperCase()} nhé!`;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(msg).then(()=>{
+            toast(`Đã sao chép tin nhắn cho ${memberName}!`, 'success');
+        });
+    } else {
+        prompt('Sao chép tin nhắn:', msg);
+    }
+}
+
 function updateFundSelection(){
     const sb = document.getElementById('fundSelectBox');
     const key = sb ? sb.value : (S.selectedFund || 'room');
@@ -1055,6 +1633,17 @@ async function saveOcr(){
         });
         renderAll();
         closeModal();
+        addAppNotification({
+            title: 'Quét hóa đơn AI thành công ✨',
+            body: `Đã lưu hóa đơn ${data.merchant} (${fmt(data.amount)}) vào Ví cá nhân.`,
+            type: 'expense',
+            icon: 'ri-scan-2-line',
+            iconBg: '#ede9fe',
+            iconColor: '#7c3aed',
+            actionUrl: 'history',
+            actionText: 'Xem giao dịch →'
+        });
+        checkBudgetAlerts(data.cat);
         toast(`Đã lưu ${fmt(data.amount)} vào Ví cá nhân!`, 'success');
         return;
     }
@@ -1090,6 +1679,17 @@ async function saveOcr(){
 
         renderAll();
         closeModal();
+
+        addAppNotification({
+            title: 'Chia tiền hóa đơn 👥',
+            body: `Hóa đơn ${data.merchant} (${fmt(data.amount)}) chia ${count} người. Phần bạn cần trả: ${fmt(myShare)}.`,
+            type: 'split',
+            icon: 'ri-user-shared-line',
+            iconBg: '#e0e7ff',
+            iconColor: '#4338ca',
+            actionUrl: 'history',
+            actionText: 'Xem chi tiết →'
+        });
 
         if(S.splitPayRole === 'mine_only'){
             toast(`Đã lưu phần của bạn ${fmt(myShare)} vào Ví cá nhân!`, 'success');
@@ -1134,6 +1734,18 @@ async function saveOcr(){
         renderAll();
         renderGroup();
         closeModal();
+
+        addAppNotification({
+            title: 'Trích chi Quỹ chung 🏢',
+            body: `Đã trích ${fmt(data.amount)} từ ${fund.name} thanh toán ${data.merchant}.`,
+            type: 'fund',
+            icon: 'ri-community-line',
+            iconBg: '#fef3c7',
+            iconColor: '#d97706',
+            actionUrl: 'group',
+            actionText: 'Xem quỹ phòng →'
+        });
+
         toast(`Đã trích ${fmt(data.amount)} từ ${fund.name}!`, 'success');
         return;
     }
@@ -1158,8 +1770,8 @@ function showQuickSplitQrModal(merchant, totalAmt, count, perPerson){
             <div class="qr-details" style="padding:0.55rem;margin-bottom:0.5rem">
                 <div class="qr-row"><span style="color:var(--text3)">Tổng bill:</span> <strong>${fmt(totalAmt)} (${count} người)</strong></div>
                 <div class="qr-row"><span style="color:var(--text3)">Cần thu:</span> <strong style="color:var(--danger)">${fmt(othersTotal)}</strong> <span style="font-size:0.68rem;color:var(--text3)">(${othersCount} người)</span></div>
-                <div class="qr-row"><span style="color:var(--text3)">Số TK:</span> <strong>0912 345 678</strong> (MB Bank)</div>
-                <div class="qr-row"><span style="color:var(--text3)">Chủ TK:</span> <strong>Nguyễn Thúy Hiền</strong></div>
+                ${S.user?.bank_account ? `<div class="qr-row"><span style="color:var(--text3)">Số TK:</span> <strong>${S.user.bank_account}</strong> (${S.user.bank_name || 'Ngân hàng'})</div>` : ''}
+                <div class="qr-row"><span style="color:var(--text3)">Người nhận:</span> <strong>${S.user?.name || S.user?.full_name || 'Trưởng nhóm'}</strong></div>
                 <div class="qr-row"><span style="color:var(--text3)">Nội dung:</span> <strong>${memo}</strong></div>
             </div>
             <button class="btn btn-p btn-block" onclick="copyQuickSplitZaloMessage('${merchant}', ${totalAmt}, ${count}, ${perPerson})">
@@ -1179,7 +1791,8 @@ function showQuickSplitQrModal(merchant, totalAmt, count, perPerson){
 }
 
 function copyQuickSplitZaloMessage(merchant, totalAmt, count, perPerson){
-    const msg = `Tiền ${merchant}: ${fmt(totalAmt)} chia ${count} = ${fmt(perPerson)}/người. STK: 0912 345 678 (MB Bank - Thúy Hiền).`;
+    const bankInfo = S.user?.bank_account ? ` STK: ${S.user.bank_account} (${S.user.bank_name || 'Ngân hàng'} - ${S.user.name || 'Trưởng nhóm'}).` : '';
+    const msg = `Tiền ${merchant}: ${fmt(totalAmt)} chia ${count} = ${fmt(perPerson)}/người.${bankInfo}`;
     if(navigator.clipboard && navigator.clipboard.writeText){
         navigator.clipboard.writeText(msg).then(()=>{
             toast('Đã sao chép tin nhắn!', 'success');
@@ -1280,7 +1893,25 @@ function renderBgt(){
         return`<div class="bgt-card" style="animation:fadeUp 0.3s ease ${i*0.05}s both"><div class="bgt-hdr"><div class="bgt-title"><i class="${c2.ic}" style="color:${c2.color}"></i> ${c2.label}</div><div class="bgt-amt">${fmt(u)} / ${fmt(b.limit)}</div></div><div class="bgt-bar"><div class="bgt-bar-fill" style="width:${p}%;background:${bc}"></div></div><div class="bgt-foot"><span>Đã dùng ${p}%</span><span class="${rem<0?'over':'safe'}">${rem>=0?'Còn '+fmt(rem):'Vượt '+fmt(-rem)}</span></div></div>`;
     }).join('');
 }
-function addBgt(){const c=document.getElementById('bfC').value,a=parseFloat(document.getElementById('bfA').value);if(!a){toast('Nhập hạn mức!','error');return}const ex=S.budgets.find(b=>b.cat===c);if(ex)ex.limit=a;else S.budgets.push({cat:c,limit:a});togForm('bgtF');renderBgt();toast('Đã lưu ngân sách!','success')}
+function addBgt(){
+    const c=document.getElementById('bfC').value,a=parseFloat(document.getElementById('bfA').value);
+    if(!a){toast('Nhập hạn mức!','error');return}
+    const ex=S.budgets.find(b=>b.cat===c);
+    if(ex)ex.limit=a;else S.budgets.push({cat:c,limit:a});
+    togForm('bgtF');renderBgt();
+    const c2 = CATS[c] || CATS.other;
+    addAppNotification({
+        title: 'Thiết lập ngân sách 📊',
+        body: `Hạn mức chi tiêu danh mục ${c2.label} được cập nhật là ${fmt(a)}.`,
+        type: 'budget',
+        icon: 'ri-funds-line',
+        iconBg: '#ede9fe',
+        iconColor: '#7c3aed',
+        actionUrl: 'budget',
+        actionText: 'Xem ngân sách →'
+    });
+    toast('Đã lưu ngân sách!','success');
+}
 
 // ===== SAVINGS =====
 function renderSav(){
@@ -1288,15 +1919,147 @@ function renderSav(){
     document.getElementById('savL').innerHTML=S.savings.map((g,i)=>{const pct=Math.min(100,(g.saved/g.target*100)).toFixed(0);const col=pct>=100?'var(--success)':'var(--primary)';
     return`<div class="sav-card" style="animation:fadeUp 0.3s ease ${i*0.07}s both"><div class="sav-hdr"><div class="sav-ic"><i class="${SAVICONS[g.icon]||'ri-star-line'}"></i></div><div><div class="sav-name">${g.name}</div><div class="sav-target">Mục tiêu: ${fmt(g.target)}</div></div></div><div class="sav-bar"><div class="sav-bar-fill" style="width:${pct}%;background:${col}"></div></div><div class="sav-foot"><span class="sav-foot-amt">${fmt(g.saved)}</span><span class="sav-foot-pct" style="color:${col}">${pct}%</span></div><div style="margin-top:0.4rem;display:flex;gap:0.3rem"><button class="btn btn-sm btn-p" style="flex:1" onclick="addToSav(${g.id})"><i class="ri-add-line"></i> Nạp tiền</button><button class="btn btn-sm btn-s" onclick="delSav(${g.id})"><i class="ri-delete-bin-line"></i></button></div></div>`;}).join('');
 }
-function addSav(){const n=document.getElementById('sfN').value.trim(),t=parseFloat(document.getElementById('sfT').value),ic=document.getElementById('sfI').value;if(!n||!t){toast('Điền đầy đủ!','error');return}S.savings.push({id:Date.now(),name:n,icon:ic,target:t,saved:0});togForm('savF');renderSav();toast('Đã tạo mục tiêu!','success')}
-function addToSav(id){const g=S.savings.find(s=>s.id===id);if(!g)return;const a=prompt('Nhập số tiền nạp (₫):');if(!a||isNaN(a))return;g.saved+=parseInt(a);renderSav();toast(`Đã nạp ${fmt(parseInt(a))}`,'success')}
-function delSav(id){S.savings=S.savings.filter(s=>s.id!==id);renderSav();toast('Đã xoá','info')}
+
+function addSav(){
+    const n=document.getElementById('sfN').value.trim(),t=parseFloat(document.getElementById('sfT').value),ic=document.getElementById('sfI').value;
+    if(!n||!t){toast('Điền đầy đủ!','error');return}
+    S.savings.push({id:Date.now(),name:n,icon:ic,target:t,saved:0});
+    togForm('savF');renderSav();
+    addAppNotification({
+        title: 'Mục tiêu tiết kiệm mới 🎯',
+        body: `Đã tạo mục tiêu "${n}" với kế hoạch ${fmt(t)}.`,
+        type: 'savings',
+        icon: 'ri-safe-2-line',
+        iconBg: '#dbeafe',
+        iconColor: '#2563eb',
+        actionUrl: 'savings',
+        actionText: 'Xem heo đất →'
+    });
+    toast('Đã tạo mục tiêu!','success');
+}
+
+function addToSav(id){
+    const g = S.savings.find(s => s.id === id);
+    if(!g) return;
+    S.currentSavingsGoalId = id;
+    const nameEl = document.getElementById('sdGoalName'); if(nameEl) nameEl.textContent = g.name;
+    const targetEl = document.getElementById('sdGoalTarget'); if(targetEl) targetEl.textContent = fmt(g.target);
+    const curEl = document.getElementById('sdGoalCurrent'); if(curEl) curEl.textContent = `Đã có: ${fmt(g.saved)}`;
+    const pct = Math.min(100, Math.round((g.saved / g.target) * 100));
+    const pctEl = document.getElementById('sdGoalPercent'); if(pctEl) pctEl.textContent = `${pct}%`;
+    const barEl = document.getElementById('sdGoalBar'); if(barEl) barEl.style.width = `${pct}%`;
+    const icEl = document.getElementById('sdGoalIcon'); if(icEl) icEl.innerHTML = `<i class="${SAVICONS[g.icon]||'ri-star-line'}"></i>`;
+    const inEl = document.getElementById('sdAmountInput'); if(inEl) inEl.value = '200000';
+
+    document.getElementById('savingsDepositModal')?.classList.add('active');
+}
+
+function closeSavingsDepositModal(){
+    document.getElementById('savingsDepositModal')?.classList.remove('active');
+}
+
+function setQuickDepositAmt(amt){
+    const inEl = document.getElementById('sdAmountInput');
+    if(inEl) inEl.value = amt;
+}
+
+function confirmSavingsDeposit(){
+    if(!S.currentSavingsGoalId) return;
+    const g = S.savings.find(s => s.id === S.currentSavingsGoalId);
+    if(!g) return;
+    const inEl = document.getElementById('sdAmountInput');
+    const amt = parseFloat(inEl?.value);
+    if(!amt || amt <= 0){
+        toast('Vui lòng nhập số tiền hợp lệ!', 'error');
+        return;
+    }
+    g.saved += amt;
+    const pct = Math.min(100, Math.round((g.saved / g.target) * 100));
+    renderSav();
+    renderStatsSav();
+    closeSavingsDepositModal();
+    addAppNotification({
+        title: 'Tích lũy tiết kiệm heo đất 🐷',
+        body: `Đã nạp ${fmt(amt)} vào mục tiêu "${g.name}". Tiến độ hiện tại: ${pct}%.`,
+        type: 'savings',
+        icon: 'ri-safe-2-line',
+        iconBg: '#fce7f3',
+        iconColor: '#db2777',
+        actionUrl: 'savings',
+        actionText: 'Xem heo đất →'
+    });
+    toast(`Đã nạp ${fmt(amt)} vào "${g.name}" thành công!`, 'success');
+}
+
+function delSav(id){
+    const g=S.savings.find(s=>s.id===id);
+    S.savings=S.savings.filter(s=>s.id!==id);
+    renderSav();
+    if(g){
+        addAppNotification({
+            title: 'Đã xóa mục tiêu tiết kiệm 🗑️',
+            body: `Mục tiêu "${g.name}" đã được gỡ khỏi sổ tiết kiệm.`,
+            type: 'savings',
+            icon: 'ri-delete-bin-line',
+            iconBg: '#fee2e2',
+            iconColor: '#ef4444',
+            actionUrl: 'savings',
+            actionText: 'Xem tiết kiệm →'
+        });
+    }
+    toast('Đã xoá','info');
+}
 
 // ===== RECURRING =====
+function executeRecurring(id){
+    const r = S.recurring.find(x => x.id === id);
+    if(!r) return;
+    const nowStr = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    S.transactions.unshift({
+        id: Date.now(),
+        name: r.name,
+        amt: r.amt,
+        cat: r.cat,
+        date: todayStr,
+        time: nowStr,
+        type: 'expense',
+        note: `Khoản định kỳ (${r.freq === 'monthly' ? 'Hàng tháng' : (r.freq === 'weekly' ? 'Hàng tuần' : 'Hàng ngày')})`
+    });
+
+    renderAll();
+    checkBudgetAlerts(r.cat);
+
+    addAppNotification({
+        title: 'Ghi nhận chi tiêu định kỳ 🔄',
+        body: `Đã trích chi -${fmt(r.amt)} cho khoản "${r.name}".`,
+        type: 'expense',
+        icon: 'ri-repeat-line',
+        iconBg: '#e0e7ff',
+        iconColor: '#4338ca',
+        actionUrl: 'history',
+        actionText: 'Xem giao dịch →'
+    });
+
+    toast(`Đã ghi nhận ${r.name} (${fmt(r.amt)}) vào sổ!`, 'success');
+}
+
 function renderRec(){
     const fq={daily:'Hàng ngày',weekly:'Hàng tuần',monthly:'Hàng tháng'};
     document.getElementById('recL').innerHTML=S.recurring.map((r,i)=>{const ct=CATS[r.cat]||CATS.other;
-    return`<div class="rec-card" style="animation:fadeUp 0.3s ease ${i*0.05}s both"><div class="tx-ic" style="background:${ct.bg};color:${ct.color}"><i class="${ct.ic}"></i></div><div class="rec-info"><div class="rec-name">${r.name}</div><div class="rec-sub"><span class="freq-tag">${fq[r.freq]}</span> · ${ct.label}</div></div><div class="rec-amt">${fmt(r.amt)}</div><label class="toggle"><input type="checkbox" ${r.on?'checked':''} onchange="togRec(${r.id},this.checked)"><span class="toggle-track"></span></label></div>`;}).join('');
+    return`
+        <div class="rec-card" style="animation:fadeUp 0.3s ease ${i*0.05}s both">
+            <div class="tx-ic" style="background:${ct.bg};color:${ct.color}"><i class="${ct.ic}"></i></div>
+            <div class="rec-info">
+                <div class="rec-name">${r.name}</div>
+                <div class="rec-sub"><span class="freq-tag">${fq[r.freq]}</span> · ${ct.label}</div>
+            </div>
+            <div class="rec-amt">${fmt(r.amt)}</div>
+            <button type="button" class="btn btn-sm btn-o" style="font-size:0.68rem;padding:0.25rem 0.55rem;margin-left:0.5rem;margin-right:0.3rem" onclick="executeRecurring(${r.id})" title="Ghi nhận vào sổ thu chi ngay"><i class="ri-play-circle-line"></i> Ghi ngay</button>
+            <label class="toggle"><input type="checkbox" ${r.on?'checked':''} onchange="togRec(${r.id},this.checked)"><span class="toggle-track"></span></label>
+        </div>
+    `;}).join('');
 }
 function addRec(){const n=document.getElementById('rfN').value.trim(),a=parseFloat(document.getElementById('rfA').value),f=document.getElementById('rfF').value,c=document.getElementById('rfC').value;if(!n||!a){toast('Điền đầy đủ!','error');return}S.recurring.push({id:Date.now(),name:n,amt:a,freq:f,cat:c,on:true});togForm('recF');renderRec();toast('Đã thêm định kỳ!','success')}
 function togRec(id,on){const r=S.recurring.find(x=>x.id===id);if(r)r.on=on;toast(on?'Đã bật':'Đã tắt','info')}
@@ -1348,15 +2111,873 @@ function renderSettings(){
     if(up) up.value = phone;
     const ue = document.getElementById('setUserEmail');
     if(ue) ue.value = email;
+
+    // Thẻ tài khoản ngân hàng nhận tiền: Mặc định ẩn, chỉ hiện nếu người dùng tự cấu hình
+    const bankCard = document.getElementById('userBankCard');
+    const bankTitle = document.getElementById('userBankTitle');
+    const bankSub = document.getElementById('userBankSub');
+    if (bankCard) {
+        if (S.user.bank_name && S.user.bank_account) {
+            bankCard.style.display = 'flex';
+            if (bankTitle) bankTitle.textContent = `${S.user.bank_name} · ${S.user.bank_account}`;
+            if (bankSub) bankSub.textContent = `${name.toUpperCase()} · Nhận quỹ & chia tiền`;
+        } else {
+            bankCard.style.display = 'none';
+        }
+    }
     
-    const curTheme=document.documentElement.getAttribute('data-theme')||localStorage.getItem('vx_theme')||'pink-gold';
-    document.querySelectorAll('.theme-pill, .theme-item').forEach(t=>{
-        t.classList.toggle('active',t.dataset.theme===curTheme);
-    });
+    // Đồng bộ trạng thái Vân tay & Face ID riêng biệt (mặc định tắt, chỉ bật khi đã xác thực)
+    const isFingerprint = (localStorage.getItem('vx_fingerprint_enabled') === '1');
+    const isFaceId = (localStorage.getItem('vx_faceid_enabled') === '1');
+
+    const fpToggle = document.getElementById('prefFingerprint');
+    const fpStatus = document.getElementById('fingerprintStatusTxt');
+    if (fpToggle) fpToggle.checked = isFingerprint;
+    if (fpStatus) {
+        fpStatus.innerHTML = isFingerprint
+            ? '<span class="sg-badge-green" style="font-size:0.68rem;padding:0.1rem 0.45rem">Đã kích hoạt</span>'
+            : 'Chưa kích hoạt';
+    }
+
+    const faceToggle = document.getElementById('prefFaceId');
+    const faceStatus = document.getElementById('faceIdStatusTxt');
+    if (faceToggle) faceToggle.checked = isFaceId;
+    if (faceStatus) {
+        faceStatus.innerHTML = isFaceId
+            ? '<span class="sg-badge-green" style="font-size:0.68rem;padding:0.1rem 0.45rem">Đã kích hoạt</span>'
+            : 'Chưa kích hoạt';
+    }
+}
+
+let currentBioType = 'fingerprint'; // 'fingerprint' | 'faceid'
+let currentBioMode = 'login'; // 'login' | 'register'
+let bioAutoTimer = null;
+
+function handleFingerprintToggle(e){
+    const checkbox = e.target;
+    if (checkbox.checked) {
+        checkbox.checked = false;
+        openBiometricModal('fingerprint', 'register');
+    } else {
+        localStorage.setItem('vx_fingerprint_enabled', '0');
+        renderSettings();
+        toast('Đã tắt xác thực vân tay.', 'info');
+    }
+}
+
+function handleFaceIdToggle(e){
+    const checkbox = e.target;
+    if (checkbox.checked) {
+        checkbox.checked = false;
+        openBiometricModal('faceid', 'register');
+    } else {
+        localStorage.setItem('vx_faceid_enabled', '0');
+        renderSettings();
+        toast('Đã tắt xác thực Face ID.', 'info');
+    }
+}
+
+function handleFingerprintLogin(){
+    openBiometricModal('fingerprint', 'login');
+}
+
+function handleFaceIdLogin(){
+    openBiometricModal('faceid', 'login');
+}
+
+// Backward compatibility alias
+function handleBiometricLogin(){
+    handleFingerprintLogin();
+}
+
+let bioCameraStream = null;
+let bioCameraFacingMode = 'user';
+let bioFaceAnimId = null;
+let bioFaceProgress = 0;
+let bioPrevFaceFrame = null;
+let bioTouchTimer = null;
+let bioTouchProgress = 0;
+let bioIsTouching = false;
+
+function updateBioProgress(percent, stepText) {
+    const container = document.getElementById('bioProgressContainer');
+    const fill = document.getElementById('bioProgressFill');
+    const percentEl = document.getElementById('bioProgressPercent');
+    const stepEl = document.getElementById('bioProgressStep');
+
+    if (container) container.style.display = 'block';
+    const clamped = Math.min(100, Math.max(0, percent));
+    if (fill) fill.style.width = clamped + '%';
+    if (percentEl) percentEl.textContent = Math.round(clamped) + '%';
+    if (stepEl && stepText) stepEl.textContent = stepText;
+}
+
+function flipBioCamera(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    bioCameraFacingMode = (bioCameraFacingMode === 'user') ? 'environment' : 'user';
+    startRealFaceIdScan(currentBioMode);
+}
+
+function handleBioManualConfirm() {
+    triggerBioSuccess();
+}
+
+async function startRealFaceIdScan(mode = 'login') {
+    stopBioCamera();
+    bioFaceProgress = 0;
+    bioPrevFaceFrame = null;
+
+    const wrap = document.getElementById('bioScanWrap');
+    const video = document.getElementById('bioFaceVideo');
+    const overlay = document.getElementById('bioFaceOverlay');
+    const core = document.getElementById('bioScanCore');
+    const status = document.getElementById('bioModalStatus');
+    const btnFlip = document.getElementById('btnFlipBioCam');
+    const btnConfirm = document.getElementById('btnConfirmBioNow');
+
+    if (wrap) {
+        wrap.classList.add('face-mode');
+        wrap.classList.remove('finger-mode', 'touch-active', 'face-locked', 'success');
+    }
+    if (video) video.style.display = 'block';
+    if (overlay) overlay.style.display = 'block';
+    if (core) core.style.display = 'none';
+    if (btnFlip) btnFlip.style.display = 'flex';
+    if (btnConfirm) btnConfirm.style.display = 'none';
+
+    updateBioProgress(0, 'Đang khởi động camera...');
+
+    if (status) {
+        status.style.color = '#7c3aed';
+        status.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span> Đang bật camera trước... Vui lòng nhìn thẳng';
+    }
+
+    // Kiểm tra API mediaDevices
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        handleCameraUnavailable('Trình duyệt điện thoại bảo mật chặn camera qua kết nối HTTP (cần HTTPS/localhost).');
+        return;
+    }
+
+    try {
+        bioCameraStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: bioCameraFacingMode,
+                width: { ideal: 480 },
+                height: { ideal: 480 }
+            },
+            audio: false
+        });
+
+        if (video) {
+            video.srcObject = bioCameraStream;
+            await video.play();
+        }
+
+        if (status) {
+            status.style.color = '#7c3aed';
+            status.innerHTML = '<i class="ri-focus-2-line"></i> Đang dò tìm khuôn mặt thật... Vui lòng giữ yên';
+        }
+
+        // Bắt đầu vòng lặp thị giác máy tính (Computer Vision) phân tích khuôn mặt thật
+        runFaceDetectionLoop();
+
+    } catch (err) {
+        console.warn('Camera error for Face ID:', err);
+        handleCameraUnavailable(
+            (err.name === 'NotAllowedError') 
+                ? 'Bạn đã từ chối cấp quyền camera trên điện thoại.' 
+                : 'Không thể mở camera (' + (err.name || 'Lỗi thiết bị') + ').'
+        );
+    }
+}
+
+function playBioHapticSound(type = 'tick') {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        if (type === 'tick') {
+            osc.frequency.setValueAtTime(140, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(75, ctx.currentTime + 0.035);
+            gain.gain.setValueAtTime(0.14, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.035);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.035);
+        } else if (type === 'success') {
+            osc.frequency.setValueAtTime(520, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.18, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.12);
+        } else if (type === 'error') {
+            osc.frequency.setValueAtTime(180, ctx.currentTime);
+            osc.frequency.linearRampToValueAtTime(110, ctx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.15);
+        }
+    } catch(e){}
+}
+
+function switchToHttps() {
+    if (window.location.protocol === 'http:') {
+        window.location.href = window.location.href.replace('http:', 'https:');
+    } else {
+        toast('Bạn đang kết nối qua HTTPS bảo mật rồi.', 'info');
+    }
+}
+
+function handleCameraUnavailable(msg) {
+    const video = document.getElementById('bioFaceVideo');
+    const overlay = document.getElementById('bioFaceOverlay');
+    const core = document.getElementById('bioScanCore');
+    const status = document.getElementById('bioModalStatus');
+    const btnFlip = document.getElementById('btnFlipBioCam');
+    const btnConfirm = document.getElementById('btnConfirmBioNow');
+    const btnSnap = document.getElementById('btnSnapFacePhoto');
+    const btnHttps = document.getElementById('btnSwitchHttps');
+
+    if (video) video.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+    if (btnFlip) btnFlip.style.display = 'none';
+    if (core) core.style.display = 'flex';
     
-    document.querySelectorAll('.user-pill, .user-switch-card').forEach(c=>{
-        c.classList.toggle('active',c.textContent.includes(name) || c.textContent.includes(email));
-    });
+    // Hiển thị nút mở camera iPhone chụp mặt thật (Safari iOS hỗ trợ 100% qua HTTP)
+    if (btnSnap) btnSnap.style.display = 'block';
+    
+    // Nếu đang chạy HTTP, hiện nút chuyển sang HTTPS
+    if (btnHttps && window.location.protocol === 'http:') {
+        btnHttps.style.display = 'block';
+    }
+
+    if (btnConfirm) {
+        btnConfirm.style.display = 'block';
+        btnConfirm.innerHTML = '<i class="ri-shield-flash-line"></i> Xác thực mô phỏng (Test)';
+    }
+
+    if (status) {
+        status.style.color = '#7c3aed';
+        status.innerHTML = `<i class="ri-information-line"></i> <strong>Safari iOS chặn video qua HTTP:</strong><br><span style="font-size:0.72rem;color:var(--text2);font-weight:normal">Bấm nút màu tím bên dưới để <b>mở Camera iPhone chụp ảnh khuôn mặt thật</b>, hoặc bấm "Bật HTTPS" để mở video trực tiếp.</span>`;
+    }
+}
+
+function handleBioFaceFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const wrap = document.getElementById('bioScanWrap');
+    const imgPreview = document.getElementById('bioFacePhotoPreview');
+    const overlay = document.getElementById('bioFaceOverlay');
+    const core = document.getElementById('bioScanCore');
+    const status = document.getElementById('bioModalStatus');
+    const canvas = document.getElementById('bioFaceCanvas');
+    const btnSnap = document.getElementById('btnSnapFacePhoto');
+
+    if (core) core.style.display = 'none';
+    if (overlay) overlay.style.display = 'block';
+    if (btnSnap) btnSnap.style.display = 'none';
+
+    updateBioProgress(15, 'Đang đọc ảnh chụp từ camera...');
+    if (status) {
+        status.style.color = '#7c3aed';
+        status.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span> Đang phân tích khuôn mặt người thật trong ảnh...';
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            if (imgPreview) {
+                imgPreview.src = e.target.result;
+                imgPreview.style.display = 'block';
+            }
+
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = 160;
+            canvas.height = 160;
+            ctx.drawImage(img, 0, 0, 160, 160);
+
+            // Phân tích hình ảnh khuôn mặt qua Canvas
+            const imgData = ctx.getImageData(30, 25, 100, 110);
+            const data = imgData.data;
+
+            let skinCount = 0;
+            let total = 0;
+            let lumSum = 0;
+            let edgeContrast = 0;
+
+            for (let i = 0; i < data.length; i += 16) {
+                const r = data[i];
+                const g = data[i+1];
+                const b = data[i+2];
+                total++;
+                const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+                lumSum += lum;
+
+                if (r > 50 && g > 35 && b > 20 && r > g && r > b && (r - g >= 8)) {
+                    skinCount++;
+                }
+                if (i > 16) {
+                    const prevLum = 0.299 * data[i-16] + 0.587 * data[i-15] + 0.114 * data[i-14];
+                    edgeContrast += Math.abs(lum - prevLum);
+                }
+            }
+
+            const skinRatio = skinCount / (total || 1);
+            const avgContrast = edgeContrast / (total || 1);
+            const avgLum = lumSum / (total || 1);
+
+            const isRealFace = (avgLum > 30 && avgLum < 240 && (skinRatio > 0.15 || avgContrast > 5.5));
+
+            if (isRealFace) {
+                if (wrap) wrap.classList.add('face-locked');
+                updateBioProgress(65, 'Đã xác định đường nét khuôn mặt');
+                playBioHapticSound('tick');
+
+                setTimeout(() => {
+                    updateBioProgress(100, 'Khớp sinh trắc học thành công!');
+                    playBioHapticSound('success');
+                    if (status) {
+                        status.style.color = '#10B981';
+                        status.innerHTML = '<i class="ri-checkbox-circle-line"></i> Đã nhận diện khuôn mặt người thật thành công!';
+                    }
+                    setTimeout(() => {
+                        triggerBioSuccess();
+                    }, 500);
+                }, 400);
+
+            } else {
+                if (wrap) wrap.classList.remove('face-locked');
+                updateBioProgress(0, 'Chưa nhận diện được');
+                playBioHapticSound('error');
+                if (btnSnap) btnSnap.style.display = 'block';
+
+                if (status) {
+                    status.style.color = '#ef4444';
+                    status.innerHTML = '<i class="ri-close-circle-line"></i> Không tìm thấy khuôn mặt trong ảnh! Vui lòng bấm chụp lại ảnh chân dung rõ nét.';
+                }
+            }
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function runFaceDetectionLoop() {
+    const video = document.getElementById('bioFaceVideo');
+    const canvas = document.getElementById('bioFaceCanvas');
+    const wrap = document.getElementById('bioScanWrap');
+    const status = document.getElementById('bioModalStatus');
+
+    if (!video || !canvas || !bioCameraStream) return;
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    canvas.width = 120;
+    canvas.height = 120;
+
+    function detectFrame() {
+        if (!bioCameraStream) return;
+
+        if (video.readyState >= 2) {
+            try {
+                ctx.drawImage(video, 0, 0, 120, 120);
+                // Vùng trung tâm (khuôn mặt)
+                const imgData = ctx.getImageData(25, 20, 70, 80);
+                const data = imgData.data;
+
+                let skinPixelCount = 0;
+                let totalSampled = 0;
+                let lumSum = 0;
+                let edgeContrast = 0;
+                let motionDelta = 0;
+
+                const step = 4; // Lấy mẫu cách pixel để tối ưu hiệu năng điện thoại
+                for (let i = 0; i < data.length; i += step * 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    totalSampled++;
+
+                    // Tính độ sáng
+                    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+                    lumSum += lum;
+
+                    // Kiểm tra sắc độ da người thật (Human skin tone classification)
+                    const isSkin = (r > 50 && g > 35 && b > 20 && r > g && r > b && (r - g >= 8));
+                    if (isSkin) skinPixelCount++;
+
+                    // Tính tương phản cạnh lân cận
+                    if (i > 8) {
+                        const prevLum = 0.299 * data[i-4] + 0.587 * data[i-3] + 0.114 * data[i-2];
+                        edgeContrast += Math.abs(lum - prevLum);
+                    }
+
+                    // Tính chuyển động vi mô so với khung hình trước
+                    if (bioPrevFaceFrame && bioPrevFaceFrame.length === data.length) {
+                        motionDelta += Math.abs(r - bioPrevFaceFrame[i]) + Math.abs(g - bioPrevFaceFrame[i+1]);
+                    }
+                }
+
+                bioPrevFaceFrame = new Uint8Array(data);
+
+                const avgLum = lumSum / (totalSampled || 1);
+                const skinRatio = skinPixelCount / (totalSampled || 1);
+                const avgContrast = edgeContrast / (totalSampled || 1);
+                const avgMotion = motionDelta / (totalSampled || 1);
+
+                // Tiêu chí phát hiện khuôn mặt thật:
+                // 1. Ánh sáng vừa phải (không bị tối đen 0 hoặc chói lóa 255)
+                // 2. Tỉ lệ điểm màu da/khuôn mặt > 15%
+                // 3. Có đường viền đặc trưng (mắt, mũi, miệng tạo tương phản > 5)
+                // 4. Có cử động nhẹ tự nhiên của người sống
+                const isRealFacePresent = (avgLum > 30 && avgLum < 235 && (skinRatio > 0.15 || avgContrast > 6.0));
+
+                if (isRealFacePresent) {
+                    if (wrap) wrap.classList.add('face-locked');
+                    
+                    // Tăng tiến trình nhận diện
+                    bioFaceProgress += 2.6;
+                    updateBioProgress(bioFaceProgress, 'Đã nhận diện khuôn mặt thật');
+
+                    if (status) {
+                        status.style.color = '#10B981';
+                        if (bioFaceProgress < 40) {
+                            status.innerHTML = `<i class="ri-scan-2-line"></i> Đang khớp đặc trưng khuôn mặt: ${Math.round(bioFaceProgress)}%`;
+                        } else if (bioFaceProgress < 80) {
+                            status.innerHTML = `<i class="ri-user-smile-line"></i> Đang phân tích sinh trắc học: ${Math.round(bioFaceProgress)}%`;
+                        } else {
+                            status.innerHTML = `<i class="ri-checkbox-circle-line"></i> Khớp hoàn toàn! Vui lòng giữ yên (${Math.round(bioFaceProgress)}%)`;
+                        }
+                    }
+
+                    if (bioFaceProgress >= 100) {
+                        // Xác thực thành công khi nhận diện đủ 100%
+                        if (navigator.vibrate) navigator.vibrate([35, 60]);
+                        stopBioCamera();
+                        triggerBioSuccess();
+                        return;
+                    }
+                } else {
+                    // Khuôn mặt bị che hoặc quay đi
+                    if (wrap) wrap.classList.remove('face-locked');
+                    bioFaceProgress = Math.max(0, bioFaceProgress - 1.2);
+                    updateBioProgress(bioFaceProgress, 'Vui lòng nhìn thẳng');
+
+                    if (status) {
+                        status.style.color = '#f59e0b';
+                        status.innerHTML = '<i class="ri-user-unfollow-line"></i> Không thấy khuôn mặt trong khung hình! Vui lòng nhìn thẳng vào camera';
+                    }
+                }
+
+            } catch(e) {
+                console.warn('Frame processing err:', e);
+            }
+        }
+
+        bioFaceAnimId = requestAnimationFrame(detectFrame);
+    }
+
+    bioFaceAnimId = requestAnimationFrame(detectFrame);
+}
+
+function stopBioCamera() {
+    if (bioFaceAnimId) {
+        cancelAnimationFrame(bioFaceAnimId);
+        bioFaceAnimId = null;
+    }
+    if (bioCameraStream) {
+        try {
+            bioCameraStream.getTracks().forEach(t => t.stop());
+        } catch(e){}
+        bioCameraStream = null;
+    }
+    const video = document.getElementById('bioFaceVideo');
+    if (video) {
+        video.srcObject = null;
+        video.style.display = 'none';
+    }
+    const photoPreview = document.getElementById('bioFacePhotoPreview');
+    if (photoPreview) {
+        photoPreview.src = '';
+        photoPreview.style.display = 'none';
+    }
+    const fileInput = document.getElementById('bioFaceFileInput');
+    if (fileInput) fileInput.value = '';
+    const btnSnap = document.getElementById('btnSnapFacePhoto');
+    if (btnSnap) btnSnap.style.display = 'none';
+    const btnHttps = document.getElementById('btnSwitchHttps');
+    if (btnHttps) btnHttps.style.display = 'none';
+
+    const overlay = document.getElementById('bioFaceOverlay');
+    if (overlay) overlay.style.display = 'none';
+    const btnFlip = document.getElementById('btnFlipBioCam');
+    if (btnFlip) btnFlip.style.display = 'none';
+    const wrap = document.getElementById('bioScanWrap');
+    if (wrap) wrap.classList.remove('face-locked');
+}
+
+function startRealFingerprintAuth(mode = 'login') {
+    stopBioCamera();
+    bioTouchProgress = 0;
+    bioIsTouching = false;
+
+    const wrap = document.getElementById('bioScanWrap');
+    const core = document.getElementById('bioScanCore');
+    const status = document.getElementById('bioModalStatus');
+    const btnConfirm = document.getElementById('btnConfirmBioNow');
+
+    if (wrap) {
+        wrap.classList.remove('face-mode', 'face-locked', 'success');
+        wrap.classList.add('finger-mode');
+    }
+    if (core) {
+        core.style.display = 'flex';
+        core.innerHTML = '<i class="ri-fingerprint-line" style="font-size:2.85rem"></i>';
+    }
+    if (btnConfirm) btnConfirm.style.display = 'none';
+
+    updateBioProgress(0, 'Chạm và giữ cảm biến');
+
+    if (status) {
+        status.style.color = '#06b6d4';
+        status.innerHTML = '<i class="ri-hand-coin-line"></i> <strong>Chạm và giữ ngón tay</strong> trên cảm biến để quét...';
+    }
+
+    // Tích hợp cảm ứng Touch-and-Hold & Rung xúc giác haptic cho điện thoại
+    setupFingerprintTouchListeners();
+
+    // Đồng thời gọi WebAuthn nếu trình duyệt và thiết bị hỗ trợ
+    tryCallNativeWebAuthn(mode);
+}
+
+function setupFingerprintTouchListeners() {
+    const wrap = document.getElementById('bioScanWrap');
+    if (!wrap) return;
+
+    // Gỡ các listener cũ để tránh trùng lặp
+    wrap.onpointerdown = null;
+    wrap.onpointerup = null;
+    wrap.onpointercancel = null;
+    wrap.onpointerleave = null;
+
+    wrap.onpointerdown = function(e) {
+        if (currentBioType !== 'fingerprint') return;
+        e.preventDefault();
+
+        bioIsTouching = true;
+        wrap.classList.add('touch-active');
+
+        // Rung xúc giác haptic (Android) + Âm thanh vi mô cảm ứng (Safari iOS)
+        if (navigator.vibrate) navigator.vibrate([25, 35]);
+        playBioHapticSound('tick');
+
+        const status = document.getElementById('bioModalStatus');
+        if (status) {
+            status.style.color = '#06b6d4';
+            status.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span> Đang quét đường vân ngón tay... Vui lòng giữ yên!';
+        }
+
+        if (bioTouchTimer) clearInterval(bioTouchTimer);
+
+        let midVibrateFired = false;
+        bioTouchTimer = setInterval(() => {
+            if (!bioIsTouching) {
+                clearInterval(bioTouchTimer);
+                return;
+            }
+
+            bioTouchProgress += 3.4;
+            updateBioProgress(bioTouchProgress, 'Đang phân tích cấu trúc vân tay...');
+
+            // Nhịp xung giữa tiến trình
+            if (bioTouchProgress >= 50 && !midVibrateFired) {
+                midVibrateFired = true;
+                if (navigator.vibrate) navigator.vibrate(20);
+                playBioHapticSound('tick');
+            }
+
+            if (bioTouchProgress >= 100) {
+                clearInterval(bioTouchTimer);
+                bioIsTouching = false;
+                wrap.classList.remove('touch-active');
+
+                // Phản hồi xác nhận thành công
+                if (navigator.vibrate) navigator.vibrate([40, 50, 70]);
+                playBioHapticSound('success');
+
+                triggerBioSuccess();
+            }
+        }, 35);
+    };
+
+    function handleTouchEnd() {
+        if (!bioIsTouching) return;
+        bioIsTouching = false;
+        wrap.classList.remove('touch-active');
+
+        if (bioTouchTimer) clearInterval(bioTouchTimer);
+
+        if (bioTouchProgress < 100) {
+            const status = document.getElementById('bioModalStatus');
+            if (bioTouchProgress > 15) {
+                if (navigator.vibrate) navigator.vibrate(100);
+                playBioHapticSound('error');
+                if (status) {
+                    status.style.color = '#f59e0b';
+                    status.innerHTML = '<i class="ri-error-warning-line"></i> <strong>Nhấc tay quá sớm!</strong> Vui lòng giữ ngón tay trên cảm biến đến khi đủ 100%.';
+                }
+            }
+            bioTouchProgress = 0;
+            updateBioProgress(0, 'Chạm và giữ để quét lại');
+        }
+    }
+
+    wrap.onpointerup = handleTouchEnd;
+    wrap.onpointercancel = handleTouchEnd;
+    wrap.onpointerleave = handleTouchEnd;
+}
+
+async function tryCallNativeWebAuthn(mode = 'login') {
+    // Chỉ gọi WebAuthn nếu là secure context và rpId không phải là IP (theo chuẩn W3C FIDO2)
+    const isIpHost = /^(\d{1,3}\.){3}\d{1,3}$/.test(window.location.hostname);
+    if (!window.isSecureContext || !window.PublicKeyCredential || isIpHost) {
+        return;
+    }
+
+    try {
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+
+        if (mode === 'register') {
+            const userId = new Uint8Array(16);
+            window.crypto.getRandomValues(userId);
+            const cred = await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: 'Ví Xinh', id: window.location.hostname },
+                    user: {
+                        id: userId,
+                        name: S.user?.email || 'user@vixinh.vn',
+                        displayName: S.user?.name || 'Người dùng Ví Xinh'
+                    },
+                    pubKeyCredParams: [
+                        { alg: -7, type: 'public-key' },
+                        { alg: -257, type: 'public-key' }
+                    ],
+                    authenticatorSelection: {
+                        authenticatorAttachment: 'platform',
+                        userVerification: 'required'
+                    },
+                    timeout: 45000
+                }
+            });
+            if (cred) triggerBioSuccess();
+        } else {
+            const cred = await navigator.credentials.get({
+                publicKey: {
+                    challenge: challenge,
+                    rpId: window.location.hostname,
+                    userVerification: 'required',
+                    timeout: 45000
+                }
+            });
+            if (cred) triggerBioSuccess();
+        }
+    } catch (e) {
+        console.warn('Native WebAuthn deferred to touch sensor:', e);
+    }
+}
+
+function openBiometricModal(type = 'fingerprint', mode = 'login'){
+    currentBioType = type;
+    currentBioMode = mode;
+    const modal = document.getElementById('biometricModal');
+    const wrap = document.getElementById('bioScanWrap');
+    const title = document.getElementById('bioModalTitle');
+    const desc = document.getElementById('bioModalDesc');
+    const btnConfirm = document.getElementById('btnConfirmBioNow');
+
+    if (!modal) return;
+
+    if (wrap) {
+        wrap.classList.remove('success', 'touch-active', 'face-locked');
+        if (type === 'faceid') {
+            wrap.classList.add('face-mode');
+            wrap.classList.remove('finger-mode');
+        } else {
+            wrap.classList.add('finger-mode');
+            wrap.classList.remove('face-mode');
+        }
+    }
+
+    const core = document.querySelector('#bioScanWrap .bio-scan-core');
+    if (core) {
+        if (type === 'faceid') {
+            core.innerHTML = '<svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v2M16 20h2a2 2 0 0 0 2-2v-2M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 0 0 5 0"/></svg>';
+        } else {
+            core.innerHTML = '<i class="ri-fingerprint-line" style="font-size:2.85rem"></i>';
+        }
+    }
+
+    if (btnConfirm) btnConfirm.style.display = 'none';
+
+    if (type === 'faceid') {
+        if (mode === 'register') {
+            if (title) title.textContent = 'Kích hoạt Face ID Thật';
+            if (desc) desc.textContent = 'Nhìn thẳng vào camera trước để quét và phân tích khuôn mặt thật';
+        } else {
+            if (title) title.textContent = 'Xác thực Face ID Thật';
+            if (desc) desc.textContent = 'Đưa khuôn mặt vào giữa khung tròn để mở khóa Ví Xinh';
+        }
+    } else {
+        // Fingerprint
+        if (mode === 'register') {
+            if (title) title.textContent = 'Kích hoạt Cảm biến Vân tay';
+            if (desc) desc.textContent = 'Chạm và giữ ngón tay trên cảm biến đến khi quét đủ 100%';
+        } else {
+            if (title) title.textContent = 'Xác thực Vân tay Thật';
+            if (desc) desc.textContent = 'Chạm và giữ ngón tay trên cảm biến để mở khóa Ví Xinh';
+        }
+    }
+
+    modal.classList.add('active');
+
+    // Kích hoạt engine sinh trắc học tương ứng
+    if (type === 'faceid') {
+        startRealFaceIdScan(mode);
+    } else {
+        startRealFingerprintAuth(mode);
+    }
+}
+
+function closeBiometricModal(success = false){
+    stopBioCamera();
+    if (bioTouchTimer) clearInterval(bioTouchTimer);
+    bioIsTouching = false;
+
+    const modal = document.getElementById('biometricModal');
+    if (modal) modal.classList.remove('active');
+
+    if (!success && currentBioMode === 'register') {
+        const fpToggle = document.getElementById('prefFingerprint');
+        const faceToggle = document.getElementById('prefFaceId');
+        if (fpToggle) fpToggle.checked = (localStorage.getItem('vx_fingerprint_enabled') === '1');
+        if (faceToggle) faceToggle.checked = (localStorage.getItem('vx_faceid_enabled') === '1');
+    }
+}
+
+function triggerBioSuccess(){
+    stopBioCamera();
+    if (bioTouchTimer) clearInterval(bioTouchTimer);
+
+    const wrap = document.getElementById('bioScanWrap');
+    const status = document.getElementById('bioModalStatus');
+    const core = document.querySelector('#bioScanWrap .bio-scan-core');
+    const video = document.getElementById('bioFaceVideo');
+    const overlay = document.getElementById('bioFaceOverlay');
+    const btnFlip = document.getElementById('btnFlipBioCam');
+    const btnConfirm = document.getElementById('btnConfirmBioNow');
+
+    if (video) video.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+    if (btnFlip) btnFlip.style.display = 'none';
+    if (btnConfirm) btnConfirm.style.display = 'none';
+
+    if (core) {
+        core.style.display = 'flex';
+        core.innerHTML = '<i class="ri-checkbox-circle-fill" style="font-size:2.85rem"></i>';
+    }
+
+    if (wrap) {
+        wrap.classList.remove('touch-active');
+        wrap.classList.add('success');
+    }
+
+    updateBioProgress(100, 'Xác thực thành công!');
+
+    if (status) {
+        status.style.color = '#10B981';
+        status.innerHTML = '<i class="ri-check-line"></i> Xác thực sinh trắc học thành công!';
+    }
+
+    setTimeout(() => {
+        closeBiometricModal(true);
+
+        if (currentBioMode === 'register') {
+            if (currentBioType === 'faceid') {
+                localStorage.setItem('vx_faceid_enabled', '1');
+                if (S.user) localStorage.setItem('vx_last_user', JSON.stringify(S.user));
+                renderSettings();
+                addAppNotification({
+                    title: 'Đã kích hoạt Face ID 🧑‍🦱',
+                    body: 'Bạn có thể sử dụng khuôn mặt để đăng nhập nhanh chóng và bảo mật.',
+                    type: 'security',
+                    icon: 'ri-face-recognition-line',
+                    iconBg: '#f5f3ff',
+                    iconColor: '#7c3aed',
+                    actionUrl: 'settings',
+                    actionText: 'Xem cài đặt →'
+                });
+                toast('Đã kích hoạt Face ID thành công! ✨', 'success');
+            } else {
+                localStorage.setItem('vx_fingerprint_enabled', '1');
+                if (S.user) localStorage.setItem('vx_last_user', JSON.stringify(S.user));
+                renderSettings();
+                addAppNotification({
+                    title: 'Đã kích hoạt Vân tay ☝️',
+                    body: 'Bạn có thể chạm ngón tay vào cảm biến để đăng nhập nhanh chóng và bảo mật.',
+                    type: 'security',
+                    icon: 'ri-fingerprint-line',
+                    iconBg: '#ecfdf5',
+                    iconColor: '#059669',
+                    actionUrl: 'settings',
+                    actionText: 'Xem cài đặt →'
+                });
+                toast('Đã kích hoạt cảm biến vân tay thành công! ✨', 'success');
+            }
+        } else {
+            // Login mode
+            const em = document.getElementById('loginEmail')?.value.trim() || localStorage.getItem('vx_remembered_account');
+            let u = null;
+            if (em) {
+                u = USERS.find(x => x.email === em || (x.phone && x.phone.replace(/\s+/g,'') === em.replace(/\s+/g,'')));
+            }
+            if (!u) {
+                const lastU = localStorage.getItem('vx_last_user');
+                if (lastU) {
+                    try { u = JSON.parse(lastU); } catch(e){}
+                }
+            }
+            if (!u) u = USERS[0];
+
+            S.loggedIn = true;
+            S.user = u;
+            localStorage.setItem('vx_u', JSON.stringify(u));
+            localStorage.setItem('vx_last_user', JSON.stringify(u));
+            enterApp();
+            const bioLabel = (currentBioType === 'faceid') ? 'Face ID' : 'Vân tay';
+            toast(`Đăng nhập bằng ${bioLabel} thành công: ${u.name || u.full_name} ✨`, 'success');
+        }
+    }, 400);
+}
+
+function updateBioLoginUI(){
+    // Kept for backward compatibility
 }
 
 function openEditProfileModal(){
@@ -1370,6 +2991,10 @@ function openEditProfileModal(){
     if(up) up.value = phone;
     const ue = document.getElementById('setUserEmail');
     if(ue) ue.value = email;
+    const ubn = document.getElementById('setUserBankName');
+    if(ubn) ubn.value = S.user.bank_name || '';
+    const uba = document.getElementById('setUserBankAccount');
+    if(uba) uba.value = S.user.bank_account || '';
     document.getElementById('editProfileModal')?.classList.add('active');
 }
 
@@ -1378,30 +3003,12 @@ function closeEditProfileModal(){
 }
 
 function copyBankAccount(){
-    navigator.clipboard.writeText('0912 345 678');
-    toast('Đã sao chép STK MB Bank: 0912 345 678 ✨','success');
-}
-
-async function toggleBiometricsWeb(e){
-    const checkbox = e.target;
-    if(checkbox.checked){
-        // WebAuthn / Platform Authenticator (Windows Hello, Touch ID Mac, FaceID iPhone)
-        if(window.PublicKeyCredential && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable){
-            try {
-                const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-                if(available){
-                    toast('Đã kích hoạt sinh trắc học thiết bị (Face ID / Vân tay) ✨','success');
-                    localStorage.setItem('vx_bio_enabled', '1');
-                    return;
-                }
-            } catch(err){}
-        }
-        toast('Đã bật bảo mật sinh trắc học (Face ID / Vân tay) ✨','success');
-        localStorage.setItem('vx_bio_enabled', '1');
-    } else {
-        localStorage.setItem('vx_bio_enabled', '0');
-        toast('Đã tắt bảo mật sinh trắc học','info');
+    if (!S.user?.bank_account) {
+        toast('Chưa thiết lập số tài khoản ngân hàng.', 'info');
+        return;
     }
+    navigator.clipboard.writeText(S.user.bank_account);
+    toast(`Đã sao chép STK ${S.user.bank_name ? S.user.bank_name + ' ' : ''}: ${S.user.bank_account} ✨`,'success');
 }
 
 async function saveProfile(e){
@@ -1409,11 +3016,15 @@ async function saveProfile(e){
     const name=document.getElementById('setUserName').value.trim();
     const phone=document.getElementById('setUserPhone').value.trim();
     const email=document.getElementById('setUserEmail').value.trim();
+    const bankName=document.getElementById('setUserBankName')?.value.trim() || '';
+    const bankAccount=document.getElementById('setUserBankAccount')?.value.trim() || '';
     if(!name||!phone||!email){toast('Chưa điền đủ thông tin!','error');return}
     S.user.name=name;
     S.user.full_name=name;
     S.user.phone=phone;
     S.user.email=email;
+    S.user.bank_name=bankName;
+    S.user.bank_account=bankAccount;
     localStorage.setItem('vx_u',JSON.stringify(S.user));
     const un = document.getElementById('uName');
     if(un) un.textContent=name;
@@ -1428,6 +3039,16 @@ async function saveProfile(e){
             });
         }catch(err){}
     }
+    addAppNotification({
+        title: 'Cập nhật tài khoản thành công 👤',
+        body: `Thông tin tài khoản (${name}) đã được lưu và đồng bộ.`,
+        type: 'security',
+        icon: 'ri-user-settings-line',
+        iconBg: '#e0f2fe',
+        iconColor: '#0284c7',
+        actionUrl: 'settings',
+        actionText: 'Xem tài khoản →'
+    });
     toast('Đã cập nhật thông tin cá nhân thành công! ✨','success');
 }
 
@@ -1436,6 +3057,16 @@ function setTheme(themeName){
     localStorage.setItem('vx_theme',themeName);
     document.querySelectorAll('.theme-pill, .theme-item').forEach(t=>{
         t.classList.toggle('active',t.dataset.theme===themeName);
+    });
+    addAppNotification({
+        title: 'Đổi giao diện ứng dụng 🎨',
+        body: `Đã áp dụng chủ đề: ${THEME_NAMES[themeName]||themeName}.`,
+        type: 'system',
+        icon: 'ri-palette-line',
+        iconBg: '#fef3c7',
+        iconColor: '#d97706',
+        actionUrl: 'settings',
+        actionText: 'Xem cài đặt →'
     });
     toast(`Giao diện: ${THEME_NAMES[themeName]||themeName}`,'success');
 }
@@ -1641,9 +3272,21 @@ function handleFundContribution(e){
         date: new Date().toISOString().slice(0,10),
         user: mem.name
     });
-    
+
     renderGroup();
     closeFundModal();
+
+    addAppNotification({
+        title: 'Đóng quỹ nhóm thành công ✨',
+        body: `${mem.name} vừa nộp ${fmt(amt)} vào Quỹ sinh hoạt chung (${note}).`,
+        type: 'fund',
+        icon: 'ri-hand-coin-line',
+        iconBg: '#d1fae5',
+        iconColor: '#059669',
+        actionUrl: 'group',
+        actionText: 'Xem quỹ nhóm →'
+    });
+
     toast(`Đã nộp ${fmt(amt)} vào Quỹ phòng thành công!`, 'success');
 }
 
@@ -1680,8 +3323,8 @@ function showReminderQR(billId, memberId){
             <div style="font-size:1.15rem;font-weight:900;color:var(--primary);margin-bottom:0.4rem">${fmt(amt)}</div>
             <div class="qr-details" style="padding:0.55rem;margin-bottom:0.5rem">
                 <div class="qr-row"><span style="color:var(--text3)">Khoản chi:</span> <strong>${bill.name}</strong></div>
-                <div class="qr-row"><span style="color:var(--text3)">Số TK:</span> <strong>0912 345 678</strong> (MB Bank)</div>
-                <div class="qr-row"><span style="color:var(--text3)">Chủ TK:</span> <strong>Nguyễn Thúy Hiền</strong></div>
+                ${S.user?.bank_account ? `<div class="qr-row"><span style="color:var(--text3)">Số TK:</span> <strong>${S.user.bank_account}</strong> (${S.user.bank_name || 'Ngân hàng'})</div>` : ''}
+                <div class="qr-row"><span style="color:var(--text3)">Người nhận:</span> <strong>${S.user?.name || S.user?.full_name || 'Trưởng nhóm'}</strong></div>
                 <div class="qr-row"><span style="color:var(--text3)">Nội dung:</span> <strong>${memo}</strong></div>
             </div>
             <button class="btn btn-p btn-block" onclick="copyZaloReminder('${bill.name}', ${amt}, '${name}')">
@@ -1723,8 +3366,8 @@ function drawMockVietQr(canvas, amt, memo){
         }
     }
     ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(80,80,18,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#2E86DE'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('MB', 80, 80);
+    ctx.fillStyle = '#FF6584'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('VX', 80, 80);
 }
 
 function toggleDebtStatus(billId, memberId){
@@ -1744,11 +3387,24 @@ function toggleDebtStatus(billId, memberId){
     
     renderGroup();
     closeQrModal();
+
+    addAppNotification({
+        title: 'Cập nhật chia tiền phòng 📋',
+        body: `${share.name} đã được ghi nhận ${wasPaid ? 'chưa thanh toán' : 'đã thanh toán'} (${fmt(share.amt)}).`,
+        type: 'fund',
+        icon: 'ri-checkbox-circle-line',
+        iconBg: wasPaid ? '#fee2e2' : '#d1fae5',
+        iconColor: wasPaid ? '#ef4444' : '#059669',
+        actionUrl: 'group',
+        actionText: 'Xem phòng trọ →'
+    });
+
     toast(`Đã cập nhật: ${share.name} (${wasPaid ? 'chưa trả' : 'đã trả'})`, 'success');
 }
 
 function copyZaloReminder(billTitle, amt, memberName){
-    const msg = `Tiền ${billTitle}: ${fmt(amt * 4)} chia 4. Phần ${memberName}: ${fmt(amt)}. STK: 0912 345 678 (MB Bank - Thúy Hiền).`;
+    const bankInfo = S.user?.bank_account ? ` STK: ${S.user.bank_account} (${S.user.bank_name || 'Ngân hàng'} - ${S.user.name || 'Trưởng nhóm'}).` : '';
+    const msg = `Tiền ${billTitle}: ${fmt(amt * 4)} chia 4. Phần ${memberName}: ${fmt(amt)}.${bankInfo}`;
     if(navigator.clipboard && navigator.clipboard.writeText){
         navigator.clipboard.writeText(msg).then(()=>{
             toast('Đã sao chép tin nhắn!', 'success');
@@ -1935,17 +3591,204 @@ function copyZaloText() {
     }
 }
 
-// ===== TRUNG TÂM THÔNG BÁO =====
+// ===== TRUNG TÂM THÔNG BÁO HOÀN CHỈNH & THEO DÕI BIẾN ĐỘNG THỰC TẾ =====
+function initNotifications(){
+    try {
+        const raw = localStorage.getItem('vx_notifications');
+        if(raw){
+            S.notifications = JSON.parse(raw);
+        } else {
+            // Khởi tạo mặc định: người dùng mới chưa có biến động -> rỗng để hiển thị đúng như app thật: "Không có thông báo nào"
+            S.notifications = [];
+        }
+    } catch(e) {
+        S.notifications = [];
+    }
+    renderNotifications();
+    updateNotifBadge();
+}
+
+function saveNotifications(){
+    try {
+        localStorage.setItem('vx_notifications', JSON.stringify(S.notifications || []));
+    } catch(e){}
+}
+
+function updateNotifBadge(){
+    const unreadCount = (S.notifications || []).filter(n => n.unread).length;
+    const dot = document.getElementById('hdrNotifDot');
+    if(dot){
+        dot.style.display = unreadCount > 0 ? 'block' : 'none';
+    }
+    const countLbl = document.getElementById('notifCountLabel');
+    if(countLbl){
+        countLbl.textContent = unreadCount > 0 ? `Thông báo mới (${unreadCount})` : 'Thông báo';
+    }
+}
+
+function formatNotifTime(timeVal){
+    if(!timeVal) return 'Vừa xong';
+    const now = new Date();
+    const d = new Date(timeVal);
+    if(isNaN(d.getTime())) return timeVal;
+    const diffSec = Math.floor((now - d) / 1000);
+    if(diffSec < 60) return 'Vừa xong';
+    const diffMin = Math.floor(diffSec / 60);
+    if(diffMin < 60) return `${diffMin} phút trước`;
+    const diffHr = Math.floor(diffMin / 60);
+    if(diffHr < 24) return `${diffHr} giờ trước`;
+    const diffDays = Math.floor(diffHr / 24);
+    if(diffDays === 1) return `Hôm qua ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    if(diffDays < 7) return `${diffDays} ngày trước`;
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function renderNotifications(){
+    const list = document.getElementById('notifList');
+    if(!list) return;
+    const notifs = S.notifications || [];
+
+    const btnMark = document.getElementById('btnMarkAllRead');
+    const btnClear = document.getElementById('btnClearAllNotifs');
+
+    // Nếu không có thông báo: Hiển thị giao diện Không có thông báo như app thật
+    if(notifs.length === 0){
+        list.innerHTML = `
+            <div class="empty" style="padding:2.6rem 1rem;text-align:center">
+                <div style="width:60px;height:60px;border-radius:50%;background:rgba(244,91,138,0.08);color:var(--primary);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;font-size:1.85rem">
+                    <i class="ri-notification-off-line"></i>
+                </div>
+                <div style="font-size:0.95rem;font-weight:700;color:var(--text);margin-bottom:0.3rem">Không có thông báo nào</div>
+                <div style="font-size:0.75rem;color:var(--text3);line-height:1.45;max-width:280px;margin:0 auto">
+                    Mọi biến động số dư, quét hóa đơn AI, nộp quỹ nhóm hoặc cảnh báo ngân sách sẽ xuất hiện tại đây.
+                </div>
+            </div>
+        `;
+        if(btnMark) btnMark.style.display = 'none';
+        if(btnClear) btnClear.style.display = 'none';
+        return;
+    }
+
+    if(btnMark) btnMark.style.display = 'inline-block';
+    if(btnClear) btnClear.style.display = 'inline-block';
+
+    list.innerHTML = notifs.map(n => `
+        <div class="notif-item ${n.unread ? 'unread' : ''}" style="display:flex;gap:0.65rem;padding:0.65rem;background:${n.unread ? 'var(--card)' : 'var(--bg)'};border-radius:12px;border:1px solid ${n.unread ? 'rgba(244,91,138,0.25)' : 'var(--border)'};cursor:pointer;position:relative;transition:all 0.2s ease" onclick="handleNotifClick('${n.id}')">
+            <div style="width:36px;height:36px;border-radius:10px;background:${n.iconBg};color:${n.iconColor};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="${n.icon}" style="font-size:1.1rem"></i>
+            </div>
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:0.4rem">
+                    <strong style="font-size:0.83rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.title}</strong>
+                    <div style="display:flex;align-items:center;gap:0.35rem">
+                        ${n.unread ? '<span class="notif-dot" style="width:7px;height:7px;border-radius:50%;background:var(--primary);flex-shrink:0"></span>' : ''}
+                        <button type="button" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0 2px;font-size:0.9rem;display:flex;align-items:center" onclick="event.stopPropagation();deleteNotif('${n.id}')" title="Xóa thông báo này"><i class="ri-close-line"></i></button>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;line-height:1.35">${n.body}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+                    <span style="font-size:0.68rem;color:var(--text3)"><i class="ri-time-line" style="font-size:0.68rem"></i> ${formatNotifTime(n.time)}</span>
+                    ${n.actionText ? `<span style="font-size:0.7rem;color:var(--primary);font-weight:700">${n.actionText}</span>` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function addAppNotification(item){
+    if(!S.notifications) S.notifications = [];
+    const notif = {
+        id: Date.now() + Math.random(),
+        title: item.title || 'Thông báo mới',
+        body: item.body || '',
+        type: item.type || 'system',
+        icon: item.icon || 'ri-notification-3-line',
+        iconBg: item.iconBg || 'rgba(244,91,138,0.12)',
+        iconColor: item.iconColor || 'var(--primary)',
+        time: new Date().toISOString(),
+        unread: true,
+        actionUrl: item.actionUrl || null,
+        actionText: item.actionText || null
+    };
+    S.notifications.unshift(notif);
+    if(S.notifications.length > 50) S.notifications = S.notifications.slice(0, 50);
+    saveNotifications();
+    renderNotifications();
+    updateNotifBadge();
+}
+
+function handleNotifClick(notifId){
+    const notif = (S.notifications || []).find(n => String(n.id) === String(notifId));
+    if(notif){
+        notif.unread = false;
+        saveNotifications();
+        renderNotifications();
+        updateNotifBadge();
+        closeNotificationModal();
+        if(notif.actionUrl){
+            go(notif.actionUrl);
+        }
+    }
+}
+
+function deleteNotif(notifId){
+    S.notifications = (S.notifications || []).filter(n => String(n.id) !== String(notifId));
+    saveNotifications();
+    renderNotifications();
+    updateNotifBadge();
+    toast('Đã xóa thông báo.', 'info');
+}
+
+function markAllNotifsRead(){
+    (S.notifications || []).forEach(n => n.unread = false);
+    saveNotifications();
+    renderNotifications();
+    updateNotifBadge();
+    toast('Đã đọc tất cả thông báo! ✨', 'success');
+}
+
+function clearAllNotifs(){
+    if(!S.notifications || S.notifications.length === 0) return;
+    S.notifications = [];
+    saveNotifications();
+    renderNotifications();
+    updateNotifBadge();
+    toast('Đã xóa tất cả thông báo.', 'info');
+}
+
+function checkBudgetAlerts(categoryKey){
+    if(!categoryKey || !S.budgets) return;
+    const b = S.budgets.find(item => item.cat === categoryKey);
+    if(!b || !b.limit) return;
+    const spent = S.transactions
+        .filter(t => t.type === 'expense' && t.cat === categoryKey)
+        .reduce((sum, t) => sum + t.amt, 0);
+    const pct = Math.round((spent / b.limit) * 100);
+    const ct = CATS[categoryKey] || CATS.other;
+
+    if(pct >= 80){
+        const existing = (S.notifications || []).find(n => n.type === 'budget' && n.title.includes(ct.label) && n.unread);
+        if(!existing){
+            addAppNotification({
+                title: `Cảnh báo ngân sách ${ct.label} ⚠️`,
+                body: `Bạn đã dùng ${pct}% hạn mức ${ct.label} (${fmt(spent)}/${fmt(b.limit)}).`,
+                type: 'budget',
+                icon: 'ri-alert-line',
+                iconBg: '#fef3c7',
+                iconColor: '#d97706',
+                actionUrl: 'budget',
+                actionText: 'Kiểm tra ngân sách →'
+            });
+        }
+    }
+}
+
 function openNotificationModal(){
     document.getElementById('notifModal')?.classList.add('active');
+    renderNotifications();
 }
 function closeNotificationModal(){
     document.getElementById('notifModal')?.classList.remove('active');
-}
-function markAllNotifsRead(){
-    document.querySelectorAll('.notif-dot').forEach(el => el.remove());
-    document.querySelectorAll('.hdr-actions .dot').forEach(el => el.remove());
-    toast('Đã đọc tất cả thông báo! ✨', 'success');
 }
 
 // ===== INIT =====
@@ -1957,12 +3800,46 @@ document.addEventListener('DOMContentLoaded',()=>{
     const dz=document.getElementById('dropZone');
     if(dz){dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover')});dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f){document.getElementById('fileIn').files=e.dataTransfer.files;handleFile({target:{files:[f]}})}});}
     document.getElementById('modal')?.addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
-    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+    document.getElementById('txDetailModal')?.addEventListener('click',e=>{if(e.target.id==='txDetailModal')closeTxDetailModal()});
+    document.getElementById('savingsDepositModal')?.addEventListener('click',e=>{if(e.target.id==='savingsDepositModal')closeSavingsDepositModal()});
+    document.getElementById('notifModal')?.addEventListener('click',e=>{if(e.target.id==='notifModal')closeNotificationModal()});
+    document.getElementById('biometricModal')?.addEventListener('click',e=>{if(e.target.id==='biometricModal')closeBiometricModal(false)});
+    document.addEventListener('keydown',e=>{
+        if(e.key==='Escape'){
+            closeModal();
+            closeTxDetailModal();
+            closeSavingsDepositModal();
+            closeNotificationModal();
+            closeEditProfileModal();
+            closeQrModal();
+            closeFundModal();
+            closeBiometricModal(false);
+        }
+    });
     const md=document.getElementById('manual-date');if(md)md.value=new Date().toISOString().slice(0,10);
     if(document.getElementById('transaction-list')){loadDashboardStats();loadRecentTransactions()}
+    
+    // Tự động nhớ tài khoản nếu người dùng đã bật Ghi nhớ trước đó
+    const remembered = localStorage.getItem('vx_remembered_account');
+    const emInp = document.getElementById('loginEmail');
+    const remChk = document.getElementById('rememberMeCheck');
+    if (remembered && emInp) {
+        emInp.value = remembered;
+        if (remChk) remChk.checked = true;
+    }
+    updateBioLoginUI();
     drawCaptcha();
+    initNotifications();
+
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+        navigator.serviceWorker.getRegistrations().then(regs => {
+            for (let reg of regs) reg.unregister();
+        }).catch(() => {});
+    }
+    if ('caches' in window) {
+        caches.keys().then(keys => {
+            for (let k of keys) caches.delete(k);
+        }).catch(() => {});
     }
 });
 

@@ -29,6 +29,14 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__, static_folder=str(FRONTEND_DIR), static_url_path="")
 CORS(app)
 
+
+@app.after_request
+def add_header(response):
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 pipeline = ProcessingPipeline()
 db = DatabaseManager(DB_PATH)
 group_wallet = GroupWalletManager(db)

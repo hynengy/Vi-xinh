@@ -11,7 +11,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final BiometricService _biometricService = BiometricService();
-  bool _biometricEnabled = true;
+  bool _biometricEnabled = false;
   bool _reminderEnabled = true;
   String _biometricName = 'Face ID / Vân tay';
 
@@ -137,11 +137,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const Divider(height: 20),
-                  _buildInfoRow('Ngân hàng', 'MB Bank (Quân Đội)'),
+                  _buildInfoRow('Ngân hàng', 'Chưa thiết lập'),
                   const SizedBox(height: 8),
-                  _buildInfoRow('Số tài khoản', '0912 345 678'),
+                  _buildInfoRow('Số tài khoản', '---'),
                   const SizedBox(height: 8),
-                  _buildInfoRow('Chủ tài khoản', 'NGUYEN THUY HIEN'),
+                  _buildInfoRow('Chủ tài khoản', 'Nguyễn Thúy Hiền'),
                 ],
               ),
             ),
@@ -183,6 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       activeColor: AppColors.primary,
                     ),
                   ),
+
                   const Divider(height: 1, indent: 56),
                   _buildSettingTile(
                     icon: Icons.info_outline,
