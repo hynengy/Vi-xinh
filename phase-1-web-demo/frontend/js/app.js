@@ -799,9 +799,11 @@ function deleteTx(id){
         S.transactions = S.transactions.filter(t => t.id !== id);
         renderAll();
         filterTransactions();
+        const now = new Date();
+        const delTimeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} ngày ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
         addAppNotification({
             title: 'Đã xóa giao dịch 🗑️',
-            body: `Giao dịch "${tx.name}" (${fmt(tx.amt)}) đã được xóa khỏi sổ thu chi.`,
+            body: `Giao dịch "${tx.name}" (${fmt(tx.amt)}) đã được xóa lúc ${delTimeStr}.`,
             type: 'expense',
             icon: 'ri-delete-bin-line',
             iconBg: '#fee2e2',
@@ -985,10 +987,16 @@ function saveTx(e){
     document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
     document.querySelector('.type-btn.e').classList.add('active');
 
+    const now = new Date();
+    const curTimeStr = now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
+    const dParts = date ? date.split('-') : [];
+    const dateFormatted = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}/${dParts[0]}` : date;
+    const fullTimeStr = `${curTimeStr} ngày ${dateFormatted}`;
+
     if(!isInc){
         addAppNotification({
             title: 'Biến động số dư: Chi tiêu 💸',
-            body: `Đã chi -${fmt(amt)} tại ${mer} (${ct.label}).`,
+            body: `Đã chi -${fmt(amt)} tại ${mer} (${ct.label}) vào lúc ${fullTimeStr}.`,
             type: 'expense',
             icon: ct.ic || 'ri-shopping-cart-2-line',
             iconBg: ct.bg || '#fee2e2',
@@ -1000,7 +1008,7 @@ function saveTx(e){
     } else {
         addAppNotification({
             title: 'Biến động số dư: Thu nhập 💰',
-            body: `Cộng tiền vào ví: +${fmt(amt)} (${mer}).`,
+            body: `Cộng tiền vào ví: +${fmt(amt)} (${mer}) vào lúc ${fullTimeStr}.`,
             type: 'income',
             icon: 'ri-arrow-down-circle-line',
             iconBg: '#d1fae5',
@@ -1633,9 +1641,14 @@ async function saveOcr(){
         });
         renderAll();
         closeModal();
+        const now = new Date();
+        const dParts = dateStr ? dateStr.split('-') : [];
+        const dateFormatted = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}/${dParts[0]}` : dateStr;
+        const scanFullTime = `${nowStr || now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})} ngày ${dateFormatted}`;
+
         addAppNotification({
             title: 'Quét hóa đơn AI thành công ✨',
-            body: `Đã lưu hóa đơn ${data.merchant} (${fmt(data.amount)}) vào Ví cá nhân.`,
+            body: `Đã lưu chi tiêu ${data.merchant} (${fmt(data.amount)}) vào Ví cá nhân lúc ${scanFullTime}.`,
             type: 'expense',
             icon: 'ri-scan-2-line',
             iconBg: '#ede9fe',
@@ -1680,9 +1693,14 @@ async function saveOcr(){
         renderAll();
         closeModal();
 
+        const now = new Date();
+        const dParts = dateStr ? dateStr.split('-') : [];
+        const dateFormatted = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}/${dParts[0]}` : dateStr;
+        const splitTimeFull = `${nowStr || now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})} ngày ${dateFormatted}`;
+
         addAppNotification({
             title: 'Chia tiền hóa đơn 👥',
-            body: `Hóa đơn ${data.merchant} (${fmt(data.amount)}) chia ${count} người. Phần bạn cần trả: ${fmt(myShare)}.`,
+            body: `Hóa đơn ${data.merchant} (${fmt(data.amount)}) chia ${count} người lúc ${splitTimeFull}. Phần bạn: ${fmt(myShare)}.`,
             type: 'split',
             icon: 'ri-user-shared-line',
             iconBg: '#e0e7ff',
@@ -1735,9 +1753,14 @@ async function saveOcr(){
         renderGroup();
         closeModal();
 
+        const now = new Date();
+        const dParts = dateStr ? dateStr.split('-') : [];
+        const dateFormatted = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}/${dParts[0]}` : dateStr;
+        const fundTimeFull = `${nowStr || now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})} ngày ${dateFormatted}`;
+
         addAppNotification({
             title: 'Trích chi Quỹ chung 🏢',
-            body: `Đã trích ${fmt(data.amount)} từ ${fund.name} thanh toán ${data.merchant}.`,
+            body: `Đã trích ${fmt(data.amount)} từ ${fund.name} thanh toán ${data.merchant} lúc ${fundTimeFull}.`,
             type: 'fund',
             icon: 'ri-community-line',
             iconBg: '#fef3c7',
@@ -2031,9 +2054,13 @@ function executeRecurring(id){
     renderAll();
     checkBudgetAlerts(r.cat);
 
+    const rDateParts = todayStr ? todayStr.split('-') : [];
+    const rDateFmt = rDateParts.length === 3 ? `${rDateParts[2]}/${rDateParts[1]}/${rDateParts[0]}` : todayStr;
+    const rTimeFull = `${nowStr} ngày ${rDateFmt}`;
+
     addAppNotification({
         title: 'Ghi nhận chi tiêu định kỳ 🔄',
-        body: `Đã trích chi -${fmt(r.amt)} cho khoản "${r.name}".`,
+        body: `Đã trích chi -${fmt(r.amt)} cho khoản "${r.name}" vào lúc ${rTimeFull}.`,
         type: 'expense',
         icon: 'ri-repeat-line',
         iconBg: '#e0e7ff',
@@ -3627,20 +3654,38 @@ function updateNotifBadge(){
 }
 
 function formatNotifTime(timeVal){
-    if(!timeVal) return 'Vừa xong';
+    if(!timeVal) return '';
     const now = new Date();
     const d = new Date(timeVal);
     if(isNaN(d.getTime())) return timeVal;
+
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const MM = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const exactDateTime = `${hh}:${mm} - ${dd}/${MM}/${yyyy}`;
+
     const diffSec = Math.floor((now - d) / 1000);
-    if(diffSec < 60) return 'Vừa xong';
-    const diffMin = Math.floor(diffSec / 60);
-    if(diffMin < 60) return `${diffMin} phút trước`;
-    const diffHr = Math.floor(diffMin / 60);
-    if(diffHr < 24) return `${diffHr} giờ trước`;
-    const diffDays = Math.floor(diffHr / 24);
-    if(diffDays === 1) return `Hôm qua ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    if(diffDays < 7) return `${diffDays} ngày trước`;
-    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    let rel = '';
+    if(diffSec < 60) {
+        rel = 'vừa xong';
+    } else {
+        const diffMin = Math.floor(diffSec / 60);
+        if(diffMin < 60) {
+            rel = `${diffMin} phút trước`;
+        } else {
+            const diffHr = Math.floor(diffMin / 60);
+            if(diffHr < 24) {
+                rel = `${diffHr} giờ trước`;
+            } else {
+                const diffDays = Math.floor(diffHr / 24);
+                if(diffDays === 1) rel = 'hôm qua';
+                else if(diffDays < 7) rel = `${diffDays} ngày trước`;
+            }
+        }
+    }
+    return rel ? `${exactDateTime} (${rel})` : exactDateTime;
 }
 
 function renderNotifications(){
@@ -3686,8 +3731,8 @@ function renderNotifications(){
                     </div>
                 </div>
                 <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;line-height:1.35">${n.body}</div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
-                    <span style="font-size:0.68rem;color:var(--text3)"><i class="ri-time-line" style="font-size:0.68rem"></i> ${formatNotifTime(n.time)}</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;gap:0.4rem;flex-wrap:wrap">
+                    <span style="font-size:0.68rem;color:var(--text3);display:inline-flex;align-items:center;gap:3px"><i class="ri-time-line" style="font-size:0.68rem"></i> ${formatNotifTime(n.time)}</span>
                     ${n.actionText ? `<span style="font-size:0.7rem;color:var(--primary);font-weight:700">${n.actionText}</span>` : ''}
                 </div>
             </div>
@@ -3769,9 +3814,11 @@ function checkBudgetAlerts(categoryKey){
     if(pct >= 80){
         const existing = (S.notifications || []).find(n => n.type === 'budget' && n.title.includes(ct.label) && n.unread);
         if(!existing){
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} ngày ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
             addAppNotification({
                 title: `Cảnh báo ngân sách ${ct.label} ⚠️`,
-                body: `Bạn đã dùng ${pct}% hạn mức ${ct.label} (${fmt(spent)}/${fmt(b.limit)}).`,
+                body: `Cảnh báo lúc ${timeStr}: Bạn đã dùng ${pct}% hạn mức ${ct.label} (${fmt(spent)}/${fmt(b.limit)}).`,
                 type: 'budget',
                 icon: 'ri-alert-line',
                 iconBg: '#fef3c7',

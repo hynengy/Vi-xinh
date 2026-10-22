@@ -23,6 +23,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
 
     final filteredList = allList.where((n) {
       if (_selectedFilter == 'unread') return !n.isRead;
+      if (_selectedFilter == 'expense') return n.type == NotificationType.expense;
       if (_selectedFilter == 'fund') return n.type == NotificationType.fund || n.type == NotificationType.split;
       if (_selectedFilter == 'budget') return n.type == NotificationType.budget;
       return true;
@@ -58,6 +59,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                   _buildFilterChip('Tất cả', 'all', allList.length),
                   const SizedBox(width: 8),
                   _buildFilterChip('Chưa đọc', 'unread', notifService.unreadCount),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Chi tiêu', 'expense', allList.where((n) => n.type == NotificationType.expense).length),
                   const SizedBox(width: 8),
                   _buildFilterChip('Quỹ & Chia tiền', 'fund', allList.where((n) => n.type == NotificationType.fund || n.type == NotificationType.split).length),
                   const SizedBox(width: 8),
@@ -185,9 +188,15 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text(
-                                            item.timeAgo,
-                                            style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+                                          Row(
+                                            children: [
+                                              Icon(Icons.access_time_rounded, size: 12, color: Colors.grey.shade400),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                item.timeAgo,
+                                                style: TextStyle(color: Colors.grey.shade500, fontSize: 11, fontWeight: FontWeight.w500),
+                                              ),
+                                            ],
                                           ),
                                           if (item.actionRoute != null)
                                             Container(

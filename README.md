@@ -1,12 +1,5 @@
 # 👛 VÍ XINH — Ứng Dụng Quản Lý Tài Chính & OCR Hóa Đơn Thông Minh
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Project-V%C3%AD%20Xinh-FF6584?style=for-the-badge&logo=wallet&logoColor=white" alt="Project Ví Xinh" />
-  <img src="https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" />
-  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
-  <img src="https://img.shields.io/badge/ML%20Kit-On--Device-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Google ML Kit" />
-  <img src="https://img.shields.io/badge/Platform-Web%20PWA%20%7C%20Android%20%7C%20iOS-success?style=for-the-badge" alt="Platform" />
-</p>
 
 > **Đồ án Thực tập Chuyên môn** — Lớp **23CN1** — **Nhóm 05**  
 > Quản lý chi tiêu cá nhân và quỹ nhóm tự động với công nghệ Thị giác máy tính & OCR bóc tách hóa đơn siêu tốc.

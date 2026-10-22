@@ -6,6 +6,7 @@ enum NotificationType {
   budget,    // Cảnh báo hạn mức ngân sách
   daily,     // Nhắc quét hóa đơn hàng ngày
   security,  // Bảo mật & sinh trắc học
+  expense,   // Biến động chi tiêu
 }
 
 class AppNotificationModel {
@@ -41,6 +42,8 @@ class AppNotificationModel {
         return Icons.camera_alt_outlined;
       case NotificationType.security:
         return Icons.shield_outlined;
+      case NotificationType.expense:
+        return Icons.shopping_bag_outlined;
     }
   }
 
@@ -56,19 +59,34 @@ class AppNotificationModel {
         return const Color(0xFF10B981); // Emerald
       case NotificationType.security:
         return const Color(0xFF3B82F6); // Blue
+      case NotificationType.expense:
+        return const Color(0xFFF43F5E); // Rose 500
     }
   }
 
+  /// Định dạng ngày giờ cụ thể: HH:mm - dd/MM/yyyy
+  String get formattedDateTime {
+    final hour = timestamp.hour.toString().padLeft(2, '0');
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    final day = timestamp.day.toString().padLeft(2, '0');
+    final month = timestamp.month.toString().padLeft(2, '0');
+    final year = timestamp.year;
+    return '$hour:$minute - $day/$month/$year';
+  }
+
+  /// Hiển thị ngày giờ cụ thể kèm thời gian tương đối
   String get timeAgo {
+    final exact = formattedDateTime;
     final diff = DateTime.now().difference(timestamp);
     if (diff.inMinutes < 60) {
-      return '${diff.inMinutes <= 0 ? 1 : diff.inMinutes} phút trước';
+      final mins = diff.inMinutes <= 0 ? 1 : diff.inMinutes;
+      return '$exact ($mins phút trước)';
     } else if (diff.inHours < 24) {
-      return '${diff.inHours} giờ trước';
+      return '$exact (${diff.inHours} giờ trước)';
     } else if (diff.inDays < 7) {
-      return '${diff.inDays} ngày trước';
+      return '$exact (${diff.inDays} ngày trước)';
     } else {
-      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+      return exact;
     }
   }
 }

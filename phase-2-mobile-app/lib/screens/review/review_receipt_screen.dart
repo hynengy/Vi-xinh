@@ -4,6 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../models/transaction_model.dart';
 import '../../providers/wallet_provider.dart';
+import '../../services/notification_service.dart';
 
 class ReviewReceiptScreen extends StatefulWidget {
   final TransactionModel transaction;
@@ -80,6 +81,16 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
     );
 
     context.read<WalletProvider>().addTransaction(updatedTx);
+
+    // Kích hoạt thông báo biến động chi tiêu với ngày giờ cụ thể
+    try {
+      context.read<NotificationService>().notifyExpense(
+        merchantName: updatedTx.merchantName,
+        amount: updatedTx.amount,
+        category: updatedTx.category,
+        timestamp: DateTime.now(),
+      );
+    } catch (_) {}
 
     final successMsg = _splitMode == 'quick_split'
         ? 'Đã lưu phần của bạn: ${CurrencyFormatter.format(savedAmount)} ✨'
