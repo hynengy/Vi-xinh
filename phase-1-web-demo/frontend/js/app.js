@@ -566,8 +566,8 @@ function renderAll(){
 function updStats(){
     const exp=S.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amt,0);
     const inc=S.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amt,0);
-    const el=document.getElementById('mExp');if(el)el.textContent='-'+fmt(exp);
-    const ei=document.getElementById('mInc');if(ei)ei.textContent='+'+fmt(inc);
+    const el=document.getElementById('mExp');if(el)el.textContent=exp ? ('-'+fmt(exp)) : '0 ₫';
+    const ei=document.getElementById('mInc');if(ei)ei.textContent=inc ? ('+'+fmt(inc)) : '0 ₫';
     const ba=document.getElementById('balAmt');if(ba&&S.balVis)ba.textContent=fmt(inc-exp);
     const he=document.getElementById('hExp');if(he)he.textContent=fmt(exp);
     const hi=document.getElementById('hInc');if(hi)hi.textContent=fmt(inc);
@@ -860,7 +860,9 @@ function filterTransactions(){
     const cntTxt = document.getElementById('histCountTxt');
     if(cntTxt) cntTxt.textContent = `${list.length} giao dịch`;
     const amtTxt = document.getElementById('histAmtTxt');
-    if(amtTxt) amtTxt.innerHTML = `Chi: <strong style="color:var(--danger)">-${fmt(exp)}</strong> · Thu: <strong style="color:var(--success)">+${fmt(inc)}</strong>`;
+    const expStr = exp ? `-${fmt(exp)}` : '0 ₫';
+    const incStr = inc ? `+${fmt(inc)}` : '0 ₫';
+    if(amtTxt) amtTxt.innerHTML = `Chi: <strong style="color:var(--danger)">${expStr}</strong> · Thu: <strong style="color:var(--success)">${incStr}</strong>`;
 
     renderTxL('allTx', list);
 }

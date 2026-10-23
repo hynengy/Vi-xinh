@@ -221,26 +221,15 @@ class DatabaseManager:
                 (group_id, u_id, "admin" if u_id == 1 else "member", 1500000 if u_id <= 4 else 0)
             )
 
-        # Giao dịch mẫu
-        today = date.today().isoformat()
-        seed_transactions = [
-            (1, None, "food", "Highlands Coffee", 59000, "expense", today, "08:30"),
-            (1, None, "transport", "Grab Taxi", 45000, "expense", today, "07:15"),
-            (1, None, "salary", "Lương tháng 10", 12000000, "income", today, "00:00"),
-            (1, None, "shopping", "Circle K", 127000, "expense", today, "21:00"),
-            (1, None, "food", "Cơm Tấm Sài Gòn", 235000, "expense", today, "12:30"),
-            (1, None, "education", "Fahasa", 189000, "expense", today, "15:45"),
-            (1, None, "entertainment", "CGV Cinemas", 150000, "expense", today, "19:00"),
-            (1, None, "food", "Phúc Long", 49000, "expense", today, "14:20"),
-            (1, None, "bills", "Tiền điện T10", 350000, "expense", today, "09:00"),
-            (1, None, "health", "Pharmacity", 85000, "expense", today, "16:30"),
-        ]
-        cursor.executemany(
-            """INSERT INTO transactions
-               (user_id, group_id, category, merchant_name, amount, type, transaction_date, transaction_time)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            seed_transactions
-        )
+        # Giao dịch: Để trống 100% khi khởi tạo để người dùng tự nhập hoặc quét hóa đơn thật
+        seed_transactions = []
+        if seed_transactions:
+            cursor.executemany(
+                """INSERT INTO transactions
+                   (user_id, group_id, category, merchant_name, amount, type, transaction_date, transaction_time)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                seed_transactions
+            )
 
         # Budgets mẫu
         seed_budgets = [

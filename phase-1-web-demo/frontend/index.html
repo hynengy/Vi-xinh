@@ -223,10 +223,10 @@
         <div class="bal-sec">
             <div class="bal-card">
                 <div class="bal-top"><div class="bal-label">Số dư ví</div><button class="bal-eye" onclick="toggleBal()"><i class="ri-eye-line" id="eyeIc"></i></button></div>
-                <div class="bal-amt" id="balAmt">8.250.000 ₫</div>
+                <div class="bal-amt" id="balAmt">0 ₫</div>
                 <div class="bal-row">
-                    <div class="bal-mini"><div class="bal-mini-lbl"><i class="ri-arrow-up-circle-fill" style="color:var(--success)"></i> Thu tháng</div><div class="bal-mini-val inc" id="mInc">+12.000.000 ₫</div></div>
-                    <div class="bal-mini"><div class="bal-mini-lbl"><i class="ri-arrow-down-circle-fill" style="color:var(--danger)"></i> Chi tháng</div><div class="bal-mini-val exp" id="mExp">-3.750.000 ₫</div></div>
+                    <div class="bal-mini"><div class="bal-mini-lbl"><i class="ri-arrow-up-circle-fill" style="color:var(--success)"></i> Thu tháng</div><div class="bal-mini-val inc" id="mInc">0 ₫</div></div>
+                    <div class="bal-mini"><div class="bal-mini-lbl"><i class="ri-arrow-down-circle-fill" style="color:var(--danger)"></i> Chi tháng</div><div class="bal-mini-val exp" id="mExp">0 ₫</div></div>
                 </div>
                 <div class="bal-actions">
                     <button class="bal-act" onclick="openModal('manual')"><div class="bal-act-ic bai-v"><i class="ri-edit-2-line"></i></div><span class="bal-act-lbl">Nhập tay</span></button>
@@ -281,9 +281,9 @@
                 </div>
                 <div class="chart-area" id="chartArea"></div>
                 <div class="chart-sum">
-                    <div class="chart-s"><div class="chart-sv" style="color:var(--danger)" id="hExp">2.150.000 ₫</div><div class="chart-sl">Chi</div></div>
-                    <div class="chart-s"><div class="chart-sv" style="color:var(--success)" id="hInc">3.500.000 ₫</div><div class="chart-sl">Thu</div></div>
-                    <div class="chart-s"><div class="chart-sv" id="hTx">14</div><div class="chart-sl">Giao dịch</div></div>
+                    <div class="chart-s"><div class="chart-sv" style="color:var(--danger)" id="hExp">0 ₫</div><div class="chart-sl">Chi</div></div>
+                    <div class="chart-s"><div class="chart-sv" style="color:var(--success)" id="hInc">0 ₫</div><div class="chart-sl">Thu</div></div>
+                    <div class="chart-s"><div class="chart-sv" id="hTx">0</div><div class="chart-sl">Giao dịch</div></div>
                 </div>
             </div>
         </div>
@@ -308,12 +308,12 @@
         </div>
         <div id="sOv" class="sec" style="margin-top:0.7rem">
             <div class="st-row">
-                <div class="st-card"><div class="st-ic"><i class="ri-wallet-3-line" style="color:var(--success)"></i></div><div class="st-val" style="color:var(--success)" id="sI">12.000.000 ₫</div><div class="st-lbl">Thu T10</div></div>
-                <div class="st-card"><div class="st-ic"><i class="ri-shopping-cart-2-line" style="color:var(--danger)"></i></div><div class="st-val" style="color:var(--danger)" id="sE">3.750.000 ₫</div><div class="st-lbl">Chi T10</div></div>
+                <div class="st-card"><div class="st-ic"><i class="ri-wallet-3-line" style="color:var(--success)"></i></div><div class="st-val" style="color:var(--success)" id="sI">0 ₫</div><div class="st-lbl">Thu tháng</div></div>
+                <div class="st-card"><div class="st-ic"><i class="ri-shopping-cart-2-line" style="color:var(--danger)"></i></div><div class="st-val" style="color:var(--danger)" id="sE">0 ₫</div><div class="st-lbl">Chi tháng</div></div>
             </div>
             <div class="st-row">
-                <div class="st-card"><div class="st-ic"><i class="ri-line-chart-line" style="color:var(--primary)"></i></div><div class="st-val" style="color:var(--primary)" id="sN">8.250.000 ₫</div><div class="st-lbl">Số dư</div></div>
-                <div class="st-card"><div class="st-ic"><i class="ri-file-list-3-line" style="color:var(--text2)"></i></div><div class="st-val" id="sC">14</div><div class="st-lbl">Giao dịch</div></div>
+                <div class="st-card"><div class="st-ic"><i class="ri-line-chart-line" style="color:var(--primary)"></i></div><div class="st-val" style="color:var(--primary)" id="sN">0 ₫</div><div class="st-lbl">Số dư</div></div>
+                <div class="st-card"><div class="st-ic"><i class="ri-file-list-3-line" style="color:var(--text2)"></i></div><div class="st-val" id="sC">0</div><div class="st-lbl">Giao dịch</div></div>
             </div>
             <div class="sec-hdr" style="margin-top:0.4rem"><span class="sec-title">Biểu đồ thu chi</span></div>
             <div class="chart-card"><div class="chart-area" id="sChart" style="height:170px"></div></div>
@@ -334,8 +334,8 @@
         </div>
         <div id="sSav" class="sec hidden" style="margin-top:0.7rem">
             <div class="st-row">
-                <div class="st-card"><div class="st-ic"><i class="ri-safe-2-line" style="color:var(--primary)"></i></div><div class="st-val" style="color:var(--primary)" id="ssT">2.500.000 ₫</div><div class="st-lbl">Đã tiết kiệm</div></div>
-                <div class="st-card"><div class="st-ic"><i class="ri-flag-line" style="color:var(--amber)"></i></div><div class="st-val" id="ssG">3</div><div class="st-lbl">Mục tiêu</div></div>
+                <div class="st-card"><div class="st-ic"><i class="ri-safe-2-line" style="color:var(--primary)"></i></div><div class="st-val" style="color:var(--primary)" id="ssT">0 ₫</div><div class="st-lbl">Đã tiết kiệm</div></div>
+                <div class="st-card"><div class="st-ic"><i class="ri-flag-line" style="color:var(--amber)"></i></div><div class="st-val" id="ssG">0</div><div class="st-lbl">Mục tiêu</div></div>
             </div>
             <div id="ssList"></div>
         </div>
@@ -372,8 +372,8 @@
                     </select>
                 </div>
                 <div id="histSummaryBar" style="display:flex;justify-content:space-between;align-items:center;margin-top:0.55rem;padding-top:0.45rem;border-top:1px solid var(--divider);font-size:0.72rem;color:var(--text3)">
-                    <span id="histCountTxt">14 giao dịch</span>
-                    <span id="histAmtTxt">Chi: <strong style="color:var(--danger)">-3.750.000 ₫</strong> · Thu: <strong style="color:var(--success)">+12.000.000 ₫</strong></span>
+                    <span id="histCountTxt">0 giao dịch</span>
+                    <span id="histAmtTxt">Chi: <strong style="color:var(--danger)">0 ₫</strong> · Thu: <strong style="color:var(--success)">0 ₫</strong></span>
                 </div>
             </div>
             <div id="allTx"></div>
@@ -384,8 +384,8 @@
     <div class="pv" id="pgBgt">
         <div class="top-bar"><button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button><span class="top-title">Ngân sách</span></div>
         <div class="sec" style="margin-top:0.7rem">
-            <div class="bgt-summary"><div class="bgt-circle" id="bgtC"></div><div class="bgt-pct" id="bgtP">45%</div><div class="bgt-lbl">Đã dùng</div>
-                <div class="bgt-info"><div class="bgt-info-item"><div class="bgt-info-val" style="color:var(--danger)" id="bgtU">3.750.000 ₫</div><div class="bgt-info-lbl">Đã chi</div></div><div class="bgt-info-item"><div class="bgt-info-val" style="color:var(--success)" id="bgtR">4.250.000 ₫</div><div class="bgt-info-lbl">Còn lại</div></div></div>
+            <div class="bgt-summary"><div class="bgt-circle" id="bgtC"></div><div class="bgt-pct" id="bgtP">0%</div><div class="bgt-lbl">Đã dùng</div>
+                <div class="bgt-info"><div class="bgt-info-item"><div class="bgt-info-val" style="color:var(--danger)" id="bgtU">0 ₫</div><div class="bgt-info-lbl">Đã chi</div></div><div class="bgt-info-item"><div class="bgt-info-val" style="color:var(--success)" id="bgtR">0 ₫</div><div class="bgt-info-lbl">Còn lại</div></div></div>
             </div>
             <div class="sec-hdr"><span class="sec-title">Theo danh mục</span><button class="btn btn-sm btn-o" onclick="togForm('bgtF')"><i class="ri-add-line"></i> Thêm</button></div>
             <div class="i-form" id="bgtF">
@@ -400,7 +400,7 @@
     <div class="pv" id="pgSav">
         <div class="top-bar"><button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button><span class="top-title">Tiết kiệm</span></div>
         <div class="sec" style="margin-top:0.7rem">
-            <div class="sav-hero"><div class="sav-hero-ic"><i class="ri-safe-2-line"></i></div><div class="sav-hero-val" id="savT">2.500.000 ₫</div><div class="sav-hero-lbl">Đã tiết kiệm</div></div>
+            <div class="sav-hero"><div class="sav-hero-ic"><i class="ri-safe-2-line"></i></div><div class="sav-hero-val" id="savT">0 ₫</div><div class="sav-hero-lbl">Đã tiết kiệm</div></div>
             <div class="sec-hdr"><span class="sec-title">Mục tiêu</span><button class="btn btn-sm btn-o" onclick="togForm('savF')"><i class="ri-add-line"></i> Thêm</button></div>
             <div class="i-form" id="savF">
                 <div class="fg"><label class="fl">Tên mục tiêu</label><input type="text" class="fc" id="sfN" placeholder="VD: Laptop mới..."></div>
@@ -721,11 +721,11 @@
                 <div id="ocrData" class="hidden" style="background:var(--bg);border-radius:var(--r-md);padding:0.75rem;margin-top:0.5rem">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
                         <span style="font-size:0.78rem;color:var(--text3)">Nơi chi:</span>
-                        <strong style="font-size:0.88rem" id="ocrMer">Highlands Coffee</strong>
+                        <strong style="font-size:0.88rem" id="ocrMer">--</strong>
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
                         <span style="font-size:0.78rem;color:var(--text3)">Tổng tiền:</span>
-                        <strong style="font-size:1.1rem;color:var(--danger)" id="ocrAmt">145.000 ₫</strong>
+                        <strong style="font-size:1.1rem;color:var(--danger)" id="ocrAmt">0 ₫</strong>
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
                         <span style="font-size:0.78rem;color:var(--text3)">Danh mục:</span>
@@ -902,7 +902,7 @@
                 </div>
                 <div class="fg">
                     <label class="fl">Ghi chú</label>
-                    <input type="text" id="fundNoteInput" class="fc" value="Quỹ phòng T10">
+                    <input type="text" id="fundNoteInput" class="fc" placeholder="VD: Đóng quỹ sinh hoạt...">
                 </div>
                 <button type="submit" class="btn btn-p btn-block" style="margin-top:0.4rem"><i class="ri-check-line"></i> Nộp quỹ</button>
             </form>
@@ -985,8 +985,8 @@
         </div>
         <div class="modal-body" style="padding:0.6rem 1.2rem 1.6rem">
             <div style="text-align:center;padding:0.75rem 0;border-bottom:1px solid var(--divider);margin-bottom:0.9rem">
-                <div style="font-size:1.75rem;font-weight:900" id="tdAmt">-145.000 ₫</div>
-                <div style="font-size:0.95rem;font-weight:700;color:var(--text);margin-top:0.2rem" id="tdName">Highlands Coffee</div>
+                <div style="font-size:1.75rem;font-weight:900" id="tdAmt">0 ₫</div>
+                <div style="font-size:0.95rem;font-weight:700;color:var(--text);margin-top:0.2rem" id="tdName">--</div>
                 <div style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.65rem;border-radius:var(--r-pill);font-size:0.7rem;font-weight:700;margin-top:0.4rem" id="tdCatBadge">
                     <i class="ri-cup-line"></i> Ăn uống
                 </div>
@@ -994,7 +994,7 @@
             <div style="display:flex;flex-direction:column;gap:0.65rem;font-size:0.78rem">
                 <div style="display:flex;justify-content:space-between">
                     <span style="color:var(--text3)">Thời gian giao dịch:</span>
-                    <strong id="tdTime">20/10/2026 10:15</strong>
+                    <strong id="tdTime">--</strong>
                 </div>
                 <div style="display:flex;justify-content:space-between">
                     <span style="color:var(--text3)">Phạm vi sổ sách:</span>
