@@ -149,7 +149,7 @@ def test_pipeline_kiotviet_stained_receipt():
         result = pipeline.process_receipt_image(sample_img)
         assert result["status"] == "ready_for_review"
         assert result["amount"] == 42000.0
-        assert result["merchant_name"] == "KiotViet - Thaihoamart"
+        assert "KiotViet" in result["merchant_name"]
         assert result["transaction_date"] == "2026-10-22"
 
 

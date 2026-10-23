@@ -6,6 +6,7 @@ Nhiệm vụ: Định nghĩa các mẫu regex để bắt Tên quán, Hotline, �
 import re
 
 # 1. Từ khóa nhận diện số tiền Khách phải trả (Ưu tiên số 1 - Net Amount Due)
+# Lưu ý: Tuyệt đối không để 'thanh toán' đơn độc vì sẽ bắt nhầm 'Hóa đơn thanh toán'
 DUE_AMOUNT_KEYWORDS = [
     r"kh[áa]ch\s*ph[ảa]i\s*tr[ảa]",
     r"ti[ềe]n\s*c[ầa]n\s*thanh\s*to[áa]n",
@@ -15,10 +16,7 @@ DUE_AMOUNT_KEYWORDS = [
     r"t[ổôoóòõọ]ng\s*ti[ềêeéèẽẹ]n\s*thanh\s*to[áa]n",
     r"ti[ềêeéèẽẹ]n\s*thanh\s*to[áa]n",
     r"t[ổôoóòõọ]ng\s*c[ộôo]ng",
-    r"thanhto[áa]n",
-    r"i[ềêeéèẽẹ]n\s*thanhto",
-    r"i[ềêeéèẽẹ]n\s*thanh",
-    r"thanh\s*to[áa]n",
+    r"t[ổôoóòõọ]ng\s*ti[ềêeéèẽẹ]n",
     r"amount\s*due",
     r"net\s*amount",
     r"grand\s*total",
@@ -81,7 +79,6 @@ TOTAL_AMOUNT_KEYWORDS = FINAL_PAYMENT_KEYWORDS + SUBTOTAL_KEYWORDS + [
     r"t[ổôoóòõọ]ng\s*ti[ềêeéèẽẹ]n\s*ph[òo]ng",
     r"t[ổôoóòõọ]ng\s*ti[ềêeéèẽẹ]n\s*dv",
     r"th[àa]nh\s*ti[ềêeéèẽẹ]n",
-    r"t[ổôoóòõọ]ng",
     r"total",
 ]
 
@@ -93,12 +90,26 @@ TABLE_HEADER_KEYWORDS = [
     "diễn giải", "khoản chi", "quy cách"
 ]
 
+# Từ khóa tiêu đề hóa đơn (tuyệt đối không được coi là món ăn hay tổng tiền)
+RECEIPT_TITLE_KEYWORDS = [
+    "phiếu tính tiền", "phieu tinh tien", "hóa đơn thanh toán", "hoa don thanh toan",
+    "hóa đơn bán lẻ", "hoa don ban le", "phiếu thanh toán", "phieu thanh toan",
+    "hóa đơn gtgt", "phiếu thu", "hoa don", "hóa đơn", "bảng tính tiền", "order bill"
+]
+
 # Từ khóa metadata của hóa đơn (Bàn, Giờ vào, Giờ ra, Thu ngân...) cần loại bỏ khỏi danh sách món
-RECEIPT_METADATA_KEYWORDS = [
+RECEIPT_METADATA_KEYWORDS = RECEIPT_TITLE_KEYWORDS + [
     "giờ vào", "gio vao", "giờ ra", "gio ra", "thu ngân", "thu ngan",
     "bàn", "ban", "phòng vip", "phong vip", "trong nhà", "trong nha", "mang về", "mang ve",
-    "số hđ", "so hd", "sđ hd", "sd hd", "hóa đơn", "hoá đơn", "phiếu thanh toán",
+    "số hđ", "so hd", "sđ hd", "sd hd", "mã hđ", "ma hd", "mã bill", "số bill",
     "administrator", "cashier", "waiter", "order", "khách lẻ", "khach le"
+]
+
+# Từ khóa chân trang wifi / quảng cáo / cảm ơn
+WIFI_FOOTER_KEYWORDS = [
+    "wifi", "pass", "mật khẩu", "password", "taphoatoi", "taphoatai",
+    "powered by", "kiotviet", "phần mềm", "lắp đặt", "cảm ơn", "cam on",
+    "hẹn gặp lại", "hen gap lai", "chúc quý khách"
 ]
 
 # Pattern nhận diện thời gian HH:MM hoặc HH.MM (tránh nhầm giờ vào ra thành số tiền)
@@ -113,15 +124,21 @@ AMOUNT_PATTERN = re.compile(
 # Pattern số bất kỳ dự phòng
 FALLBACK_NUMBER_PATTERN = re.compile(r"\b\d{4,9}\b")
 
-# Pattern nhận diện Hotline / Số điện thoại
+# Pattern nhận diện Hotline / Số điện thoại (bắt buộc có từ khóa phía trước)
 HOTLINE_PATTERN = re.compile(
-    r"(?:hotline|đt|dt|tel|phone|sđt|sdt|cskh|liên\s*hệ|lh)?\s*[:\s]*(\b(?:0[1-9]\d{1,2}[.\s-]?\d{3,4}[.\s-]?\d{3,4}|1[89]00[.\s-]?\d{4})\b)",
+    r"(?:hotline|hotine|điện\s*thoại|dien\s*thoai|đt|dt|tel|phone|sđt|sdt|cskh|liên\s*hệ|lh)\s*[:\s\-]*([0-9.\s\-]{8,15})",
+    re.IGNORECASE
+)
+
+# Pattern nhận diện Số hóa đơn / Mã phiếu
+INVOICE_NUMBER_PATTERN = re.compile(
+    r"(?:số\s*h[đd]|so\s*hd|mã\s*h[đd]|ma\s*hd|s[ốo]\s*phi[ếe]u|mã\s*bill|số\s*bill|invoice\s*no|bill\s*no|số\s*:|so\s*:)\s*[:\s\-]*([A-Z0-9\-_#]+)",
     re.IGNORECASE
 )
 
 # Pattern nhận diện Địa chỉ
 ADDRESS_PREFIX_PATTERN = re.compile(
-    r"^(?:địa\s*chỉ|dia\s*chi|đ\/c|đc|dc|address|add)\s*[:\s]*(.+)$",
+    r"(?:địa\s*chỉ|dia\s*chi|đ\/c|đc|dc|address|add)\s*[:\s\-]+(.+)$",
     re.IGNORECASE
 )
 
@@ -171,10 +188,11 @@ KNOWN_MERCHANTS = [
 RESTAURANT_PREFIX_KEYWORDS = [
     "nhà hàng", "nha hang", "quán", "quan", "tiệm", "tiem",
     "cà phê", "ca phe", "coffee", "cafe", "trà sữa", "tra sua",
+    "tạp hóa", "tap hoa", "bách hóa", "bach hoa", "cửa hàng", "cua hang",
     "bánh mì", "banh mi", "bakery", "bếp", "bep", "ẩm thực", "am thuc",
     "hải sản", "hai san", "cơm", "com", "phở", "pho", "bún", "bun",
     "lẩu", "lau", "nướng", "nuong", "buffet", "bar", "pub", "bistro",
-    "siêu thị", "sieu thi", "mart", "store", "shop"
+    "siêu thị", "sieu thi", "mart", "store", "shop", "đại lý", "dai ly"
 ]
 
 # Các từ khóa bỏ qua khi tìm Tên Cửa Hàng

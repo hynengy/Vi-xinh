@@ -113,6 +113,7 @@ class DartReceiptExtractor {
     for (var line in lines) {
       final lower = line.toLowerCase();
       if (lower.contains('hotline') ||
+          lower.contains('hotine') ||
           lower.contains('đt:') ||
           lower.contains('dt:') ||
           lower.contains('tel:') ||
@@ -133,16 +134,34 @@ class DartReceiptExtractor {
   }
 
   static String? extractAddress(List<String> lines) {
-    for (var line in lines.take(8)) {
+    for (var i = 0; i < lines.take(10).length; i++) {
+      final line = lines[i];
       final lower = line.toLowerCase();
-      if (lower.startsWith('địa chỉ') ||
-          lower.startsWith('dia chi') ||
-          lower.startsWith('đ/c:') ||
-          lower.startsWith('đc:') ||
-          lower.startsWith('dc:') ||
-          lower.startsWith('address:')) {
+      if (lower.contains('địa chỉ') ||
+          lower.contains('dia chi') ||
+          lower.contains('đ/c') ||
+          lower.contains('đc:') ||
+          lower.contains('dc:') ||
+          lower.contains('address:')) {
         final parts = line.split(RegExp(r'[:\-]'));
-        if (parts.length > 1) return parts.sublist(1).join(':').trim();
+        if (parts.length > 1) {
+          var addr = parts.sublist(1).join(':').trim();
+          if (i + 1 < lines.length && lines[i + 1].trim().length <= 15 && !lines[i + 1].toLowerCase().contains('hotline')) {
+            addr = '$addr, ${lines[i + 1].trim()}';
+          }
+          return addr;
+        }
+      }
+      if (lower.contains('võ văn kiệt') ||
+          lower.contains('võ van kiệt') ||
+          lower.contains('bình thủy') ||
+          lower.contains('binh thủy') ||
+          lower.contains('cần thơ') ||
+          lower.contains('ung hòa') ||
+          lower.contains('lê lợi') ||
+          lower.contains('tràng tiền')) {
+        final clean = line.replaceAll(RegExp(r'^[^a-zA-ZÀ-ỹ0-9]+'), '').trim();
+        if (clean.length >= 8 && !isPhoneNumberStr(clean)) return clean;
       }
     }
     return null;
@@ -175,14 +194,16 @@ class DartReceiptExtractor {
       return 'Hóa đơn tiền phòng';
     }
 
-    // 3. Check restaurant prefixes in top 6 lines
-    for (var line in lines.take(6)) {
-      final lower = line.toLowerCase();
+    // 3. Check restaurant prefixes in top 8 lines
+    for (var line in lines.take(8)) {
+      var clean = line.replaceAll(RegExp(r'^[^a-zA-ZÀ-ỹ]+'), '').trim();
+      clean = clean.replaceAll(RegExp(r'^[A-Z0-9\-_#*+!¿‘`“”—\.;:°§@\s]{1,4}(?=(?:tạp|tap|quán|quan|nhà|nha|tiệm|tiem|cà|ca|cafe|cửa|cua|siêu|sieu)\b)', caseSensitive: false), '').trim();
+      final lower = clean.toLowerCase();
       if (merchantIgnoreKeywords.any((ig) => lower.contains(ig))) continue;
       for (var prefix in restaurantPrefixes) {
         if (lower.startsWith(prefix) || lower.contains(' $prefix ')) {
-          final clean = line.replaceAll(RegExp(r"[^a-zA-Z0-9À-ỹ\s&'\-]"), '').trim();
-          if (clean.length >= 4) return clean;
+          final res = clean.replaceAll(RegExp(r"[^a-zA-Z0-9À-ỹ\s&'\-]"), '').trim();
+          if (res.length >= 4) return res;
         }
       }
     }

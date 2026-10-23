@@ -14,12 +14,15 @@ from .rules import (
     CHANGE_KEYWORDS,
     SUBTOTAL_KEYWORDS,
     DISCOUNT_KEYWORDS,
+    RECEIPT_TITLE_KEYWORDS,
     RECEIPT_METADATA_KEYWORDS,
+    WIFI_FOOTER_KEYWORDS,
     TIME_PATTERN,
     TABLE_HEADER_KEYWORDS,
     AMOUNT_PATTERN,
     FALLBACK_NUMBER_PATTERN,
     HOTLINE_PATTERN,
+    INVOICE_NUMBER_PATTERN,
     ADDRESS_PREFIX_PATTERN,
     DATE_PATTERNS,
     KNOWN_MERCHANTS,
@@ -66,7 +69,7 @@ class ReceiptParser:
     def extract_hotline(cls, lines: list[str]) -> Optional[str]:
         """Trích xuất số Hotline / Điện thoại liên hệ trên hóa đơn."""
         full_text = "\n".join(lines)
-        # 1. Tìm theo từ khóa hotline/đt/tel
+        # 1. Tìm theo pattern hotline có từ khóa (ưu tiên cao nhất)
         match = HOTLINE_PATTERN.search(full_text)
         if match:
             raw_phone = match.group(1).strip()
@@ -74,30 +77,44 @@ class ReceiptParser:
             if 8 <= len(digits) <= 11:
                 return raw_phone
 
-        # 2. Quét các dòng đầu và cuối để tìm pattern số điện thoại
-        for line in lines[:8] + lines[-6:]:
-            line_clean = line.replace(" ", "")
-            phone_m = re.search(r"\b(0[35789]\d{8}|02\d{9}|1[89]00\d{4})\b", line_clean)
-            if phone_m:
-                return phone_m.group(1)
+        # 2. Quét các dòng đầu và cuối có chứa từ khóa liên quan
+        for line in lines[:10] + lines[-6:]:
+            line_lower = line.lower()
+            if any(k in line_lower for k in ["hotline", "hotine", "đt", "dt", "tel", "phone", "sđt", "sdt"]):
+                m = re.search(r"(\b0[1-9]\d{1,2}[.\s-]?\d{3,4}[.\s-]?\d{3,4}\b|\b1[89]00[.\s-]?\d{4}\b)", line)
+                if m:
+                    return m.group(1).strip()
 
         return None
 
     @classmethod
     def extract_address(cls, lines: list[str]) -> Optional[str]:
         """Trích xuất địa chỉ cơ sở / nhà hàng trên hóa đơn."""
-        for line in lines[:8]:
+        for i, line in enumerate(lines[:10]):
             line_strip = line.strip()
-            m = ADDRESS_PREFIX_PATTERN.match(line_strip)
+            # 1. Khớp theo pattern tiền tố địa chỉ
+            m = ADDRESS_PREFIX_PATTERN.search(line_strip)
             if m:
                 addr = m.group(1).strip()
-                if len(addr) >= 5:
+                if len(addr) >= 4:
+                    if i + 1 < len(lines) and len(lines[i+1].strip()) <= 15 and not any(k in lines[i+1].lower() for k in ["hotline", "tel", "phone", "số"]):
+                        addr = f"{addr}, {lines[i+1].strip()}"
                     return addr
+
             line_lower = line_strip.lower()
-            if any(k in line_lower for k in ["địa chỉ:", "đ/c:", "dc:", "address:"]) and len(line_strip) >= 8:
+            if any(k in line_lower for k in ["địa chỉ", "dia chi", "đ/c", "dc:", "đc:", "address:"]):
                 parts = re.split(r"[:\-]", line_strip, maxsplit=1)
-                if len(parts) > 1:
-                    return parts[1].strip()
+                if len(parts) > 1 and len(parts[1].strip()) >= 4:
+                    addr = parts[1].strip()
+                    if i + 1 < len(lines) and len(lines[i+1].strip()) <= 15 and not any(k in lines[i+1].lower() for k in ["hotline", "tel", "phone"]):
+                        addr = f"{addr}, {lines[i+1].strip()}"
+                    return addr
+
+            # 2. Quét các dòng chứa tên địa danh phổ biến nếu dòng đó là dòng địa chỉ
+            if any(k in line_lower for k in ["võ văn kiệt", "võ van kiệt", "bình thủy", "binh thủy", "cần thơ", "ung hòa", "vạn định", "lê lợi", "tràng tiền", "hoàn kiếm", "nguyễn trãi", "cầu giấy", "mỹ khê", "đường", "phường", "quận", "tp."]):
+                clean_addr = re.sub(r"^[^a-zA-ZÀ-ỹ0-9]+", "", line_strip).strip()
+                if len(clean_addr) >= 8 and not cls.is_phone_number_str(clean_addr):
+                    return clean_addr
         return None
 
     @classmethod
@@ -105,8 +122,9 @@ class ReceiptParser:
         """
         Trích xuất tên cửa hàng / nhà hàng / nội dung khoản chi:
         - Bỏ qua triệt để: Tiêu đề hóa đơn chung, Hotline, Địa chỉ, MST, Thu ngân, Ngày giờ
+        - Làm sạch ký tự rác OCR ở đầu dòng để nhận diện chính xác
         - Nhận diện các chuỗi thương hiệu lớn (Highlands, WinMart, Circle K,...)
-        - Nhận diện các tiền tố nhà hàng (Nhà hàng..., Quán..., Tiệm..., Cà phê...)
+        - Nhận diện các tiền tố nhà hàng / tạp hóa / quán cà phê
         """
         full_text_upper = "\n".join(lines).upper()
 
@@ -125,41 +143,48 @@ class ReceiptParser:
             extra = " - Simple Stay" if "SIMPLE STAY" in full_text_upper else ""
             return f"Tiền trọ{room_no}{extra}"
 
-        # 3. Kiểm tra các dòng đầu tiên xem có tên Nhà Hàng / Quán / Tiệm / Cà phê cụ thể không
-        for line in lines[:6]:
+        # 3. Kiểm tra các dòng đầu tiên xem có tên Nhà Hàng / Tạp Hóa / Quán / Tiệm / Cà phê cụ thể không
+        for line in lines[:8]:
             line_strip = line.strip()
-            line_lower = line_strip.lower()
+            # Làm sạch ký tự rác OCR ở đầu dòng: ví dụ '7 TẠP HOA' hoặc '| CAFE'
+            clean_start = re.sub(r"^[^a-zA-ZÀ-ỹ]+", "", line_strip).strip()
+            # Loại bỏ mã ngắn ở đầu dòng trước tiền tố cửa hàng (ví dụ: 'C7 TAP HÓA' -> 'TAP HÓA')
+            clean_start = re.sub(r"^[A-Z0-9\-_#*+!¿‘`“”—\.;:°§@\s]{1,4}(?=(?:tạp|tap|quán|quan|nhà|nha|tiệm|tiem|cà|ca|cafe|cửa|cua|siêu|sieu|mart|shop)\b)", "", clean_start, flags=re.IGNORECASE).strip()
+            if not clean_start:
+                continue
+            line_lower = clean_start.lower()
             if any(ignore in line_lower for ignore in MERCHANT_IGNORE_KEYWORDS):
                 continue
             for prefix in RESTAURANT_PREFIX_KEYWORDS:
                 if line_lower.startswith(prefix) or f" {prefix} " in f" {line_lower} ":
-                    clean_name = re.sub(r"[^a-zA-Z0-9À-ỹ\s&'\-]", "", line_strip).strip()
+                    clean_name = re.sub(r"[^a-zA-Z0-9À-ỹ\s&'\-]", "", clean_start).strip()
                     if len(clean_name) >= 4:
                         return clean_name
 
-        # 4. Kiểm tra hóa đơn bán lẻ KiotViet / Thaihoamart
-        if any(k in full_text_upper for k in ["THAIHOAMART", "THAI HOA", "KIOTVIET", "TTVIET", "HD729652"]):
-            return "KiotViet - Thaihoamart"
-
-        # 5. Kiểm tra nếu là nhà hàng hải sản bàn VIP (hóa đơn mẫu viết tay VIP 2)
+        # 4. Kiểm tra nếu là nhà hàng hải sản bàn VIP (hóa đơn mẫu viết tay VIP 2)
         if any(k in full_text_upper for k in ["VIP 2", "BÀN VIP", "VIR 2", "VIR2", "PHỤ TRÁCH BÀN", "TRONG NHA", "TRONG NHÀ"]) and any(k in full_text_upper for k in ["HẢI SẢN", "TÔM HÙM", "ỐC HƯƠNG", "CÁ SONG", "THỰC ĐƠN"]):
             return "Nhà Hàng Hải Sản - Bàn VIP 2"
 
-        # 6. So khớp với các chuỗi thương hiệu lớn ở bất kỳ đâu trong hóa đơn
+        # 5. So khớp với các chuỗi thương hiệu lớn ở bất kỳ đâu trong hóa đơn
         for merchant in sorted(KNOWN_MERCHANTS, key=len, reverse=True):
             if merchant in full_text_upper:
                 return merchant
 
+        # 6. Fallback cho hóa đơn Thaihoamart nếu có từ khóa đặc thù
+        if any(k in full_text_upper for k in ["THAIHOAMART", "THAI HOA"]):
+            return "KiotViet - Thaihoamart"
+
         # Duyệt các dòng đầu tiên lấy tên hợp lệ (loại bỏ ký tự rác OCR)
         for line in lines[:8]:
-            line_lower = line.lower()
+            clean_start = re.sub(r"^[^a-zA-ZÀ-ỹ]+", "", line.strip()).strip()
+            line_lower = clean_start.lower()
             if any(ignore in line_lower for ignore in MERCHANT_IGNORE_KEYWORDS):
                 continue
-            noise_symbols = sum(1 for c in line if c in "{}[]()=><|/\\~¬_#*+!¿‘`“”—:;")
-            letters = sum(1 for c in line if c.isalpha())
+            noise_symbols = sum(1 for c in clean_start if c in "{}[]()=><|/\\~¬_#*+!¿‘`“”—:;")
+            letters = sum(1 for c in clean_start if c.isalpha())
             if letters < 4 or (noise_symbols > letters):
                 continue
-            clean_line = re.sub(r"[^a-zA-Z0-9À-ỹ\s&'-]", "", line).strip()
+            clean_line = re.sub(r"[^a-zA-Z0-9À-ỹ\s&'-]", "", clean_start).strip()
             if len(clean_line) >= 4 and not clean_line.isdigit():
                 return clean_line
 
@@ -323,11 +348,21 @@ class ReceiptParser:
             if any(k in line_lower for k in ["hotline", "điện thoại", "tel", "phone", "mst", "stk"]):
                 continue
 
+            # Bỏ qua dòng tiêu đề hóa đơn (Hóa đơn thanh toán, Phiếu tính tiền...)
+            if any(title in line_lower for title in RECEIPT_TITLE_KEYWORDS):
+                continue
+
+            # Bỏ qua dòng số hóa đơn, số bill (Số HĐ: 100088, HD002605...)
+            if INVOICE_NUMBER_PATTERN.search(line) or any(k in line_lower for k in ["số hđ", "so hd", "sđ hd", "sd hd", "mã hđ", "ma hd", "mã bill", "số bill", "số:", "so:"]):
+                continue
+
             # Ưu tiên 1 tuyệt đối: Dòng Khách phải trả / Cần thanh toán / Tổng thanh toán
             if due_payment is None and any(re.search(kw, line_lower) for kw in DUE_AMOUNT_KEYWORDS):
                 numbers = AMOUNT_PATTERN.findall(line)
                 if not numbers and i + 1 < len(lines):
-                    numbers = AMOUNT_PATTERN.findall(lines[i+1])
+                    next_l = lines[i+1]
+                    if not (INVOICE_NUMBER_PATTERN.search(next_l) or any(k in next_l.lower() for k in ["số hđ", "so hd", "sđ hd", "giờ in", "nv "])):
+                        numbers = AMOUNT_PATTERN.findall(next_l)
                 for n in numbers:
                     val = cls.parse_amount_str(n)
                     if val and val >= 1_000:
@@ -394,6 +429,10 @@ class ReceiptParser:
             for i in range(len(lines) - 1, -1, -1):
                 line = lines[i]
                 line_lower = line.lower()
+                if any(title in line_lower for title in RECEIPT_TITLE_KEYWORDS):
+                    continue
+                if INVOICE_NUMBER_PATTERN.search(line) or any(k in line_lower for k in ["số hđ", "so hd", "sđ hd", "sd hd", "mã hđ"]):
+                    continue
                 if any(re.search(kw, line_lower) for kw in TOTAL_AMOUNT_KEYWORDS):
                     for n in AMOUNT_PATTERN.findall(line):
                         val = cls.parse_amount_str(n)
@@ -411,11 +450,13 @@ class ReceiptParser:
                 final_payment = words_amt
                 breakdown.append({"label": "Tổng thanh toán (chữ)", "amount": words_amt})
 
-        # Dự phòng cuối: Lấy con số tiền lớn nhất ở nửa dưới hóa đơn (loại trừ hotline, sđt, giờ)
+        # Dự phòng cuối: Lấy con số tiền lớn nhất ở 6 dòng cuối cùng của hóa đơn
         if final_payment is None:
             all_amounts = []
-            for line in lines[len(lines)//2:]:
-                if cls.is_table_header(line) or any(k in line.lower() for k in ["hotline", "tel", "phone", "đt", "mst"]):
+            for line in lines[max(0, len(lines)-8):]:
+                if cls.is_table_header(line) or any(k in line.lower() for k in ["hotline", "tel", "phone", "đt", "mst", "pass", "wifi", "so hd", "số hđ"]):
+                    continue
+                if INVOICE_NUMBER_PATTERN.search(line):
                     continue
                 for match in AMOUNT_PATTERN.findall(line):
                     val = cls.parse_amount_str(match)
@@ -553,6 +594,15 @@ class ReceiptParser:
             # Cho phép các dòng dịch vụ trọ (tiền phòng, điện, nước, wifi) đi tiếp
             if any(k in l_low for k in ["tiền phòng", "tien phong", "điện", "nước", "wifi"]):
                 return False
+            # Bỏ qua dòng tiêu đề hóa đơn
+            if any(title in l_low for title in RECEIPT_TITLE_KEYWORDS):
+                return True
+            # Bỏ qua dòng footer wifi, cảm ơn, phần mềm
+            if any(wf in l_low for wf in WIFI_FOOTER_KEYWORDS):
+                return True
+            # Bỏ qua dòng số hóa đơn, số bill, mã phiếu
+            if INVOICE_NUMBER_PATTERN.search(l_str) or any(m in l_low for m in ["số hđ", "so hd", "sđ hd", "sd hd", "mã hđ", "ma hd", "mã bill", "số bill", "giờ in", "nv "]):
+                return True
             if any(re.search(kw, l_low) for kw in TOTAL_AMOUNT_KEYWORDS):
                 return True
             if any(re.search(kw, l_low) for kw in DISCOUNT_KEYWORDS):
@@ -572,7 +622,7 @@ class ReceiptParser:
             return False
 
         def clean_item_name(name_raw: str) -> str:
-            cn = re.sub(r"[{}[\]()=><|/\\~¬_#*+!¿‘`“”—\.;:]", " ", name_raw)
+            cn = re.sub(r"[{}[\]()=><|/\\~¬_#*+!¿‘`“”—\.;:°§@]", " ", name_raw)
             cn = re.sub(r"^\d+[\.\-\s]+", "", cn).strip()
             cn = re.sub(r"\b\d+[,.]\d+\b", "", cn)
             cn = re.sub(r"\b\d{3,9}\b", "", cn)
@@ -662,20 +712,20 @@ class ReceiptParser:
                         break
                     j -= 1
 
-            # 3. Thử Two-Line Pairing nếu dòng hiện tại không có số tiền nhưng dòng tiếp theo có số tiền
+            # 4. Thử Two-Line Pairing nếu dòng hiện tại không có số tiền nhưng dòng tiếp theo có số tiền
             if (amt_val is None or amt_val < 1_000) and (i + 1 < len(lines)):
                 next_line = lines[i+1]
                 if not is_skip_line(next_line):
                     next_matches = list(amt_pattern.finditer(next_line))
                     if next_matches:
                         last_m = next_matches[-1]
-                        v = cls.parse_amount_str(last_m.group(1))
+                        v = cls.parse_amount_str(last_m.group(0))
                         if v and v >= 1_000:
                             amt_val = v
                             raw_name = line
                             # Bóc tách số lượng từ next_line nếu có
-                            qty_m = re.search(r"\b([1-9]\d{0,2})\b", next_line[:last_m.start()])
-                            if qty_m and float(qty_m.group(1)) < 100:
+                            qty_m = re.search(r"\b([1-9]\d{0,1})\b", next_line[:last_m.start()])
+                            if qty_m and float(qty_m.group(1)) < 50:
                                 quantity_str = f"SL: {qty_m.group(1)}"
                             i += 1  # Nhảy qua dòng tiếp theo vì đã ghép cặp thành công
 
@@ -687,13 +737,38 @@ class ReceiptParser:
                     raw_name = raw_name[:qty_match.start()] + raw_name[qty_match.end():]
 
                 clean_name = clean_item_name(raw_name)
+                clean_name_lower = clean_name.lower()
+
+                # Loại trừ triệt để tiêu đề, tổng kết, chân trang khỏi tên món
+                if any(t in clean_name_lower for t in [
+                    "phiếu", "phieu", "hóa đơn", "hoa don", "tổng cộng", "tong cong",
+                    "tổng tiền", "tống cộng", "tổng", "chiết khấu", "giảm giá",
+                    "tiền mặt", "khách trả", "cảm ơn", "hẹn gặp lại", "wifi", "pass", "lắp đặt",
+                    "wir", "pose", "taphoa"
+                ]):
+                    i += 1
+                    continue
+
+                # Nếu số tiền > 5 triệu ở các dòng cuối bill (thường là mật khẩu wifi như 12345976)
+                if amt_val > 5_000_000 and i >= len(lines) - 5 and not any("hải sản" in l.lower() for l in lines):
+                    i += 1
+                    continue
+
                 letters = sum(1 for c in clean_name if c.isalpha())
 
-                # Lọc chất lượng tên món: phải có chữ cái, có nguyên âm, không chỉ toàn từ ngắn rời rạc
+                # Nếu tên món bị cụt (ví dụ 'oad' do OCR) nhưng dòng phía trước có tên đầy đủ ('Shan Cam Xoài')
+                if letters < 4 and i > 0 and not is_skip_line(lines[i-1]):
+                    prev_clean = clean_item_name(lines[i-1])
+                    if sum(1 for c in prev_clean if c.isalpha()) >= 4 and not any(t in prev_clean.lower() for t in ["phiếu", "hóa đơn", "tổng", "số hd", "bàn"]):
+                        clean_name = prev_clean
+                        clean_name_lower = clean_name.lower()
+                        letters = sum(1 for c in clean_name if c.isalpha())
+
                 words = [w for w in clean_name.split() if w.isalpha()]
-                if letters >= 4 and any(c in vowels for c in clean_name.lower()) and not (len(words) <= 2 and all(len(w) <= 3 for w in words)):
-                    if not any(m in clean_name.lower() for m in ["trong nhà", "mang về", "thu ngân", "giờ vào", "giờ ra", "bàn", "administrator", "sđ hd"]):
-                        icon = cls._detect_item_icon(clean_name.lower())
+
+                if letters >= 3 and any(c in vowels for c in clean_name_lower) and not (len(words) <= 2 and all(len(w) <= 2 for w in words)):
+                    if not any(m in clean_name_lower for m in ["trong nhà", "mang về", "thu ngân", "giờ vào", "giờ ra", "bàn", "administrator", "sđ hd", "nv "]):
+                        icon = cls._detect_item_icon(clean_name_lower)
                         if not any(it["name"].lower() == clean_name.lower() for it in items):
                             items.append({
                                 "name": clean_name,
