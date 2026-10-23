@@ -1097,11 +1097,11 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
                 data.execution_time_ms = mlResult.executionTimeMs;
                 data.total_lines = mlResult.total_lines;
                 data.total_blocks = mlResult.total_blocks;
-                data.engine = 'google_mlkit';
+                data.engine = data.engine || 'google_mlkit_web';
 
             } catch (clientErr) {
                 console.warn('[Google ML Kit Web Client Error]:', clientErr);
-                if (statEl) statEl.textContent = 'Google ML Kit đang xử lý ảnh...';
+                if (statEl) statEl.textContent = 'Đang nhận dạng hóa đơn...';
 
                 const formData = new FormData();
                 const filename = (fileOrBlob instanceof File && fileOrBlob.name) ? fileOrBlob.name : 'receipt_capture.jpg';
@@ -1110,7 +1110,6 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
                 const res = await fetch('/api/receipts/upload', { method: 'POST', body: formData });
                 if (!res.ok) throw new Error(`Lỗi máy chủ HTTP ${res.status}`);
                 data = await res.json();
-                data.engine = 'google_mlkit';
             }
 
         } else {
@@ -1122,7 +1121,6 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
             const res = await fetch('/api/receipts/upload', { method: 'POST', body: formData });
             if (!res.ok) throw new Error(`Lỗi máy chủ HTTP ${res.status}`);
             data = await res.json();
-            data.engine = 'google_mlkit';
         }
 
         if (fillEl) fillEl.style.width = '100%';
@@ -1165,11 +1163,24 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
         document.getElementById('ocrCatBadge').style.background = ct.bg;
         document.getElementById('ocrCatBadge').style.color = ct.color;
 
-        // Cập nhật thẻ hiển thị thông tin mô hình Google ML Kit
+        // Cập nhật thẻ hiển thị thông tin mô hình OCR trung thực
         const engineTag = document.getElementById('ocrEngineTag');
         const metaTime = document.getElementById('ocrMetaTime');
         if (engineTag) {
-            engineTag.innerHTML = `<i class="ri-google-fill"></i> Google ML Kit`;
+            if (data.engine === 'google_vision_cloud') {
+                engineTag.innerHTML = `<i class="ri-google-fill"></i> Google Vision Cloud`;
+                engineTag.title = data.engine_note || 'Google Cloud Vision OCR';
+            } else if (data.engine === 'tesseract_fallback') {
+                engineTag.innerHTML = `<i class="ri-cpu-line"></i> Tesseract (Dự phòng)`;
+                engineTag.title = data.engine_note || 'Tesseract OCR Fallback';
+            } else if (data.engine === 'tesseract_fallback_no_vie') {
+                engineTag.innerHTML = `<i class="ri-alert-line"></i> Tesseract (Thiếu vie)`;
+                engineTag.title = data.engine_note || 'Tesseract thiếu gói ngôn ngữ tiếng Việt vie';
+            } else if (data.engine === 'google_mlkit_web') {
+                engineTag.innerHTML = `<i class="ri-google-fill"></i> Google ML Kit Web`;
+            } else {
+                engineTag.innerHTML = `<i class="ri-scan-2-line"></i> ${data.engine || 'Google ML Kit'}`;
+            }
         }
         if (metaTime) {
             const msStr = data.execution_time_ms ? `${data.execution_time_ms}ms` : 'AI';

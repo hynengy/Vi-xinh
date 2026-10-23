@@ -37,6 +37,24 @@ class OCREngine:
         self.lang = lang
         self.is_configured = False
         self._configure_tesseract(tesseract_cmd)
+        if self.is_configured:
+            has_vie = self.has_vietnamese_language()
+            if not has_vie and "vie" in self.lang:
+                logger.warning(
+                    "[CẢNH BÁO TESSERACT] Không tìm thấy gói ngôn ngữ tiếng Việt 'vie' trong Tesseract. "
+                    "Chữ tiếng Việt có dấu sẽ bị đọc sai. Tự động chuyển cấu hình sang 'eng'."
+                )
+                self.lang = "eng"
+
+    def has_vietnamese_language(self) -> bool:
+        """Kiểm tra Tesseract đã có gói ngôn ngữ 'vie' (tiếng Việt) chưa."""
+        if not self.is_configured:
+            return False
+        try:
+            langs = pytesseract.get_languages()
+            return "vie" in langs
+        except Exception:
+            return False
 
     def _configure_tesseract(self, custom_cmd: Optional[str] = None) -> None:
         """Tự động tìm kiếm đường dẫn Tesseract trên Windows hoặc Linux/macOS."""
@@ -130,12 +148,13 @@ class OCREngine:
 
                 best_text = ""
                 best_score = -1
+                best_cfg = r"--oem 3 --psm 6"
                 target_img = gray_img
 
                 for cfg in configs_to_try:
                     try:
                         cur_text = pytesseract.image_to_string(gray_img, lang=self.lang, config=cfg).strip()
-                    except Exception as lang_err:
+                    except Exception:
                         try:
                             cur_text = pytesseract.image_to_string(gray_img, config=cfg).strip()
                         except Exception:
@@ -151,6 +170,7 @@ class OCREngine:
                     if score > best_score:
                         best_score = score
                         best_text = cur_text
+                        best_cfg = cfg
 
                 # Dự phòng: Thử ảnh nhị phân nếu cần
                 if len(best_text) < 40:
@@ -159,56 +179,63 @@ class OCREngine:
                             bin_text = pytesseract.image_to_string(binary_img, lang=self.lang, config=cfg).strip()
                             if len(bin_text) > len(best_text):
                                 best_text = bin_text
+                                best_cfg = cfg
                                 target_img = binary_img
                         except Exception:
                             pass
 
-                # 3. Header Pass: Quét vùng đầu hóa đơn (35% phía trên) phóng to 2x để trích xuất ngày, số HĐ, bàn VIP, tên quán
-                try:
-                    h_img, w_img = gray_img.shape[:2]
-                    top_crop = gray_img[0:int(h_img * 0.38), 0:w_img]
-                    top_scaled = cv2.resize(top_crop, (0, 0), fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
-                    header_txt = ""
-                    for psm_h in [r"--oem 3 --psm 3", r"--oem 3 --psm 4", r"--oem 3 --psm 6"]:
-                        try:
-                            h_cand = pytesseract.image_to_string(top_scaled, lang=self.lang, config=psm_h).strip()
-                            if any(k in h_cand.lower() for k in ["ngày", "ban", "bàn", "vip", "hđ", "hd", "kiotviet", "thaihoamart", "hoá đơn", "hóa đơn", "thu ngân"]):
-                                header_txt = h_cand
-                                break
-                        except Exception:
-                            continue
-                    if header_txt:
-                        raw_text = header_txt + "\n---\n" + best_text
-                    else:
-                        raw_text = best_text
-                except Exception as e:
-                    logger.debug(f"Header pass skipped: {e}")
-                    raw_text = best_text
+                # 3. Kết quả văn bản OCR đầy đủ từ ảnh nguyên bản (không ghép trùng vùng đầu để tránh nhân đôi dòng)
+                raw_text = best_text
 
-                # Lấy chi tiết bounding boxes
+                # Chỉ khi toàn ảnh không trích xuất được chữ (dưới 15 ký tự) mới thử vùng header dự phòng
+                if len(raw_text.strip()) < 15:
+                    try:
+                        h_img, w_img = gray_img.shape[:2]
+                        top_crop = gray_img[0:int(h_img * 0.4), 0:w_img]
+                        top_scaled = cv2.resize(top_crop, (0, 0), fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+                        for psm_h in [r"--oem 3 --psm 6", r"--oem 3 --psm 3"]:
+                            try:
+                                h_cand = pytesseract.image_to_string(top_scaled, lang=self.lang, config=psm_h).strip()
+                                if len(h_cand) > len(raw_text):
+                                    raw_text = h_cand
+                                    break
+                            except Exception:
+                                continue
+                    except Exception as e:
+                        logger.debug(f"Header fallback skipped: {e}")
+
+                # 4. Lấy chi tiết bounding boxes và điểm tin cậy (Confidence) dùng cấu hình tối ưu best_cfg
                 try:
-                    data = pytesseract.image_to_data(
-                        target_img,
-                        lang=self.lang,
-                        config=custom_config,
-                        output_type=Output.DICT
-                    )
+                    try:
+                        data = pytesseract.image_to_data(
+                            target_img,
+                            lang=self.lang,
+                            config=best_cfg,
+                            output_type=Output.DICT
+                        )
+                    except Exception:
+                        data = pytesseract.image_to_data(
+                            target_img,
+                            config=best_cfg,
+                            output_type=Output.DICT
+                        )
+
                     n_boxes = len(data["text"])
                     for i in range(n_boxes):
                         t = data["text"][i].strip()
-                        c = int(data["conf"][i])
+                        c = float(data["conf"][i])
                         if t and c > 0:
                             confidences.append(c)
                             boxes.append({
                                 "text": t,
-                                "x": data["left"][i],
-                                "y": data["top"][i],
-                                "w": data["width"][i],
-                                "h": data["height"][i],
-                                "confidence": c
+                                "x": int(data["left"][i]),
+                                "y": int(data["top"][i]),
+                                "w": int(data["width"][i]),
+                                "h": int(data["height"][i]),
+                                "confidence": round(c, 2)
                             })
-                except Exception:
-                    pass
+                except Exception as box_err:
+                    logger.warning(f"Lỗi khi trích xuất bounding boxes & confidence: {box_err}")
             else:
                 raw_text = (
                     "[TESSERACT CHƯA ĐƯỢC CÀI ĐẶT TRÊN MÁY]\n"
@@ -226,6 +253,7 @@ class OCREngine:
                 "raw_text": raw_text,
                 "rotation_angle": stages["rotation_angle"],
                 "confidence_score": avg_confidence,
+                "confidence": avg_confidence,
                 "boxes_count": len(boxes),
                 "boxes": boxes[:30], # Lấy 30 khung từ đầu tiên
                 "metrics": {

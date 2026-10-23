@@ -125,10 +125,9 @@ def upload_receipt():
     saved_path = UPLOAD_FOLDER / saved_filename
     file.save(str(saved_path))
 
-    # Chạy quy trình Google ML Kit OCR & bóc tách cấu trúc
-    result = pipeline.process_receipt_image(saved_path, engine="google_mlkit")
+    # Chạy quy trình OCR & bóc tách cấu trúc
+    result = pipeline.process_receipt_image(saved_path)
     result["file_name"] = saved_filename
-    result["engine"] = "google_mlkit"
 
     return jsonify(result)
 

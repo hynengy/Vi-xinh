@@ -43,7 +43,15 @@ class ProcessingPipeline:
         raw_text = ml_res.get("raw_text", "")
 
         response = self.parse_extracted_text(raw_text, image_url=f"/uploads/{image_path.name}")
-        response["engine"] = "google_mlkit"
+        response["engine"] = ml_res.get("engine", "tesseract_fallback")
+        response["engine_note"] = ml_res.get("engine_note", "")
+        response["has_vie_lang"] = ml_res.get("has_vie_lang", True)
+        response["is_cloud"] = ml_res.get("is_cloud", False)
+        response["confidence"] = ml_res.get("confidence", 0.0)
+        response["confidence_score"] = ml_res.get("confidence_score", response["confidence"])
+        response["boxes_count"] = ml_res.get("boxes_count", 0)
+        response["total_lines"] = ml_res.get("total_lines", len([ln for ln in raw_text.splitlines() if ln.strip()]))
+        response["execution_time_ms"] = ml_res.get("execution_time_ms", 0)
         return response
 
     def parse_extracted_text(self, raw_text: str, image_url: str = "") -> Dict[str, Any]:

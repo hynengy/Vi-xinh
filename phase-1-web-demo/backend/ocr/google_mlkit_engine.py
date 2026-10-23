@@ -70,36 +70,59 @@ class GoogleMLKitEngine:
                     result["execution_time_ms"] = int((time.time() - start_time) * 1000)
                     return result
             except Exception as e:
-                logger.warning(f"Lỗi gọi Google Vision API, chuyển sang chế độ dự phòng: {e}")
+                logger.warning(f"Lỗi gọi Google Vision API, chuyển sang chế độ dự phòng Tesseract: {e}")
 
-        # Chế độ dự phòng: sử dụng Tesseract Engine cục bộ để mô phỏng định dạng Google ML Kit
+        # Chế độ dự phòng: sử dụng Tesseract Engine cục bộ
         from .ocr_engine import OCREngine
         local_ocr = OCREngine()
+        has_vie = local_ocr.has_vietnamese_language()
+
         ocr_res = local_ocr.extract_text_from_file(str(image_p))
         raw_text = ocr_res.get("raw_text", "")
         lines = [ln.strip() for ln in raw_text.split("\n") if ln.strip()]
+
+        if has_vie:
+            engine_name = "tesseract_fallback"
+            engine_note = "Dự phòng: Tesseract OCR cục bộ (Gói tiếng Việt vie)"
+        else:
+            engine_name = "tesseract_fallback_no_vie"
+            engine_note = (
+                "CẢNH BÁO: Tesseract chưa cài gói ngôn ngữ tiếng Việt (vie.traineddata) và chưa có GOOGLE_API_KEY. "
+                "Ký tự tiếng Việt có dấu có thể bị lỗi/sai chữ!"
+            )
+            logger.warning(f"[OCR FALLBACK] {engine_note}")
+
+        conf_val = ocr_res.get("confidence_score")
+        if conf_val is None:
+            conf_val = ocr_res.get("confidence", 0.0)
 
         blocks = []
         if lines:
             blocks.append({
                 "text": raw_text,
                 "lines": lines,
-                "confidence": ocr_res.get("confidence", 85.0),
+                "confidence": conf_val,
                 "block_index": 0
             })
 
         execution_time_ms = int((time.time() - start_time) * 1000)
 
         return {
-            "success": True,
+            "success": ocr_res.get("success", True),
             "raw_text": raw_text,
             "blocks": blocks,
             "lines": lines,
             "total_blocks": len(blocks),
             "total_lines": len(lines),
-            "confidence": ocr_res.get("confidence", 85.0),
+            "confidence": conf_val,
+            "confidence_score": conf_val,
+            "boxes": ocr_res.get("boxes", []),
+            "boxes_count": ocr_res.get("boxes_count", len(ocr_res.get("boxes", []))),
             "execution_time_ms": execution_time_ms,
-            "engine": "google_mlkit_hybrid"
+            "engine": engine_name,
+            "engine_note": engine_note,
+            "has_vie_lang": has_vie,
+            "is_cloud": False
         }
 
     def _call_google_vision_rest(self, image_p: Path) -> Dict[str, Any]:
@@ -176,5 +199,9 @@ class GoogleMLKitEngine:
             "total_blocks": len(blocks),
             "total_lines": len(lines),
             "confidence": 98.0,
-            "engine": "google_cloud_vision"
+            "confidence_score": 98.0,
+            "engine": "google_vision_cloud",
+            "engine_note": "Google Cloud Vision API (Độ chính xác cao, chuẩn tiếng Việt)",
+            "has_vie_lang": True,
+            "is_cloud": True
         }
