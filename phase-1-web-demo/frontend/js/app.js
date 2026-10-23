@@ -3385,7 +3385,7 @@ function showReminderQR(billId, memberId){
             <div style="font-size:0.85rem;font-weight:800;color:var(--text);margin-bottom:0.15rem">Mã VietQR</div>
             <div style="font-size:0.7rem;color:var(--text3);margin-bottom:0.4rem">Quét bằng ứng dụng ngân hàng</div>
             <div class="qr-frame" style="margin-bottom:0.4rem">
-                <canvas id="mockQrCanvas" width="160" height="160"></canvas>
+                <img id="vietQrImg" alt="VietQR" width="160" height="160" style="background:#fff;border-radius:8px"/>
             </div>
             <div style="font-size:1.15rem;font-weight:900;color:var(--primary);margin-bottom:0.4rem">${fmt(amt)}</div>
             <div class="qr-details" style="padding:0.55rem;margin-bottom:0.5rem">
@@ -3410,31 +3410,46 @@ function showReminderQR(billId, memberId){
     
     openQrModal();
     setTimeout(()=>{
-        const cv = document.getElementById('mockQrCanvas');
-        if(cv) drawMockVietQr(cv, amt, memo);
+        const img = document.getElementById('vietQrImg');
+        if(img) renderVietQr(img, amt, memo);
     }, 50);
 }
 
-function drawMockVietQr(canvas, amt, memo){
-    if(!canvas) return;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0,0,160,160);
-    ctx.fillStyle = '#1E293B';
-    function corner(x,y){
-        ctx.fillRect(x,y,40,40);
-        ctx.fillStyle='#FFF'; ctx.fillRect(x+6,y+6,28,28);
-        ctx.fillStyle='#1E293B'; ctx.fillRect(x+12,y+12,16,16);
+function bankBinFromName(name){
+    const n = (name || '').toLowerCase();
+    const map = [
+        ['vietcombank', '970436'], ['vcb', '970436'],
+        ['techcombank', '970407'], ['tcb', '970407'],
+        ['mb bank', '970422'], ['mbbank', '970422'],
+        ['bidv', '970418'],
+        ['vietin', '970415'],
+        ['acb', '970416'],
+        ['tpbank', '970423'], ['tp bank', '970423'],
+        ['vpbank', '970432'],
+        ['sacombank', '970403'],
+        ['msb', '970426'],
+        ['vib', '970441'],
+        ['agribank', '970405'],
+    ];
+    for (const [key, bin] of map) {
+        if (n.includes(key)) return bin;
     }
-    corner(10,10); corner(110,10); corner(10,110);
-    for(let i=0; i<12; i++){
-        for(let j=0; j<12; j++){
-            if((i<4&&j<4) || (i>7&&j<4) || (i<4&&j>7)) continue;
-            if((i*7+j*13)%3 === 0) ctx.fillRect(12+i*11, 12+j*11, 7, 7);
-        }
+    return '';
+}
+
+function renderVietQr(img, amt, memo){
+    const bin = bankBinFromName(S.user?.bank_name);
+    const acc = (S.user?.bank_account || '').replace(/\s+/g, '');
+    const accName = encodeURIComponent(S.user?.name || S.user?.full_name || 'Vi Xinh');
+    const info = encodeURIComponent(memo || 'Vi Xinh');
+    if (!bin || !acc) {
+        img.alt = 'Chưa lưu STK ngân hàng';
+        img.src = '';
+        img.style.display = 'none';
+        return;
     }
-    ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(80,80,18,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#FF6584'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('VX', 80, 80);
+    img.style.display = 'inline-block';
+    img.src = `https://img.vietqr.io/image/${bin}-${acc}-compact2.png?accountName=${accName}&addInfo=${info}&amount=${Math.round(amt || 0)}`;
 }
 
 function toggleDebtStatus(billId, memberId){
