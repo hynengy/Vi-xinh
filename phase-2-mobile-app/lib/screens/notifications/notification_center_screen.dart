@@ -120,12 +120,12 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                               color: item.isRead ? Colors.white : const Color(0xFFFDF2F4),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: item.isRead ? const Color(0xFFF1F5F9) : AppColors.primary.withOpacity(0.2),
+                                color: item.isRead ? const Color(0xFFF1F5F9) : AppColors.primary.withValues(alpha: 0.2),
                                 width: 1,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
+                                  color: Colors.black.withValues(alpha: 0.02),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -139,7 +139,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                                   width: 42,
                                   height: 42,
                                   decoration: BoxDecoration(
-                                    color: item.color.withOpacity(0.12),
+                                    color: item.color.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Icon(item.icon, color: item.color, size: 22),
@@ -202,7 +202,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                                               decoration: BoxDecoration(
-                                                color: AppColors.primary.withOpacity(0.08),
+                                                color: AppColors.primary.withValues(alpha: 0.08),
                                                 borderRadius: BorderRadius.circular(10),
                                               ),
                                               child: const Text(
@@ -258,7 +258,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.white.withOpacity(0.25) : Colors.grey.shade300,
+                  color: isSelected ? Colors.white.withValues(alpha: 0.25) : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(

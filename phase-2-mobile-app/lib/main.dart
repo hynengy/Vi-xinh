@@ -53,7 +53,6 @@ class ViXinhApp extends StatelessWidget {
           seedColor: AppColors.primary,
           primary: AppColors.primary,
           secondary: AppColors.secondary,
-          background: AppColors.background,
           surface: AppColors.surface,
         ),
         scaffoldBackgroundColor: AppColors.background,

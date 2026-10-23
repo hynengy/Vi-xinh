@@ -167,9 +167,9 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: (_weakOcr ? Colors.orange : Colors.green).withOpacity(0.1),
+                color: (_weakOcr ? Colors.orange : Colors.green).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: (_weakOcr ? Colors.orange : Colors.green).withOpacity(0.3)),
+                border: Border.all(color: (_weakOcr ? Colors.orange : Colors.green).withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [

@@ -138,7 +138,7 @@ class BudgetScreen extends StatelessWidget {
               const Text('Thêm hạn mức', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: category,
+                initialValue: category,
                 items: AppCategories.labels.entries
                     .where((e) => e.key != 'salary')
                     .map((e) => DropdownMenuItem(value: e.key, child: Text('${AppCategories.iconOf(e.key)} ${e.value}')))

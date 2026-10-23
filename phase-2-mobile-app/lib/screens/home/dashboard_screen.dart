@@ -178,7 +178,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          _HomeTab(onAdd: _showManualAddDialog),
+          _HomeTab(
+            onAdd: _showManualAddDialog,
+            onSwitchTab: (idx) => setState(() => _currentIndex = idx),
+          ),
           const GroupWalletScreen(asTab: true),
           const SizedBox.shrink(),
           const ProfileScreen(asTab: true),
@@ -209,7 +212,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 class _HomeTab extends StatelessWidget {
   final VoidCallback onAdd;
-  const _HomeTab({required this.onAdd});
+  final ValueChanged<int>? onSwitchTab;
+  const _HomeTab({required this.onAdd, this.onSwitchTab});
 
   @override
   Widget build(BuildContext context) {
@@ -276,10 +280,7 @@ class _HomeTab extends StatelessWidget {
                       ),
                       IconButton(
                         icon: const Icon(Icons.settings_outlined, color: AppColors.textPrimary),
-                        onPressed: () {
-                          final parent = context.findAncestorStateOfType<_DashboardScreenState>();
-                          parent?.setState(() => parent._currentIndex = 3);
-                        },
+                        onPressed: () => onSwitchTab?.call(3),
                       ),
                     ],
                   ),
@@ -332,8 +333,7 @@ class _HomeTab extends StatelessWidget {
                   }),
                   _quick(Icons.edit_note, 'Nhập tay', AppColors.accent, onAdd),
                   _quick(Icons.groups, 'Ví nhóm', const Color(0xFF6366F1), () {
-                    final parent = context.findAncestorStateOfType<_DashboardScreenState>();
-                    parent?.setState(() => parent._currentIndex = 1);
+                    onSwitchTab?.call(1);
                   }),
                   _quick(Icons.pie_chart_outline, 'Ngân sách', AppColors.gold, () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetScreen()));
@@ -342,10 +342,7 @@ class _HomeTab extends StatelessWidget {
               ),
             ),
             GestureDetector(
-              onTap: () {
-                final parent = context.findAncestorStateOfType<_DashboardScreenState>();
-                parent?.setState(() => parent._currentIndex = 1);
-              },
+              onTap: () => onSwitchTab?.call(1),
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 padding: const EdgeInsets.all(16),
@@ -438,7 +435,7 @@ class _HomeTab extends StatelessWidget {
   Widget _statBox(String label, String value, Color color, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(14)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -457,7 +454,7 @@ class _HomeTab extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 26),
           ),
           const SizedBox(height: 6),
