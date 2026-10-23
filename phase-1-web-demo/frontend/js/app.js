@@ -3017,13 +3017,21 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.documentElement.setAttribute('data-theme',savedTheme);
     const s=localStorage.getItem('vx_u');
     if(s){try{S.user=JSON.parse(s);S.loggedIn=true;enterApp()}catch(e){localStorage.removeItem('vx_u')}}
+    // Hiệu ứng Splash Screen: tự động ẩn sau 1 giây, bảo đảm không bao giờ bị kẹt
+    const splash = document.getElementById('appSplashScreen');
+    if (splash) {
+        setTimeout(() => {
+            splash.classList.add('fade-out');
+            setTimeout(() => { try { splash.remove(); } catch(e){} }, 400);
+        }, 900);
+    }
+
     const dz=document.getElementById('dropZone');
     if(dz){dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover')});dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f){document.getElementById('fileIn').files=e.dataTransfer.files;handleFile({target:{files:[f]}})}});}
     document.getElementById('modal')?.addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
     document.getElementById('txDetailModal')?.addEventListener('click',e=>{if(e.target.id==='txDetailModal')closeTxDetailModal()});
     document.getElementById('savingsDepositModal')?.addEventListener('click',e=>{if(e.target.id==='savingsDepositModal')closeSavingsDepositModal()});
     document.getElementById('notifModal')?.addEventListener('click',e=>{if(e.target.id==='notifModal')closeNotificationModal()});
-    document.getElementById('biometricModal')?.addEventListener('click',e=>{if(e.target.id==='biometricModal')closeBiometricModal(false)});
     document.addEventListener('keydown',e=>{
         if(e.key==='Escape'){
             closeModal();
@@ -3033,7 +3041,6 @@ document.addEventListener('DOMContentLoaded',()=>{
             closeEditProfileModal();
             closeQrModal();
             closeFundModal();
-            closeBiometricModal(false);
         }
     });
     const md=document.getElementById('manual-date');if(md)md.value=new Date().toISOString().slice(0,10);
@@ -3047,7 +3054,6 @@ document.addEventListener('DOMContentLoaded',()=>{
         emInp.value = remembered;
         if (remChk) remChk.checked = true;
     }
-    updateBioLoginUI();
     drawCaptcha();
     initNotifications();
 
@@ -3061,14 +3067,11 @@ document.addEventListener('DOMContentLoaded',()=>{
             for (let k of keys) caches.delete(k);
         }).catch(() => {});
     }
-
-    // Hiệu ứng Splash Screen: hiển thị icon app Ví Xinh rồi chuyển sang màn hình chính/đăng nhập
-    const splash = document.getElementById('appSplashScreen');
-    if (splash) {
-        setTimeout(() => {
-            splash.classList.add('fade-out');
-            setTimeout(() => { try { splash.remove(); } catch(e){} }, 500);
-        }, 1300);
-    }
 });
+
+// Stubs an toan
+function updateBioLoginUI(){}
+function closeBiometricModal(){}
+function openBiometricModal(){}
+function handleBiometricLogin(){}
 

@@ -33,6 +33,16 @@
         <div class="splash-spinner"></div>
     </div>
 </div>
+<script>
+// Fail-safe: Bao dam splash screen luon tu dong bien mat sau 1.2s, khong bao gio bi ket load
+setTimeout(function(){
+    var s = document.getElementById('appSplashScreen');
+    if (s) {
+        s.classList.add('fade-out');
+        setTimeout(function(){ try { s.remove(); } catch(e){} }, 400);
+    }
+}, 1200);
+</script>
 
 <!-- ===== LOGIN ===== -->
 <div class="login-page" id="loginPage">
@@ -1050,6 +1060,6 @@
 </div>
 
 <div class="toast-box" id="toastBox"></div>
-<script src="js/app.js?v=3.2.0"></script>
+<script src="js/app.js?v=3.3.0"></script>
 </body>
 </html>
