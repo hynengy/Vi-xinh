@@ -43,8 +43,8 @@ class NotificationService extends ChangeNotifier {
   }) {
     final dt = timestamp ?? DateTime.now();
     addNotification(
-      title: 'Biến động số dư: Thu nhập 💰',
-      body: 'Đã ghi +${amount.toStringAsFixed(0)} ₫ từ $merchantName.',
+      title: 'Thu nhập',
+      body: '+${amount.toStringAsFixed(0)} ₫ ($merchantName).',
       type: NotificationType.expense,
       timestamp: dt,
     );
@@ -57,16 +57,9 @@ class NotificationService extends ChangeNotifier {
     DateTime? timestamp,
   }) {
     final dt = timestamp ?? DateTime.now();
-    final hour = dt.hour.toString().padLeft(2, '0');
-    final minute = dt.minute.toString().padLeft(2, '0');
-    final day = dt.day.toString().padLeft(2, '0');
-    final month = dt.month.toString().padLeft(2, '0');
-    final year = dt.year;
-    final timeStr = '$hour:$minute ngày $day/$month/$year';
-
     addNotification(
-      title: 'Biến động số dư: Chi tiêu 💸',
-      body: 'Đã chi -${amount.toStringAsFixed(0)} ₫ tại $merchantName ($category) vào lúc $timeStr.',
+      title: 'Chi tiêu',
+      body: '-${amount.toStringAsFixed(0)} ₫ tại $merchantName ($category).',
       type: NotificationType.expense,
       timestamp: dt,
     );
@@ -75,10 +68,9 @@ class NotificationService extends ChangeNotifier {
   /// Thông báo đóng quỹ nhóm
   void notifyFundContribution(String memberName, double amount, String groupName) {
     final now = DateTime.now();
-    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ngày ${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
     addNotification(
-      title: 'Đã nhận nộp quỹ ✨',
-      body: '$memberName vừa nộp ${amount.toStringAsFixed(0)} ₫ vào $groupName lúc $timeStr.',
+      title: 'Đóng quỹ nhóm',
+      body: '$memberName đã nộp ${amount.toStringAsFixed(0)} ₫ vào $groupName.',
       type: NotificationType.fund,
       actionRoute: '/group',
       timestamp: now,
@@ -88,10 +80,9 @@ class NotificationService extends ChangeNotifier {
   /// Thông báo cảnh báo vượt ngưỡng ngân sách
   void notifyBudgetThreshold(String categoryName, int percent) {
     final now = DateTime.now();
-    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ngày ${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
     addNotification(
-      title: 'Cảnh báo ngân sách $categoryName',
-      body: 'Cảnh báo lúc $timeStr: Khoản chi $categoryName đã đạt $percent% hạn mức tháng. Hãy cân đối chi tiêu!',
+      title: 'Cảnh báo ngân sách: $categoryName',
+      body: 'Đã dùng $percent% hạn mức tháng của $categoryName.',
       type: NotificationType.budget,
       timestamp: now,
     );

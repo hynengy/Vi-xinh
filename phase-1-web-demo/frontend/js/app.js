@@ -720,12 +720,9 @@ function deleteTx(id){
         const now = new Date();
         const delTimeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} ngày ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
         addAppNotification({
-            title: 'Đã xóa giao dịch 🗑️',
-            body: `Giao dịch "${tx.name}" (${fmt(tx.amt)}) đã được xóa lúc ${delTimeStr}.`,
+            title: 'Đã xóa giao dịch',
+            body: `Đã xóa giao dịch ${tx.name} (${fmt(tx.amt)}).`,
             type: 'expense',
-            icon: 'ri-delete-bin-line',
-            iconBg: '#fee2e2',
-            iconColor: '#ef4444',
             actionUrl: 'history',
             actionText: 'Xem sổ giao dịch →'
         });
@@ -913,24 +910,18 @@ function saveTx(e){
 
     if(!isInc){
         addAppNotification({
-            title: 'Biến động số dư: Chi tiêu 💸',
-            body: `Đã chi -${fmt(amt)} tại ${mer} (${ct.label}) vào lúc ${fullTimeStr}.`,
+            title: 'Chi tiêu',
+            body: `-${fmt(amt)} tại ${mer} (${ct.label}).`,
             type: 'expense',
-            icon: ct.ic || 'ri-shopping-cart-2-line',
-            iconBg: ct.bg || '#fee2e2',
-            iconColor: ct.color || '#ef4444',
             actionUrl: 'history',
             actionText: 'Xem sổ giao dịch →'
         });
         checkBudgetAlerts(S.selCat);
     } else {
         addAppNotification({
-            title: 'Biến động số dư: Thu nhập 💰',
-            body: `Cộng tiền vào ví: +${fmt(amt)} (${mer}) vào lúc ${fullTimeStr}.`,
+            title: 'Thu nhập',
+            body: `+${fmt(amt)} (${mer}).`,
             type: 'income',
-            icon: 'ri-arrow-down-circle-line',
-            iconBg: '#d1fae5',
-            iconColor: '#059669',
             actionUrl: 'history',
             actionText: 'Xem chi tiết →'
         });
@@ -1581,12 +1572,9 @@ async function saveOcr(){
         const scanFullTime = `${nowStr || now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})} ngày ${dateFormatted}`;
 
         addAppNotification({
-            title: 'Quét hóa đơn AI thành công ✨',
-            body: `Đã lưu chi tiêu ${data.merchant} (${fmt(data.amount)}) vào Ví cá nhân lúc ${scanFullTime}.`,
+            title: 'Quét hóa đơn',
+            body: `Đã lưu ${data.merchant} (${fmt(data.amount)}).`,
             type: 'expense',
-            icon: 'ri-scan-2-line',
-            iconBg: '#ede9fe',
-            iconColor: '#7c3aed',
             actionUrl: 'history',
             actionText: 'Xem giao dịch →'
         });
@@ -1633,12 +1621,9 @@ async function saveOcr(){
         const splitTimeFull = `${nowStr || now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})} ngày ${dateFormatted}`;
 
         addAppNotification({
-            title: 'Chia tiền hóa đơn 👥',
-            body: `Hóa đơn ${data.merchant} (${fmt(data.amount)}) chia ${count} người lúc ${splitTimeFull}. Phần bạn: ${fmt(myShare)}.`,
+            title: 'Chia tiền hóa đơn',
+            body: `${data.merchant} (${fmt(data.amount)}) chia ${count} người. Phần bạn: ${fmt(myShare)}.`,
             type: 'split',
-            icon: 'ri-user-shared-line',
-            iconBg: '#e0e7ff',
-            iconColor: '#4338ca',
             actionUrl: 'history',
             actionText: 'Xem chi tiết →'
         });
@@ -1693,12 +1678,9 @@ async function saveOcr(){
         const fundTimeFull = `${nowStr || now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})} ngày ${dateFormatted}`;
 
         addAppNotification({
-            title: 'Trích chi Quỹ chung 🏢',
-            body: `Đã trích ${fmt(data.amount)} từ ${fund.name} thanh toán ${data.merchant} lúc ${fundTimeFull}.`,
+            title: 'Trích chi quỹ nhóm',
+            body: `Trích ${fmt(data.amount)} từ ${fund.name} trả ${data.merchant}.`,
             type: 'fund',
-            icon: 'ri-community-line',
-            iconBg: '#fef3c7',
-            iconColor: '#d97706',
             actionUrl: 'group',
             actionText: 'Xem quỹ phòng →'
         });
@@ -1858,12 +1840,9 @@ function addBgt(){
     togForm('bgtF');renderBgt();
     const c2 = CATS[c] || CATS.other;
     addAppNotification({
-        title: 'Thiết lập ngân sách 📊',
-        body: `Hạn mức chi tiêu danh mục ${c2.label} được cập nhật là ${fmt(a)}.`,
+        title: 'Thiết lập ngân sách',
+        body: `Hạn mức ${c2.label}: ${fmt(a)}.`,
         type: 'budget',
-        icon: 'ri-funds-line',
-        iconBg: '#ede9fe',
-        iconColor: '#7c3aed',
         actionUrl: 'budget',
         actionText: 'Xem ngân sách →'
     });
@@ -1883,12 +1862,9 @@ function addSav(){
     S.savings.push({id:Date.now(),name:n,icon:ic,target:t,saved:0});
     togForm('savF');renderSav();
     addAppNotification({
-        title: 'Mục tiêu tiết kiệm mới 🎯',
-        body: `Đã tạo mục tiêu "${n}" với kế hoạch ${fmt(t)}.`,
+        title: 'Mục tiêu tiết kiệm mới',
+        body: `Mục tiêu "${n}", kế hoạch: ${fmt(t)}.`,
         type: 'savings',
-        icon: 'ri-safe-2-line',
-        iconBg: '#dbeafe',
-        iconColor: '#2563eb',
         actionUrl: 'savings',
         actionText: 'Xem heo đất →'
     });
@@ -1936,12 +1912,9 @@ function confirmSavingsDeposit(){
     renderStatsSav();
     closeSavingsDepositModal();
     addAppNotification({
-        title: 'Tích lũy tiết kiệm heo đất 🐷',
-        body: `Đã nạp ${fmt(amt)} vào mục tiêu "${g.name}". Tiến độ hiện tại: ${pct}%.`,
+        title: 'Tích lũy tiết kiệm',
+        body: `Nạp ${fmt(amt)} vào "${g.name}". Tiến độ: ${pct}%.`,
         type: 'savings',
-        icon: 'ri-safe-2-line',
-        iconBg: '#fce7f3',
-        iconColor: '#db2777',
         actionUrl: 'savings',
         actionText: 'Xem heo đất →'
     });
@@ -1954,12 +1927,9 @@ function delSav(id){
     renderSav();
     if(g){
         addAppNotification({
-            title: 'Đã xóa mục tiêu tiết kiệm 🗑️',
-            body: `Mục tiêu "${g.name}" đã được gỡ khỏi sổ tiết kiệm.`,
+            title: 'Xóa mục tiêu tiết kiệm',
+            body: `Đã gỡ mục tiêu "${g.name}".`,
             type: 'savings',
-            icon: 'ri-delete-bin-line',
-            iconBg: '#fee2e2',
-            iconColor: '#ef4444',
             actionUrl: 'savings',
             actionText: 'Xem tiết kiệm →'
         });
@@ -1988,17 +1958,10 @@ function executeRecurring(id){
     renderAll();
     checkBudgetAlerts(r.cat);
 
-    const rDateParts = todayStr ? todayStr.split('-') : [];
-    const rDateFmt = rDateParts.length === 3 ? `${rDateParts[2]}/${rDateParts[1]}/${rDateParts[0]}` : todayStr;
-    const rTimeFull = `${nowStr} ngày ${rDateFmt}`;
-
     addAppNotification({
-        title: 'Ghi nhận chi tiêu định kỳ 🔄',
-        body: `Đã trích chi -${fmt(r.amt)} cho khoản "${r.name}" vào lúc ${rTimeFull}.`,
+        title: 'Chi tiêu định kỳ',
+        body: `-${fmt(r.amt)} cho "${r.name}".`,
         type: 'expense',
-        icon: 'ri-repeat-line',
-        iconBg: '#e0e7ff',
-        iconColor: '#4338ca',
         actionUrl: 'history',
         actionText: 'Xem giao dịch →'
     });
@@ -2885,12 +2848,9 @@ function triggerBioSuccess(){
                 if (S.user) localStorage.setItem('vx_last_user', JSON.stringify(S.user));
                 renderSettings();
                 addAppNotification({
-                    title: 'Đã kích hoạt Face ID 🧑‍🦱',
-                    body: 'Bạn có thể sử dụng khuôn mặt để đăng nhập nhanh chóng và bảo mật.',
+                    title: 'Kích hoạt Face ID',
+                    body: 'Đã bật đăng nhập bằng Face ID.',
                     type: 'security',
-                    icon: 'ri-face-recognition-line',
-                    iconBg: '#f5f3ff',
-                    iconColor: '#7c3aed',
                     actionUrl: 'settings',
                     actionText: 'Xem cài đặt →'
                 });
@@ -2900,12 +2860,9 @@ function triggerBioSuccess(){
                 if (S.user) localStorage.setItem('vx_last_user', JSON.stringify(S.user));
                 renderSettings();
                 addAppNotification({
-                    title: 'Đã kích hoạt Vân tay ☝️',
-                    body: 'Bạn có thể chạm ngón tay vào cảm biến để đăng nhập nhanh chóng và bảo mật.',
+                    title: 'Kích hoạt vân tay',
+                    body: 'Đã bật đăng nhập bằng vân tay.',
                     type: 'security',
-                    icon: 'ri-fingerprint-line',
-                    iconBg: '#ecfdf5',
-                    iconColor: '#059669',
                     actionUrl: 'settings',
                     actionText: 'Xem cài đặt →'
                 });
@@ -3001,12 +2958,9 @@ async function saveProfile(e){
         }catch(err){}
     }
     addAppNotification({
-        title: 'Cập nhật tài khoản thành công 👤',
-        body: `Thông tin tài khoản (${name}) đã được lưu và đồng bộ.`,
+        title: 'Cập nhật tài khoản',
+        body: `Thông tin tài khoản (${name}) đã được lưu.`,
         type: 'security',
-        icon: 'ri-user-settings-line',
-        iconBg: '#e0f2fe',
-        iconColor: '#0284c7',
         actionUrl: 'settings',
         actionText: 'Xem tài khoản →'
     });
@@ -3020,12 +2974,9 @@ function setTheme(themeName){
         t.classList.toggle('active',t.dataset.theme===themeName);
     });
     addAppNotification({
-        title: 'Đổi giao diện ứng dụng 🎨',
-        body: `Đã áp dụng chủ đề: ${THEME_NAMES[themeName]||themeName}.`,
+        title: 'Đổi giao diện',
+        body: `Đã đổi chủ đề: ${THEME_NAMES[themeName]||themeName}.`,
         type: 'system',
-        icon: 'ri-palette-line',
-        iconBg: '#fef3c7',
-        iconColor: '#d97706',
         actionUrl: 'settings',
         actionText: 'Xem cài đặt →'
     });
@@ -3344,12 +3295,9 @@ function handleFundContribution(e){
     closeFundModal();
 
     addAppNotification({
-        title: 'Đóng quỹ nhóm thành công ✨',
-        body: `${mem.name} vừa nộp ${fmt(amt)} vào Quỹ sinh hoạt chung (${note}).`,
+        title: 'Đóng quỹ nhóm',
+        body: `${mem.name} đã nộp ${fmt(amt)} vào quỹ (${note}).`,
         type: 'fund',
-        icon: 'ri-hand-coin-line',
-        iconBg: '#d1fae5',
-        iconColor: '#059669',
         actionUrl: 'group',
         actionText: 'Xem quỹ nhóm →'
     });
@@ -3471,12 +3419,9 @@ function toggleDebtStatus(billId, memberId){
     closeQrModal();
 
     addAppNotification({
-        title: 'Cập nhật chia tiền phòng 📋',
-        body: `${share.name} đã được ghi nhận ${wasPaid ? 'chưa thanh toán' : 'đã thanh toán'} (${fmt(share.amt)}).`,
+        title: 'Chia tiền phòng',
+        body: `${share.name}: ${wasPaid ? 'chưa thanh toán' : 'đã thanh toán'} (${fmt(share.amt)}).`,
         type: 'fund',
-        icon: 'ri-checkbox-circle-line',
-        iconBg: wasPaid ? '#fee2e2' : '#d1fae5',
-        iconColor: wasPaid ? '#ef4444' : '#059669',
         actionUrl: 'group',
         actionText: 'Xem phòng trọ →'
     });
@@ -3710,37 +3655,25 @@ function updateNotifBadge(){
 
 function formatNotifTime(timeVal){
     if(!timeVal) return '';
-    const now = new Date();
     const d = new Date(timeVal);
+    const now = new Date();
     if(isNaN(d.getTime())) return timeVal;
+
+    const diffSec = Math.floor((now - d) / 1000);
+    if(diffSec < 60) return 'Vừa xong';
+    const diffMin = Math.floor(diffSec / 60);
+    if(diffMin < 60) return `${diffMin} phút trước`;
+    const diffHr = Math.floor(diffMin / 60);
+    if(diffHr < 24) return `${diffHr} giờ trước`;
+    const diffDays = Math.floor(diffHr / 24);
+    if(diffDays === 1) return 'Hôm qua';
+    if(diffDays < 7) return `${diffDays} ngày trước`;
 
     const hh = String(d.getHours()).padStart(2, '0');
     const mm = String(d.getMinutes()).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     const MM = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const exactDateTime = `${hh}:${mm} - ${dd}/${MM}/${yyyy}`;
-
-    const diffSec = Math.floor((now - d) / 1000);
-    let rel = '';
-    if(diffSec < 60) {
-        rel = 'vừa xong';
-    } else {
-        const diffMin = Math.floor(diffSec / 60);
-        if(diffMin < 60) {
-            rel = `${diffMin} phút trước`;
-        } else {
-            const diffHr = Math.floor(diffMin / 60);
-            if(diffHr < 24) {
-                rel = `${diffHr} giờ trước`;
-            } else {
-                const diffDays = Math.floor(diffHr / 24);
-                if(diffDays === 1) rel = 'hôm qua';
-                else if(diffDays < 7) rel = `${diffDays} ngày trước`;
-            }
-        }
-    }
-    return rel ? `${exactDateTime} (${rel})` : exactDateTime;
+    return `${hh}:${mm}, ${dd}/${MM}`;
 }
 
 function renderNotifications(){
@@ -3751,16 +3684,12 @@ function renderNotifications(){
     const btnMark = document.getElementById('btnMarkAllRead');
     const btnClear = document.getElementById('btnClearAllNotifs');
 
-    // Nếu không có thông báo: Hiển thị giao diện Không có thông báo như app thật
     if(notifs.length === 0){
         list.innerHTML = `
-            <div class="empty" style="padding:2.6rem 1rem;text-align:center">
-                <div style="width:60px;height:60px;border-radius:50%;background:rgba(244,91,138,0.08);color:var(--primary);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;font-size:1.85rem">
-                    <i class="ri-notification-off-line"></i>
-                </div>
-                <div style="font-size:0.95rem;font-weight:700;color:var(--text);margin-bottom:0.3rem">Không có thông báo nào</div>
+            <div class="empty" style="padding:2.2rem 1rem;text-align:center">
+                <div style="font-size:0.92rem;font-weight:600;color:var(--text);margin-bottom:0.25rem">Không có thông báo nào</div>
                 <div style="font-size:0.75rem;color:var(--text3);line-height:1.45;max-width:280px;margin:0 auto">
-                    Mọi biến động số dư, quét hóa đơn AI, nộp quỹ nhóm hoặc cảnh báo ngân sách sẽ xuất hiện tại đây.
+                    Mọi biến động số dư, quét hóa đơn và quỹ nhóm sẽ xuất hiện tại đây.
                 </div>
             </div>
         `;
@@ -3772,27 +3701,33 @@ function renderNotifications(){
     if(btnMark) btnMark.style.display = 'inline-block';
     if(btnClear) btnClear.style.display = 'inline-block';
 
-    list.innerHTML = notifs.map(n => `
-        <div class="notif-item ${n.unread ? 'unread' : ''}" style="display:flex;gap:0.65rem;padding:0.65rem;background:${n.unread ? 'var(--card)' : 'var(--bg)'};border-radius:12px;border:1px solid ${n.unread ? 'rgba(244,91,138,0.25)' : 'var(--border)'};cursor:pointer;position:relative;transition:all 0.2s ease" onclick="handleNotifClick('${n.id}')">
-            <div style="width:36px;height:36px;border-radius:10px;background:${n.iconBg};color:${n.iconColor};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                <i class="${n.icon}" style="font-size:1.1rem"></i>
+    list.innerHTML = notifs.map(n => {
+        const cleanTitle = (n.title || 'Thông báo')
+            .replace(/[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
+            .trim();
+        const cleanBody = (n.body || '')
+            .replace(/lúc \d{1,2}:\d{2}(:\d{2})? ngày \d{1,2}\/\d{1,2}\/\d{4}\.?/gi, '')
+            .replace(/vào lúc \d{1,2}:\d{2}\.?/gi, '')
+            .replace(/Cảnh báo lúc [^:]+:\s*/gi, '')
+            .trim();
+
+        return `
+        <div class="notif-item ${n.unread ? 'unread' : ''}" style="display:flex;flex-direction:column;gap:0.25rem;padding:0.65rem 0.85rem;background:${n.unread ? 'var(--card)' : 'var(--bg)'};border-radius:12px;border:1px solid ${n.unread ? 'rgba(244,91,138,0.25)' : 'var(--border)'};cursor:pointer;position:relative;transition:all 0.2s ease" onclick="handleNotifClick('${n.id}')">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.4rem">
+                <strong style="font-size:0.83rem;color:var(--text);font-weight:600">${cleanTitle}</strong>
+                <div style="display:flex;align-items:center;gap:0.35rem">
+                    ${n.unread ? '<span class="notif-dot" style="width:6px;height:6px;border-radius:50%;background:var(--primary);flex-shrink:0"></span>' : ''}
+                    <button type="button" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0 2px;font-size:0.85rem;line-height:1" onclick="event.stopPropagation();deleteNotif('${n.id}')" title="Xóa thông báo">✕</button>
+                </div>
             </div>
-            <div style="flex:1;min-width:0">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:0.4rem">
-                    <strong style="font-size:0.83rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.title}</strong>
-                    <div style="display:flex;align-items:center;gap:0.35rem">
-                        ${n.unread ? '<span class="notif-dot" style="width:7px;height:7px;border-radius:50%;background:var(--primary);flex-shrink:0"></span>' : ''}
-                        <button type="button" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0 2px;font-size:0.9rem;display:flex;align-items:center" onclick="event.stopPropagation();deleteNotif('${n.id}')" title="Xóa thông báo này"><i class="ri-close-line"></i></button>
-                    </div>
-                </div>
-                <div style="font-size:0.75rem;color:var(--text2);margin-top:2px;line-height:1.35">${n.body}</div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;gap:0.4rem;flex-wrap:wrap">
-                    <span style="font-size:0.68rem;color:var(--text3);display:inline-flex;align-items:center;gap:3px"><i class="ri-time-line" style="font-size:0.68rem"></i> ${formatNotifTime(n.time)}</span>
-                    ${n.actionText ? `<span style="font-size:0.7rem;color:var(--primary);font-weight:700">${n.actionText}</span>` : ''}
-                </div>
+            <div style="font-size:0.75rem;color:var(--text2);line-height:1.35">${cleanBody}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;gap:0.4rem">
+                <span style="font-size:0.68rem;color:var(--text3)">${formatNotifTime(n.time)}</span>
+                ${n.actionText ? `<span style="font-size:0.7rem;color:var(--primary);font-weight:600">${n.actionText}</span>` : ''}
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function addAppNotification(item){
@@ -3872,12 +3807,9 @@ function checkBudgetAlerts(categoryKey){
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} ngày ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
             addAppNotification({
-                title: `Cảnh báo ngân sách ${ct.label} ⚠️`,
-                body: `Cảnh báo lúc ${timeStr}: Bạn đã dùng ${pct}% hạn mức ${ct.label} (${fmt(spent)}/${fmt(b.limit)}).`,
+                title: `Cảnh báo ngân sách: ${ct.label}`,
+                body: `Đã dùng ${pct}% hạn mức ${ct.label} (${fmt(spent)}/${fmt(b.limit)}).`,
                 type: 'budget',
-                icon: 'ri-alert-line',
-                iconBg: '#fef3c7',
-                iconColor: '#d97706',
                 actionUrl: 'budget',
                 actionText: 'Kiểm tra ngân sách →'
             });

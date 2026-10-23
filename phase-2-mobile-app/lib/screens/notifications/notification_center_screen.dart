@@ -134,17 +134,6 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Icon Box
-                                Container(
-                                  width: 42,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: item.color.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(item.icon, color: item.color, size: 22),
-                                ),
-                                const SizedBox(width: 12),
 
                                 // Content
                                 Expanded(
