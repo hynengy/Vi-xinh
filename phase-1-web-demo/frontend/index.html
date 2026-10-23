@@ -688,9 +688,21 @@ setTimeout(function(){
                         <span style="font-size:0.78rem;color:var(--text3)">Nơi chi:</span>
                         <strong style="font-size:0.88rem" id="ocrMer">--</strong>
                     </div>
+                    <div id="ocrInvoiceRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+                        <span style="font-size:0.78rem;color:var(--text3)">Số HĐ / Bill:</span>
+                        <strong style="font-size:0.82rem;color:var(--gold);font-family:monospace" id="ocrInvoiceNo">--</strong>
+                    </div>
+                    <div id="ocrDateTimeRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+                        <span style="font-size:0.78rem;color:var(--text3)">Thời gian:</span>
+                        <span style="font-size:0.82rem;font-weight:600;color:var(--text)" id="ocrDateTime">--</span>
+                    </div>
                     <div id="ocrHotlineRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
                         <span style="font-size:0.78rem;color:var(--text3)">Hotline / ĐT:</span>
                         <strong style="font-size:0.82rem;color:var(--primary)" id="ocrHotline">--</strong>
+                    </div>
+                    <div id="ocrAddressRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+                        <span style="font-size:0.78rem;color:var(--text3);white-space:nowrap">Địa chỉ:</span>
+                        <span style="font-size:0.75rem;color:var(--text2);text-align:right;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="ocrAddress">--</span>
                     </div>
                     <div id="ocrSubtotalRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
                         <span style="font-size:0.78rem;color:var(--text3)">Tạm tính (tiền hàng):</span>
@@ -700,9 +712,17 @@ setTimeout(function(){
                         <span style="font-size:0.78rem;color:var(--text3)">Giảm giá / Ưu đãi:</span>
                         <strong style="font-size:0.88rem;color:var(--success)" id="ocrDiscount">0 ₫</strong>
                     </div>
+                    <div id="ocrVatRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+                        <span style="font-size:0.78rem;color:var(--text3)">Thuế VAT:</span>
+                        <strong style="font-size:0.82rem;color:var(--text)" id="ocrVat">0 ₫</strong>
+                    </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
                         <span style="font-size:0.78rem;color:var(--text3)">Thanh toán thực tế:</span>
                         <strong style="font-size:1.1rem;color:var(--danger)" id="ocrAmt">0 ₫</strong>
+                    </div>
+                    <div id="ocrPaymentMethodRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+                        <span style="font-size:0.78rem;color:var(--text3)">Hình thức TT:</span>
+                        <span class="badge" style="background:rgba(82,134,232,0.12);color:var(--primary);font-size:0.72rem;font-weight:700" id="ocrPaymentMethod">--</span>
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
                         <span style="font-size:0.78rem;color:var(--text3)">Danh mục:</span>

@@ -23,6 +23,9 @@ from .rules import (
     FALLBACK_NUMBER_PATTERN,
     HOTLINE_PATTERN,
     INVOICE_NUMBER_PATTERN,
+    VAT_KEYWORDS,
+    CASHIER_PATTERN,
+    TABLE_PATTERN,
     ADDRESS_PREFIX_PATTERN,
     DATE_PATTERNS,
     KNOWN_MERCHANTS,
@@ -115,6 +118,124 @@ class ReceiptParser:
                 clean_addr = re.sub(r"^[^a-zA-ZÀ-ỹ0-9]+", "", line_strip).strip()
                 if len(clean_addr) >= 8 and not cls.is_phone_number_str(clean_addr):
                     return clean_addr
+        return None
+
+    @classmethod
+    def extract_time(cls, raw_text: str) -> Optional[str]:
+        """Trích xuất giờ giao dịch (HH:MM hoặc HH:MM:SS) từ hóa đơn."""
+        # 1. Tìm theo từ khóa giờ rõ ràng: 'Giờ vào: 20:04', 'Time: 14:30:15', 'Lúc 09:45'
+        for line in raw_text.splitlines():
+            line_clean = line.strip()
+            m = re.search(r"(?:gi[ờo]\s*(?:v[àa]o|ra|in|l[ậa]p)?|time|l[úu]c|t[ạa]i)\s*[:\s\-]*([01]?\d|2[0-3])[:.]([0-5]\d)(?:[:.]([0-5]\d))?", line_clean, re.IGNORECASE)
+            if m:
+                hh, mm = m.group(1), m.group(2)
+                ss = m.group(3) if len(m.groups()) >= 3 and m.group(3) else None
+                time_res = f"{int(hh):02d}:{int(mm):02d}"
+                if ss:
+                    time_res += f":{int(ss):02d}"
+                return time_res
+
+        # 2. Tìm giờ đi kèm ngày tháng (ví dụ: 25/12/2026 14:30)
+        dt_m = re.search(r"\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s+([01]?\d|2[0-3])[:.]([0-5]\d)(?:[:.]([0-5]\d))?\b", raw_text)
+        if dt_m:
+            hh, mm = dt_m.group(1), dt_m.group(2)
+            ss = dt_m.group(3) if len(dt_m.groups()) >= 3 and dt_m.group(3) else None
+            time_res = f"{int(hh):02d}:{int(mm):02d}"
+            if ss:
+                time_res += f":{int(ss):02d}"
+            return time_res
+
+        # 3. Quét các dòng thông tin (bỏ qua dòng tổng kết tiền và tiêu đề)
+        for line in raw_text.splitlines():
+            line_lower = line.lower()
+            if any(k in line_lower for k in ["tổng", "tong", "tiền", "thanh toán", "thanh toan", "địa chỉ", "đc"]):
+                continue
+            m = re.search(r"\b([01]?\d|2[0-3])[:.]([0-5]\d)(?:[:.]([0-5]\d))?\b", line)
+            if m:
+                hh, mm = m.group(1), m.group(2)
+                return f"{int(hh):02d}:{int(mm):02d}"
+
+        return None
+
+    @classmethod
+    def extract_invoice_number(cls, lines: list[str]) -> Optional[str]:
+        """Trích xuất Số hóa đơn / Số phiếu / Mã bill / Invoice No."""
+        for line in lines:
+            line_clean = line.strip()
+            m = INVOICE_NUMBER_PATTERN.search(line_clean)
+            if m:
+                inv = m.group(1).strip()
+                inv = re.sub(r"^[^a-zA-Z0-9#]+|[^a-zA-Z0-9#]+$", "", inv)
+                if len(inv) >= 3 and not cls.is_time_str(inv) and not cls.is_phone_number_str(inv):
+                    if inv.lower() not in ["thanh", "toan", "tien", "ban", "so", "hd", "bill", "phieu"]:
+                        return inv
+
+        # Tìm các mã hóa đơn dạng chuỗi chuẩn: HD729652, INV-002, HD002605
+        full_text = "\n".join(lines)
+        spec_m = re.search(r"\b(HD\d{4,12}|BILL\d{4,12}|INV[A-Z0-9\-_]{3,12}|RECEIPT[A-Z0-9\-_]{2,10})\b", full_text, re.IGNORECASE)
+        if spec_m:
+            return spec_m.group(1).strip()
+
+        return None
+
+    @classmethod
+    def extract_vat(cls, lines: list[str]) -> Tuple[float, Optional[str]]:
+        """
+        Trích xuất Thuế VAT / GTGT.
+        Trả về (số_tiền_vat: float, ghi_chú: str)
+        """
+        for line in lines:
+            line_lower = line.lower()
+            if any(re.search(kw, line_lower) for kw in VAT_KEYWORDS):
+                pct_m = re.search(r"(\d{1,2}(?:\.\d+)?)\s*%", line)
+                pct_val = float(pct_m.group(1)) if pct_m else None
+                for m in AMOUNT_PATTERN.finditer(line):
+                    v = cls.parse_amount_str(m.group(0))
+                    if v and v >= 100:
+                        pct_str = f" ({pct_val}%)" if pct_val else ""
+                        return v, f"VAT{pct_str}: +{int(v):,} ₫"
+                if pct_val:
+                    return 0.0, f"Thuế VAT: {pct_val}%"
+        return 0.0, None
+
+    @classmethod
+    def extract_payment_method(cls, lines: list[str]) -> Optional[str]:
+        """Trích xuất hình thức thanh toán (Tiền mặt, Chuyển khoản, Thẻ, MoMo, QR...)."""
+        full_text_lower = "\n".join(lines).lower()
+        if any(k in full_text_lower for k in ["chuyển khoản", "chuyen khoan", "ck ngân hàng", "stk:", "banking"]):
+            return "Chuyển khoản"
+        if any(k in full_text_lower for k in ["quẹt thẻ", "quet the", "thẻ tín dụng", "thẻ atm", "visa", "mastercard", "pos"]):
+            return "Thẻ ngân hàng"
+        if "momo" in full_text_lower:
+            return "Ví MoMo"
+        if any(k in full_text_lower for k in ["zalopay", "zalo pay"]):
+            return "Ví ZaloPay"
+        if any(k in full_text_lower for k in ["vnpay", "vn pay", "qr code", "quét qr"]):
+            return "Quét mã QR"
+        if any(k in full_text_lower for k in ["tiền mặt", "tien mat", "tiền trao tay"]):
+            return "Tiền mặt"
+        return None
+
+    @classmethod
+    def extract_cashier(cls, lines: list[str]) -> Optional[str]:
+        """Trích xuất tên thu ngân / nhân viên bán hàng."""
+        for line in lines:
+            m = CASHIER_PATTERN.search(line)
+            if m:
+                val = m.group(1).strip()
+                if not any(k in val.lower() for k in ["ngày", "giờ", "tổng", "bàn", "số:", "so:"]):
+                    return val
+        return None
+
+    @classmethod
+    def extract_table_no(cls, lines: list[str]) -> Optional[str]:
+        """Trích xuất số bàn / phòng."""
+        for line in lines:
+            m = TABLE_PATTERN.search(line)
+            if m:
+                val = m.group(1).strip()
+                if val.lower() not in ["vip", "thu", "ngan", "in", "ra"]:
+                    return val
         return None
 
     @classmethod
@@ -607,6 +728,10 @@ class ReceiptParser:
                 return True
             if any(re.search(kw, l_low) for kw in DISCOUNT_KEYWORDS):
                 return True
+            if any(re.search(kw, l_low) for kw in VAT_KEYWORDS):
+                return True
+            if any(k in l_low for k in ["hình thức", "hinh thuc", "phương thức", "phuong thuc", "pttt", "thu ngân", "thu ngan", "cashier", "bàn số", "ban so"]):
+                return True
             if cls.is_table_header(l_str):
                 return True
             if any(p in l_low for p in ignored_phrases):
@@ -646,6 +771,8 @@ class ReceiptParser:
                     if val and val >= 100_000:
                         items.append({
                             "name": "Tiền phòng",
+                            "quantity": 1.0,
+                            "unit_price": val,
                             "amount": val,
                             "consumption": "1 phòng / tháng",
                             "icon": "🏠"
@@ -669,8 +796,10 @@ class ReceiptParser:
                         if val and val >= 1_000:
                             items.append({
                                 "name": sname,
+                                "quantity": 1.0,
+                                "unit_price": val,
                                 "amount": val,
-                                "consumption": None,
+                                "consumption": "SL: 1",
                                 "icon": sicon
                             })
                             handled_service = True
@@ -685,6 +814,8 @@ class ReceiptParser:
             amt_val = None
             raw_name = ""
             quantity_str = ""
+            quantity_val = None
+            unit_price_val = None
 
             if len(tokens) >= 2:
                 j = len(tokens) - 1
@@ -723,18 +854,48 @@ class ReceiptParser:
                         if v and v >= 1_000:
                             amt_val = v
                             raw_name = line
-                            # Bóc tách số lượng từ next_line nếu có
-                            qty_m = re.search(r"\b([1-9]\d{0,1})\b", next_line[:last_m.start()])
-                            if qty_m and float(qty_m.group(1)) < 50:
-                                quantity_str = f"SL: {qty_m.group(1)}"
+                            # Bóc tách số lượng và đơn giá từ next_line
+                            if len(next_matches) >= 2:
+                                up_m = next_matches[-2]
+                                up_v = cls.parse_amount_str(up_m.group(0))
+                                if up_v and up_v >= 100:
+                                    unit_price_val = up_v
+                                prefix_qty = next_line[:up_m.start()].strip()
+                                qty_m = re.search(r"\b(\d+(?:[.,]\d+)?)\b", prefix_qty)
+                                if qty_m:
+                                    parsed_q = float(qty_m.group(1).replace(",", "."))
+                                    if 0 < parsed_q < 500:
+                                        quantity_val = parsed_q
+                                        quantity_str = f"SL: {int(parsed_q) if parsed_q.is_integer() else parsed_q}"
+                            else:
+                                qty_m = re.search(r"\b([1-9]\d{0,1})\b", next_line[:last_m.start()])
+                                if qty_m and float(qty_m.group(1)) < 50:
+                                    parsed_q = float(qty_m.group(1))
+                                    quantity_val = parsed_q
+                                    quantity_str = f"SL: {int(parsed_q) if parsed_q.is_integer() else parsed_q}"
                             i += 1  # Nhảy qua dòng tiếp theo vì đã ghép cặp thành công
 
             if amt_val and amt_val >= 1_000 and raw_name:
-                # Bóc tách số lượng nếu có trong tên món
-                qty_match = re.search(r"(?:x|\*|\bSL:?|\bso luong:?)\s*(\d+(?:[.,]\d+)?)\b", raw_name, re.IGNORECASE)
-                if qty_match:
-                    quantity_str = f"SL: {qty_match.group(1)}"
-                    raw_name = raw_name[:qty_match.start()] + raw_name[qty_match.end():]
+                # Kiểm tra công thức nhân số lượng: ví dụ '2 x 35.000' hoặc '2*35.000'
+                mult_m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:x|\*)\s*(\d{1,3}(?:[.,]\d{3})+|\d{4,9})", raw_name, re.IGNORECASE)
+                if mult_m:
+                    parsed_q = float(mult_m.group(1).replace(",", "."))
+                    parsed_p = cls.parse_amount_str(mult_m.group(2))
+                    if parsed_q > 0 and parsed_p and parsed_p >= 100:
+                        quantity_val = parsed_q
+                        unit_price_val = parsed_p
+                        quantity_str = f"SL: {int(parsed_q) if parsed_q.is_integer() else parsed_q}"
+                        raw_name = raw_name[:mult_m.start()] + raw_name[mult_m.end():]
+
+                # Bóc tách số lượng độc lập nếu có trong tên món (ví dụ: 'Khoai tây (SL: 2)' hoặc 'Trà Đào x2')
+                if quantity_val is None:
+                    qty_match = re.search(r"(?:x|\*|\bSL:?|\bso luong:?)\s*(\d+(?:[.,]\d+)?)\b", raw_name, re.IGNORECASE)
+                    if qty_match:
+                        parsed_q = float(qty_match.group(1).replace(",", "."))
+                        if 0 < parsed_q < 500:
+                            quantity_val = parsed_q
+                            quantity_str = f"SL: {int(parsed_q) if parsed_q.is_integer() else parsed_q}"
+                            raw_name = raw_name[:qty_match.start()] + raw_name[qty_match.end():]
 
                 clean_name = clean_item_name(raw_name)
                 clean_name_lower = clean_name.lower()
@@ -773,10 +934,16 @@ class ReceiptParser:
                     if not any(m in clean_name_lower for m in ["trong nhà", "mang về", "thu ngân", "giờ vào", "giờ ra", "bàn", "administrator", "sđ hd", "nv "]):
                         icon = cls._detect_item_icon(clean_name_lower)
                         if not any(it["name"].lower() == clean_name.lower() for it in items):
+                            qty_final = quantity_val if quantity_val and quantity_val > 0 else 1.0
+                            up_final = unit_price_val if unit_price_val and unit_price_val > 0 else round(amt_val / qty_final, 0)
+                            if not quantity_str:
+                                quantity_str = f"SL: {int(qty_final) if qty_final.is_integer() else qty_final}"
                             items.append({
                                 "name": clean_name,
+                                "quantity": qty_final,
+                                "unit_price": up_final,
                                 "amount": amt_val,
-                                "consumption": quantity_str if quantity_str else None,
+                                "consumption": quantity_str,
                                 "icon": icon
                             })
 
@@ -786,15 +953,24 @@ class ReceiptParser:
 
     @classmethod
     def parse_all(cls, raw_text: str) -> Dict[str, Any]:
-        """Hàm chính thực thi toàn bộ logic bóc tách."""
+        """Hàm chính thực thi toàn bộ logic bóc tách đầy đủ các trường hóa đơn."""
         lines = cls.clean_text(raw_text)
 
         merchant = cls.extract_merchant(lines) if lines else "Khoản chi không xác định"
         hotline = cls.extract_hotline(lines)
         address = cls.extract_address(lines)
+        invoice_no = cls.extract_invoice_number(lines)
         date_str = cls.extract_date(raw_text)
+        time_str = cls.extract_time(raw_text)
         total_amount, subtotal, discount, breakdown = cls.extract_totals_full(lines)
+        vat_amount, vat_note = cls.extract_vat(lines)
+        payment_method = cls.extract_payment_method(lines)
+        cashier = cls.extract_cashier(lines)
+        table_no = cls.extract_table_no(lines)
         line_items = cls.extract_line_items(lines)
+
+        if vat_amount > 0 and not any("vat" in b.get("label", "").lower() for b in breakdown):
+            breakdown.append({"label": f"Thuế VAT (+{int(vat_amount):,} ₫)", "amount": vat_amount})
 
         # Nếu tổng tiền bằng 0 nhưng có danh sách món chi tiết, tự tính tổng từ các món
         if total_amount == 0 and line_items:
@@ -802,14 +978,26 @@ class ReceiptParser:
             subtotal = total_amount
 
         notes_parts = []
+        if invoice_no:
+            notes_parts.append(f"Số HĐ: {invoice_no}")
+        if time_str:
+            notes_parts.append(f"Giờ: {time_str}")
         if hotline:
             notes_parts.append(f"Hotline: {hotline}")
         if address:
             notes_parts.append(f"ĐC: {address}")
+        if table_no:
+            notes_parts.append(f"Bàn: {table_no}")
+        if cashier:
+            notes_parts.append(f"Thu ngân: {cashier}")
+        if payment_method:
+            notes_parts.append(f"PTTT: {payment_method}")
         if discount > 0:
             notes_parts.append(f"Ưu đãi: -{int(discount):,} ₫")
+        if vat_amount > 0:
+            notes_parts.append(f"VAT: +{int(vat_amount):,} ₫")
         if line_items:
-            item_summary = ", ".join(it["name"] for it in line_items[:3])
+            item_summary = ", ".join(f"{it['name']} (x{it.get('quantity', 1):g})" if it.get('quantity', 1) > 1 else it['name'] for it in line_items[:3])
             if len(line_items) > 3:
                 item_summary += f" (+{len(line_items)-3} món)"
             notes_parts.append(f"Món: {item_summary}")
@@ -819,11 +1007,18 @@ class ReceiptParser:
         return {
             "merchant_name": merchant,
             "hotline": hotline,
+            "phone": hotline,
             "address": address,
+            "invoice_no": invoice_no,
             "transaction_date": date_str,
+            "transaction_time": time_str,
             "amount": total_amount,
             "subtotal": subtotal,
             "discount": discount,
+            "vat": vat_amount,
+            "payment_method": payment_method,
+            "cashier": cashier,
+            "table_no": table_no,
             "breakdown": breakdown,
             "items": line_items,
             "notes": notes,

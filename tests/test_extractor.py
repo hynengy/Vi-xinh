@@ -289,3 +289,62 @@ def test_google_mlkit_engine_and_parse_text():
     assert result["discount"] == 10000.0
     assert len(result["items"]) == 2
 
+
+def test_extract_time_and_invoice_no():
+    """Test bóc tách giờ giao dịch và số hóa đơn / số bill."""
+    raw_text = """
+    HIGHLANDS COFFEE
+    Số HĐ: HD729652
+    Ngày: 22/10/2026 14:35:10
+    Thu ngân: Thu Thảo
+    Bàn số: T02
+    1. Freeze Trà Xanh    55.000
+    Tổng cộng: 55.000 đ
+    """
+    res = ReceiptParser.parse_all(raw_text)
+    assert res["invoice_no"] == "HD729652"
+    assert res["transaction_time"] is not None
+    assert "14:35" in res["transaction_time"]
+    assert res["cashier"] == "Thu Thảo"
+    assert res["table_no"] == "T02"
+
+
+def test_extract_granular_items_quantity_unit_price():
+    """Test bóc tách chi tiết: tên sản phẩm, số lượng, đơn giá, thành tiền."""
+    raw_text = """
+    TẠP HÓA AN NHIÊN
+    ĐC: 45 Nguyễn Huệ, Quận 1, TP.HCM
+    Hotline: 0903.111.222
+    Số bill: 00458
+    Giờ vào: 09:15
+    1. Trà sữa trân châu 2 x 35.000    70.000
+    2. Cà phê đen đá                    20.000
+    VAT 10%: 9.000
+    Tổng thanh toán: 99.000 đ
+    Hình thức: Chuyển khoản
+    """
+    res = ReceiptParser.parse_all(raw_text)
+    assert res["invoice_no"] == "00458"
+    assert res["transaction_time"] == "09:15"
+    assert res["hotline"] is not None and "0903" in res["hotline"]
+    assert res["address"] is not None and "Nguyễn Huệ" in res["address"]
+    assert res["vat"] == 9000.0
+    assert res["payment_method"] == "Chuyển khoản"
+    assert res["amount"] == 99000.0
+
+    items = res["items"]
+    assert len(items) == 2
+    # Item 1: Trà sữa
+    assert "Trà sữa" in items[0]["name"]
+    assert items[0]["quantity"] == 2.0
+    assert items[0]["unit_price"] == 35000.0
+    assert items[0]["amount"] == 70000.0
+    assert "SL: 2" in items[0]["consumption"]
+
+    # Item 2: Cà phê
+    assert "Cà phê" in items[1]["name"]
+    assert items[1]["quantity"] == 1.0
+    assert items[1]["unit_price"] == 20000.0
+    assert items[1]["amount"] == 20000.0
+
+

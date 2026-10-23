@@ -132,7 +132,28 @@ HOTLINE_PATTERN = re.compile(
 
 # Pattern nhận diện Số hóa đơn / Mã phiếu
 INVOICE_NUMBER_PATTERN = re.compile(
-    r"(?:số\s*h[đd]|so\s*hd|mã\s*h[đd]|ma\s*hd|s[ốo]\s*phi[ếe]u|mã\s*bill|số\s*bill|invoice\s*no|bill\s*no|số\s*:|so\s*:)\s*[:\s\-]*([A-Z0-9\-_#]+)",
+    r"(?:s[ốo]\s*h[đd]|so\s*hd|m[ãa]\s*h[đd]|ma\s*hd|s[ốo]\s*phi[ếe]u|so\s*phieu|m[ãa]\s*bill|s[ốo]\s*bill|invoice\s*(?:no|num)?|receipt\s*(?:no|num)?|bill\s*(?:no|num)?|s[ốo]\s*h[óo]a\s*đ[ơo]n|s[ốo]\s*ct|m[ãa]\s*ct|s[ốo]\s*:|so\s*:)\s*[:\s\-#]*([A-Z0-9\-_#/]{2,25})",
+    re.IGNORECASE
+)
+
+# Pattern nhận diện Thuế VAT / GTGT
+VAT_KEYWORDS = [
+    r"thu[ếe]\s*gtgt",
+    r"thu[ếe]\s*vat",
+    r"\bvat\b",
+    r"\bgtgt\b",
+    r"\btax\b",
+]
+
+# Pattern nhận diện Thu ngân / Nhân viên
+CASHIER_PATTERN = re.compile(
+    r"(?:thu\s*ng[âa]n|cashier|nh[âa]n\s*vi[êe]n|nv\s*b[áa]n\s*h[àa]ng|nv)\s*[:\s\-]+([a-zA-ZÀ-ỹ0-9\s._-]{2,25})",
+    re.IGNORECASE
+)
+
+# Pattern nhận diện Bàn / Phòng
+TABLE_PATTERN = re.compile(
+    r"(?:b[àa]n\s*s[ốo]|b[àa]n|ban|ph[òo]ng\s*vip|phong\s*vip|ph[òo]ng|table)\s*[:\s\-]+([A-Za-z0-9\-_]+)",
     re.IGNORECASE
 )
 

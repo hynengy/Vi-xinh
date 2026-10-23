@@ -516,12 +516,40 @@ class DartReceiptExtractor {
       }
 
       if (amt != null && amt >= 1000 && rawName.isNotEmpty) {
-        // Quantity extraction
-        final qtyMatch = RegExp(r'(?:x|\*|\bSL:?)\s*(\d+(?:[.,]\d+)?)\b', caseSensitive: false)
+        double qtyNum = 1.0;
+        double? unitPrice;
+
+        // Mult pattern: e.g. '2 x 35.000'
+        final multMatch = RegExp(r'(\d+(?:[.,]\d+)?)\s*(?:x|\*)\s*(\d{1,3}(?:[.,]\d{3})+|\d{4,9})', caseSensitive: false)
             .firstMatch(rawName);
-        if (qtyMatch != null) {
-          qtyStr = 'SL: ${qtyMatch.group(1)}';
-          rawName = rawName.replaceRange(qtyMatch.start, qtyMatch.end, '').trim();
+        if (multMatch != null) {
+          final q = double.tryParse(multMatch.group(1)!.replaceAll(',', '.')) ?? 1.0;
+          final p = parseAmountStr(multMatch.group(2)!);
+          if (q > 0 && p >= 100) {
+            qtyNum = q;
+            unitPrice = p;
+            qtyStr = 'SL: ${q.truncate() == q ? q.toInt() : q}';
+            rawName = rawName.replaceRange(multMatch.start, multMatch.end, '').trim();
+          }
+        }
+
+        // Single quantity match
+        if (qtyStr.isEmpty) {
+          final qtyMatch = RegExp(r'(?:x|\*|\bSL:?|\bso luong:?)\s*(\d+(?:[.,]\d+)?)\b', caseSensitive: false)
+              .firstMatch(rawName);
+          if (qtyMatch != null) {
+            final q = double.tryParse(qtyMatch.group(1)!.replaceAll(',', '.')) ?? 1.0;
+            if (q > 0 && q < 500) {
+              qtyNum = q;
+              qtyStr = 'SL: ${q.truncate() == q ? q.toInt() : q}';
+              rawName = rawName.replaceRange(qtyMatch.start, qtyMatch.end, '').trim();
+            }
+          }
+        }
+
+        unitPrice ??= (qtyNum > 0 ? (amt / qtyNum) : amt);
+        if (qtyStr.isEmpty) {
+          qtyStr = 'SL: ${qtyNum.truncate() == qtyNum ? qtyNum.toInt() : qtyNum}';
         }
 
         var cleanName = rawName
@@ -537,6 +565,8 @@ class DartReceiptExtractor {
             items.add(LineItem(
               name: cleanName,
               amount: amt,
+              quantity: qtyNum,
+              unitPrice: unitPrice,
               icon: icon,
               consumption: qtyStr,
             ));
@@ -550,13 +580,82 @@ class DartReceiptExtractor {
     return items;
   }
 
+  static String? extractTime(String raw) {
+    for (var line in raw.split('\n')) {
+      final m = RegExp(r'(?:gi[ờo]\s*(?:v[àa]o|ra|in|l[ậa]p)?|time|l[úu]c|t[ạa]i)\s*[:\s\-]*([01]?\d|2[0-3])[:.]([0-5]\d)(?:[:.]([0-5]\d))?', caseSensitive: false).firstMatch(line);
+      if (m != null) {
+        final hh = int.tryParse(m.group(1)!) ?? 0;
+        final mm = int.tryParse(m.group(2)!) ?? 0;
+        final ss = m.group(3);
+        final base = '${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}';
+        return ss != null ? '$base:${ss.padLeft(2, '0')}' : base;
+      }
+    }
+    final dtMatch = RegExp(r'\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s+([01]?\d|2[0-3])[:.]([0-5]\d)\b').firstMatch(raw);
+    if (dtMatch != null) {
+      final hh = int.tryParse(dtMatch.group(1)!) ?? 0;
+      final mm = int.tryParse(dtMatch.group(2)!) ?? 0;
+      return '${hh.toString().padLeft(2, '0')}:${mm.toString().padLeft(2, '0')}';
+    }
+    return null;
+  }
+
+  static String? extractInvoiceNumber(List<String> lines) {
+    for (var line in lines) {
+      final m = RegExp(r'(?:s[ốo]\s*h[đd]|so\s*hd|m[ãa]\s*h[đd]|ma\s*hd|s[ốo]\s*phi[ếe]u|so\s*phieu|m[ãa]\s*bill|s[ốo]\s*bill|invoice\s*(?:no|num)?|receipt\s*(?:no|num)?|bill\s*(?:no|num)?|s[ốo]\s*:|so\s*:)\s*[:\s\-#]*([A-Z0-9\-_#/]{2,25})', caseSensitive: false).firstMatch(line);
+      if (m != null) {
+        final inv = m.group(1)!.trim();
+        if (inv.length >= 3 && !inv.toLowerCase().contains('thanh') && !inv.toLowerCase().contains('toan')) {
+          return inv;
+        }
+      }
+    }
+    final fullText = lines.join('\n');
+    final spec = RegExp(r'\b(HD\d{4,12}|BILL\d{4,12}|INV[A-Z0-9\-_]{3,12})\b', caseSensitive: false).firstMatch(fullText);
+    if (spec != null) return spec.group(1);
+    return null;
+  }
+
+  static double extractVat(List<String> lines) {
+    for (var line in lines) {
+      final lower = line.toLowerCase();
+      if (lower.contains('vat') || lower.contains('gtgt') || lower.contains('thuế')) {
+        final matches = RegExp(r'(?:\d{1,3}(?:[.,\s]\d{3})+|\d{4,9})').allMatches(line);
+        if (matches.isNotEmpty) {
+          final v = parseAmountStr(matches.last.group(0)!);
+          if (v >= 100) return v;
+        }
+      }
+    }
+    return 0.0;
+  }
+
+  static String? extractPaymentMethod(List<String> lines) {
+    final lower = lines.join(' ').toLowerCase();
+    if (lower.contains('chuyển khoản') || lower.contains('chuyen khoan') || lower.contains('banking')) {
+      return 'Chuyển khoản';
+    }
+    if (lower.contains('quẹt thẻ') || lower.contains('thẻ') || lower.contains('pos') || lower.contains('visa')) {
+      return 'Thẻ ngân hàng';
+    }
+    if (lower.contains('momo')) return 'Ví MoMo';
+    if (lower.contains('zalopay')) return 'Ví ZaloPay';
+    if (lower.contains('vnpay') || lower.contains('qr')) return 'Quét mã QR';
+    if (lower.contains('tiền mặt') || lower.contains('tien mat')) return 'Tiền mặt';
+    return null;
+  }
+
   static TransactionModel parseAll(String rawOcr) {
     final lines = cleanText(rawOcr);
     final merchant = extractMerchant(lines);
     final date = extractDate(rawOcr);
+    final timeStr = extractTime(rawOcr) ?? '12:00';
+    final invoiceNo = extractInvoiceNumber(lines);
     final hotline = extractHotline(lines);
     final address = extractAddress(lines);
     final totalData = extractTotal(lines);
+    final vat = extractVat(lines);
+    final pttt = extractPaymentMethod(lines);
     final items = extractLineItems(lines);
 
     double total = totalData['total'] ?? 0.0;
@@ -587,12 +686,16 @@ class DartReceiptExtractor {
     }
 
     final notesList = <String>[];
+    if (invoiceNo != null) notesList.add('Số HĐ: $invoiceNo');
+    if (timeStr != '12:00') notesList.add('Giờ: $timeStr');
     if (hotline != null) notesList.add('Hotline: $hotline');
     if (address != null) notesList.add('ĐC: $address');
+    if (pttt != null) notesList.add('PTTT: $pttt');
     final double discount = totalData['discount'] ?? 0.0;
     if (discount > 0) notesList.add('Ưu đãi: -${discount.toInt()} ₫');
+    if (vat > 0) notesList.add('VAT: +${vat.toInt()} ₫');
     if (items.isNotEmpty) {
-      final summary = items.take(3).map((it) => it.name).join(', ');
+      final summary = items.take(3).map((it) => '${it.name} (x${it.quantity.truncate() == it.quantity ? it.quantity.toInt() : it.quantity})').join(', ');
       notesList.add('Món: $summary${items.length > 3 ? ' (+${items.length - 3})' : ''}');
     }
 
@@ -601,6 +704,7 @@ class DartReceiptExtractor {
       merchantName: merchant,
       amount: total,
       transactionDate: date,
+      transactionTime: timeStr,
       category: cat,
       notes: notesList.isNotEmpty ? notesList.join(' · ') : null,
       rawOcrText: rawOcr,

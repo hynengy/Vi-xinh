@@ -1177,15 +1177,56 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
             metaTime.textContent = linesStr ? `${msStr} • ${linesStr}` : msStr;
         }
 
+        // Hiển thị Số HĐ / Bill nếu có
+        const invRow = document.getElementById('ocrInvoiceRow');
+        const invEl = document.getElementById('ocrInvoiceNo');
+        if(invRow){
+            if(data.invoice_no){
+                invRow.style.display = 'flex';
+                if(invEl) invEl.textContent = data.invoice_no;
+            } else {
+                invRow.style.display = 'none';
+            }
+        }
+
+        // Hiển thị Thời gian (Ngày & Giờ)
+        const dtRow = document.getElementById('ocrDateTimeRow');
+        const dtEl = document.getElementById('ocrDateTime');
+        if(dtRow){
+            const dStr = data.transaction_date || '';
+            const tStr = data.transaction_time || '';
+            if(dStr || tStr){
+                dtRow.style.display = 'flex';
+                if(dtEl) dtEl.textContent = `${dStr}${tStr ? ' lúc ' + tStr : ''}`;
+            } else {
+                dtRow.style.display = 'none';
+            }
+        }
+
         // Hiển thị Hotline nếu bóc tách được
         const hlEl = document.getElementById('ocrHotline');
         const hlRow = document.getElementById('ocrHotlineRow');
         if(hlRow){
-            if(data.hotline){
+            if(data.hotline || data.phone){
                 hlRow.style.display = 'flex';
-                if(hlEl) hlEl.textContent = data.hotline;
+                if(hlEl) hlEl.textContent = data.hotline || data.phone;
             } else {
                 hlRow.style.display = 'none';
+            }
+        }
+
+        // Hiển thị Địa chỉ cửa hàng
+        const addrRow = document.getElementById('ocrAddressRow');
+        const addrEl = document.getElementById('ocrAddress');
+        if(addrRow){
+            if(data.address){
+                addrRow.style.display = 'flex';
+                if(addrEl) {
+                    addrEl.textContent = data.address;
+                    addrEl.title = data.address;
+                }
+            } else {
+                addrRow.style.display = 'none';
             }
         }
 
@@ -1207,6 +1248,30 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
             } else {
                 discRow.style.display = 'none';
                 if(subRow) subRow.style.display = 'none';
+            }
+        }
+
+        // Hiển thị Thuế VAT
+        const vatRow = document.getElementById('ocrVatRow');
+        const vatEl = document.getElementById('ocrVat');
+        if(vatRow){
+            if(data.vat && data.vat > 0){
+                vatRow.style.display = 'flex';
+                if(vatEl) vatEl.textContent = `+${fmt(data.vat)}`;
+            } else {
+                vatRow.style.display = 'none';
+            }
+        }
+
+        // Hiển thị Hình thức thanh toán (PTTT)
+        const pmRow = document.getElementById('ocrPaymentMethodRow');
+        const pmEl = document.getElementById('ocrPaymentMethod');
+        if(pmRow){
+            if(data.payment_method){
+                pmRow.style.display = 'flex';
+                if(pmEl) pmEl.textContent = data.payment_method;
+            } else {
+                pmRow.style.display = 'none';
             }
         }
 
@@ -1365,14 +1430,27 @@ function renderOcrItemsAndRawText(detected){
     if(badgeEl) badgeEl.textContent = `${items.length} món`;
 
     if(listEl){
-        listEl.innerHTML = items.map(it => `
+        listEl.innerHTML = items.map(it => {
+            const qtyText = it.consumption || (it.quantity && it.quantity > 1 ? `SL: ${it.quantity}` : '');
+            const unitPriceText = (it.unit_price && it.quantity && it.quantity > 1) ? `Đơn giá: ${fmt(it.unit_price)}` : '';
+            return `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0.5rem;background:var(--bg);border-radius:var(--r-sm);font-size:0.78rem">
-                <span style="font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">
-                    ${it.name}
-                </span>
-                <strong style="color:var(--primary);white-space:nowrap">${fmt(it.amount)}</strong>
+                <div style="display:flex;align-items:center;gap:0.4rem;overflow:hidden">
+                    <span style="font-size:0.95rem;line-height:1">${it.icon || '📦'}</span>
+                    <div style="overflow:hidden">
+                        <div style="font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:210px">
+                            ${it.name}
+                        </div>
+                        <div style="font-size:0.68rem;color:var(--text3);display:flex;gap:0.4rem;align-items:center">
+                            ${qtyText ? `<span style="font-weight:700;color:var(--primary)">${qtyText}</span>` : ''}
+                            ${unitPriceText ? `<span>${unitPriceText}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <strong style="color:var(--primary);white-space:nowrap;font-size:0.85rem">${fmt(it.amount)}</strong>
             </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     renderItemizedSplit();

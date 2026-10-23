@@ -51,12 +51,18 @@
                     <i class="ri-edit-box-line" style="color:var(--primary)"></i> Thông Tin Hóa Đơn
                 </h2>
                 <form id="verify-form" onsubmit="handleConfirmTransaction(event)">
-                    <div class="form-group">
-                        <label class="form-label" style="font-weight:700;font-size:0.82rem">Nơi giao dịch</label>
-                        <input type="text" id="verify-merchant" class="form-control" required>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.8rem;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Nơi giao dịch</label>
+                            <input type="text" id="verify-merchant" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Số HĐ / Mã bill</label>
+                            <input type="text" id="verify-invoice-no" class="form-control" placeholder="HD..." style="font-family:monospace;font-weight:600">
+                        </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem;">
                         <div class="form-group">
                             <label class="form-label" style="font-weight:700;font-size:0.82rem">Số tiền (₫)</label>
                             <input type="number" id="verify-amount" class="form-control" required style="font-weight:800;color:var(--danger)">
@@ -64,6 +70,21 @@
                         <div class="form-group">
                             <label class="form-label" style="font-weight:700;font-size:0.82rem">Ngày</label>
                             <input type="date" id="verify-date" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Giờ</label>
+                            <input type="time" id="verify-time" class="form-control">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Thuế VAT (₫)</label>
+                            <input type="number" id="verify-vat" class="form-control" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Hình thức TT</label>
+                            <input type="text" id="verify-payment-method" class="form-control" placeholder="Tiền mặt, Chuyển khoản...">
                         </div>
                     </div>
 
@@ -101,11 +122,12 @@
                             <span class="badge" style="background:#FFF0F4;color:var(--primary)" id="item-count-badge">0 mục</span>
                         </div>
                         <div class="table-responsive">
-                            <table style="margin-top: 0;">
+                            <table style="margin-top: 0; width: 100%;">
                                 <thead>
                                     <tr>
                                         <th>Hạng mục</th>
-                                        <th>Số lượng</th>
+                                        <th style="width:70px">SL</th>
+                                        <th>Đơn giá</th>
                                         <th>Thành tiền (₫)</th>
                                     </tr>
                                 </thead>
@@ -140,6 +162,18 @@
                 document.getElementById('verify-merchant').value = data.merchant_name || '';
                 document.getElementById('verify-amount').value = data.amount || 0;
                 document.getElementById('verify-date').value = data.transaction_date || '';
+                if (document.getElementById('verify-invoice-no')) {
+                    document.getElementById('verify-invoice-no').value = data.invoice_no || '';
+                }
+                if (document.getElementById('verify-time')) {
+                    document.getElementById('verify-time').value = data.transaction_time || '';
+                }
+                if (document.getElementById('verify-vat')) {
+                    document.getElementById('verify-vat').value = data.vat || '';
+                }
+                if (document.getElementById('verify-payment-method')) {
+                    document.getElementById('verify-payment-method').value = data.payment_method || '';
+                }
                 if (document.getElementById('verify-notes')) {
                     document.getElementById('verify-notes').value = data.notes || '';
                 }
@@ -161,16 +195,19 @@
                     tbody.innerHTML = items.map((it, idx) => `
                         <tr>
                             <td style="font-weight: 600;">
-                                <i class="ri-file-list-3-line" style="color:var(--primary);margin-right:0.3rem"></i>
+                                <span style="margin-right:0.35rem">${it.icon || '📦'}</span>
                                 ${it.name}
                             </td>
-                            <td style="color: var(--text3); font-size: 0.85rem;">
-                                ${it.consumption || 'Trọn gói'}
+                            <td style="color: var(--primary); font-size: 0.82rem; font-weight:700">
+                                ${it.quantity || 1}
+                            </td>
+                            <td style="color: var(--text2); font-size: 0.8rem">
+                                ${new Intl.NumberFormat('vi-VN').format(it.unit_price || it.amount)} ₫
                             </td>
                             <td>
                                 <input type="number" class="form-control item-price-input" 
                                        value="${it.amount}" 
-                                       style="width: 130px; padding: 0.35rem 0.6rem; font-weight: 700; color: #b91c1c;"
+                                       style="width: 120px; padding: 0.35rem 0.6rem; font-weight: 700; color: #b91c1c;"
                                        onchange="recalcTotalFromItemInputs()">
                             </td>
                         </tr>

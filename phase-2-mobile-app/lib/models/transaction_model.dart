@@ -1,20 +1,29 @@
 class LineItem {
   final String name;
   final double amount;
+  final double quantity;
+  final double unitPrice;
   final String? consumption;
   final String? icon;
 
   LineItem({
     required this.name,
     required this.amount,
+    this.quantity = 1.0,
+    double? unitPrice,
     this.consumption,
     this.icon,
-  });
+  }) : unitPrice = unitPrice ?? (quantity > 0 ? (amount / quantity) : amount);
 
   factory LineItem.fromMap(Map<String, dynamic> map) {
+    final amt = (map['amount'] as num?)?.toDouble() ?? 0.0;
+    final qty = (map['quantity'] as num?)?.toDouble() ?? 1.0;
+    final up = (map['unit_price'] as num?)?.toDouble() ?? (qty > 0 ? amt / qty : amt);
     return LineItem(
       name: map['name'] ?? '',
-      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      amount: amt,
+      quantity: qty,
+      unitPrice: up,
       consumption: map['consumption'],
       icon: map['icon'] ?? '',
     );
@@ -24,6 +33,8 @@ class LineItem {
     return {
       'name': name,
       'amount': amount,
+      'quantity': quantity,
+      'unit_price': unitPrice,
       'consumption': consumption,
       'icon': icon,
     };
