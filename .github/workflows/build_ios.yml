@@ -1,0 +1,51 @@
+name: Build iOS App
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "phase-2-mobile-app/**"
+
+jobs:
+  build:
+    runs-on: macos-13
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          cd phase-2-mobile-app
+          flutter pub get
+
+      - name: Run tests
+        run: |
+          cd phase-2-mobile-app
+          flutter test
+
+      - name: Build iOS No-Codesign
+        run: |
+          cd phase-2-mobile-app
+          flutter build ios --release --no-codesign
+
+      - name: Package Payload (Payload.zip / .ipa)
+        run: |
+          cd phase-2-mobile-app/build/ios/iphoneos
+          mkdir Payload
+          cp -r Runner.app Payload/
+          zip -r ViXinh_iOS.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ViXinh_iOS_IPA
+          path: phase-2-mobile-app/build/ios/iphoneos/ViXinh_iOS.ipa
+          retention-days: 7
