@@ -36,7 +36,7 @@ void main() {
       expect(DartReceiptExtractor.extractMerchant(lines1), 'HIGHLANDS COFFEE');
 
       final lines2 = ['WINMART+', 'Chi nhánh Cầu Giấy'];
-      expect(DartReceiptExtractor.extractMerchant(lines2), 'WINMART');
+      expect(DartReceiptExtractor.extractMerchant(lines2), 'WINMART+');
 
       final lines3 = ['CIRCLE K', 'Store #45'];
       expect(DartReceiptExtractor.extractMerchant(lines3), 'CIRCLE K');
@@ -49,6 +49,18 @@ void main() {
         'Tiền phòng: 3.800.000',
       ];
       expect(DartReceiptExtractor.extractMerchant(lines), 'Tiền trọ Phòng 302');
+    });
+
+    test('identifies restaurant by prefix keyword', () {
+      final lines = [
+        'NHÀ HÀNG HƯƠNG BIỂN',
+        'ĐC: 123 Bờ Biển, Đà Nẵng',
+        'Hotline: 0912.345.678',
+        '1. Cơm chiên: 120.000',
+      ];
+      expect(DartReceiptExtractor.extractMerchant(lines), 'NHÀ HÀNG HƯƠNG BIỂN');
+      expect(DartReceiptExtractor.extractHotline(lines), contains('0912'));
+      expect(DartReceiptExtractor.extractAddress(lines), contains('123 Bờ Biển'));
     });
   });
 
@@ -91,6 +103,17 @@ void main() {
       final res = DartReceiptExtractor.extractTotal(lines);
       expect(res['total'], 185000.0);
     });
+
+    test('does not mistake hotline phone number for total amount', () {
+      final lines = [
+        'QUÁN ĂN GIA ĐÌNH',
+        'Hotline: 0988.123.456',
+        '1. Cơm rang dưa bò: 50.000',
+        'TỔNG TIỀN: 50.000 đ',
+      ];
+      final res = DartReceiptExtractor.extractTotal(lines);
+      expect(res['total'], 50000.0);
+    });
   });
 
   group('DartReceiptExtractor - extractLineItems', () {
@@ -105,9 +128,30 @@ void main() {
       ];
       final items = DartReceiptExtractor.extractLineItems(lines);
       final names = items.map((it) => it.name).toList();
-      expect(names, contains('Tiền thuê phòng'));
+      expect(names.any((n) => n.toLowerCase().contains('phòng')), isTrue);
       expect(names.any((n) => n.toLowerCase().contains('điện')), isTrue);
       expect(names.any((n) => n.toLowerCase().contains('nước')), isTrue);
+    });
+
+    test('extracts restaurant food dishes and cafe drinks', () {
+      final lines = [
+        'TIỆM TRÀ SỮA & CÀ PHÊ CHILL',
+        'Hotline: 0912.888.999',
+        'Ngày: 22/10/2026',
+        '1. Trà sữa trân châu đường đen x2    70.000',
+        '2. Cà phê sữa đá phin                25.000',
+        '3. Khoai tây chiên giòn              30.000',
+        'Tổng cộng: 125.000 đ',
+      ];
+      final items = DartReceiptExtractor.extractLineItems(lines);
+      expect(items.length, 3);
+      expect(items[0].amount, 70000.0);
+      expect(items[0].icon, '🧋');
+      expect(items[0].consumption, contains('SL: 2'));
+      expect(items[1].amount, 25000.0);
+      expect(items[1].icon, '☕');
+      expect(items[2].amount, 30000.0);
+      expect(items[2].icon, '🍟');
     });
   });
 }

@@ -153,3 +153,53 @@ def test_pipeline_kiotviet_stained_receipt():
         assert result["transaction_date"] == "2026-10-22"
 
 
+def test_extract_hotline_and_address():
+    """Test bóc tách Hotline, Địa chỉ và không bị nhầm Hotline thành số tiền."""
+    raw_text = """
+    NHÀ HÀNG HƯƠNG BIỂN
+    ĐC: 123 Đường Bờ Biển, Phường Mỹ Khê, Đà Nẵng
+    Hotline: 0912.345.678 - Tel: 0236.3888.999
+    MST: 0401234567
+    Ngày: 20/10/2026
+    1. Cơm chiên hải sản   120.000
+    2. Canh ngao chua       80.000
+    TỔNG TIỀN: 200.000 đ
+    Cảm ơn quý khách!
+    """
+    res = ReceiptParser.parse_all(raw_text)
+    assert "HƯƠNG BIỂN" in res["merchant_name"].upper()
+    assert res["hotline"] is not None and "0912" in res["hotline"]
+    assert res["address"] is not None and "123 Đường Bờ Biển" in res["address"]
+    # Số tiền phải là 200.000 chứ KHÔNG ĐƯỢC là hotline 912.345.678!
+    assert res["amount"] == 200000.0
+    assert len(res["items"]) >= 2
+    item_names = [it["name"] for it in res["items"]]
+    assert any("Cơm chiên" in n for n in item_names)
+    assert any("Canh ngao" in n for n in item_names)
+
+
+def test_extract_dishes_and_prices_vietnamese_cafe():
+    """Test bóc tách đồ ăn đồ uống tiếng Việt phổ biến."""
+    raw_text = """
+    TIỆM TRÀ SỮA & ĂN VẶT CHILL
+    SĐT: 0988.777.666
+    Ngày: 22/10/2026
+    1. Trà sữa trân châu đường đen    35.000
+    2. Cà phê sữa đá phin             25.000
+    3. Khoai tây lắc phô mai          30.000
+    Tổng thanh toán: 90.000 đ
+    """
+    res = ReceiptParser.parse_all(raw_text)
+    assert "TIỆM TRÀ SỮA" in res["merchant_name"].upper()
+    assert res["amount"] == 90000.0
+    assert len(res["items"]) == 3
+    assert res["items"][0]["amount"] == 35000.0
+    assert res["items"][1]["amount"] == 25000.0
+    assert res["items"][2]["amount"] == 30000.0
+    # Icon nhận diện chuẩn
+    assert res["items"][0]["icon"] in ["🧋", "🍵", "☕"]
+    assert res["items"][1]["icon"] == "☕"
+    assert res["items"][2]["icon"] in ["🍟", "🍢"]
+
+
+
