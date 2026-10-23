@@ -32,28 +32,18 @@ class ProcessingPipeline:
         self.parser = ReceiptParser()
         self.db_manager = DatabaseManager(DB_PATH)
 
-    def process_receipt_image(self, image_path: Path, engine: str = "auto") -> Dict[str, Any]:
+    def process_receipt_image(self, image_path: Path, engine: str = "google_mlkit") -> Dict[str, Any]:
         """
-        Thực thi các bước 2 & 3 trong Pipeline:
-        1. Gọi OCREngine hoặc GoogleMLKitEngine trích xuất raw text
-        2. Gọi ReceiptParser bóc tách các trường Tên quán, Ngày, Tổng tiền
+        Thực thi quy trình Google ML Kit OCR -> Regex Parser bóc tách dữ liệu hóa đơn.
         """
         image_path = Path(image_path)
-        logger.info(f"Bắt đầu pipeline xử lý ảnh: {image_path} (engine={engine})")
+        logger.info(f"Bắt đầu Google ML Kit pipeline xử lý ảnh: {image_path}")
 
-        # Bước 2: OCR (Google ML Kit hoặc Tesseract)
-        if engine in ("google_mlkit", "google_vision") or (engine == "auto" and self.mlkit_engine.is_cloud_vision_available()):
-            ml_res = self.mlkit_engine.process_image(str(image_path))
-            raw_text = ml_res.get("raw_text", "")
-            active_engine = ml_res.get("engine", "google_mlkit")
-        else:
-            ocr_result = self.ocr_engine.extract_text_from_file(str(image_path))
-            raw_text = ocr_result.get("raw_text", "")
-            active_engine = "tesseract_opencv"
+        ml_res = self.mlkit_engine.process_image(str(image_path))
+        raw_text = ml_res.get("raw_text", "")
 
-        # Bước 3: Regex Extractor
         response = self.parse_extracted_text(raw_text, image_url=f"/uploads/{image_path.name}")
-        response["engine"] = active_engine
+        response["engine"] = "google_mlkit"
         return response
 
     def parse_extracted_text(self, raw_text: str, image_url: str = "") -> Dict[str, Any]:

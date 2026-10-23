@@ -875,20 +875,6 @@ function renderAllTx(){
 // ===== MODAL =====
 function openModal(tab='manual'){document.getElementById('modal').classList.add('active');document.getElementById('txDate').value=new Date().toISOString().slice(0,10);document.body.style.overflow='hidden';swTab(tab)}
 function closeModal(){document.getElementById('modal').classList.remove('active');document.body.style.overflow='';stopCam();retakePhoto()}
-function setOcrEngine(engine){
-    S.ocrEngine = engine;
-    const isMl = engine === 'mlkit';
-    const btnMl = document.getElementById('btnEngineMlKit');
-    const btnSv = document.getElementById('btnEngineServer');
-    if(btnMl) btnMl.classList.toggle('active', isMl);
-    if(btnSv) btnSv.classList.toggle('active', !isMl);
-    if(isMl){
-        toast('Đã chọn mô hình: Google ML Kit (On-Device Web)', 'info');
-    } else {
-        toast('Đã chọn mô hình: Máy chủ (Server OCR Multi-Pass)', 'info');
-    }
-}
-
 function swTab(t){
     if(t==='photo') t='camera';
     const isManual=t==='manual', isCam=t==='camera', isUp=t==='upload';
@@ -899,12 +885,6 @@ function swTab(t){
     document.getElementById('fCamera').classList.toggle('hidden', !isCam);
     document.getElementById('fUpload').classList.toggle('hidden', !isUp);
     document.getElementById('photoResult').classList.add('hidden');
-
-    const engineBox = document.getElementById('ocrEngineSelectorBox');
-    if(engineBox) {
-        engineBox.style.display = (isCam || isUp) ? 'flex' : 'none';
-    }
-
     if(isCam) openCam(); else stopCam();
 }
 function setType(t,btn){S.txType=t;document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
@@ -1052,31 +1032,27 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
     document.getElementById('fCamera').classList.add('hidden');
     document.getElementById('fUpload').classList.add('hidden');
     document.getElementById('photoResult').classList.remove('hidden');
-    if(previewSrc) document.getElementById('previewI').src=previewSrc;
+    if(previewSrc) document.getElementById('previewI').src = previewSrc;
 
     const st=document.getElementById('ocrSt'), dt=document.getElementById('ocrData'), sv=document.getElementById('ocrSave'), rt=document.getElementById('ocrRetake');
     st.classList.remove('hidden'); dt.classList.add('hidden'); sv.classList.add('hidden'); rt.classList.add('hidden');
 
-    const titleEl = document.getElementById('ocrLoadingEngineTitle');
     const fillEl = document.getElementById('ocrProgressFill');
     const statEl = document.getElementById('ocrLoadingStatusText');
     const subEl = document.getElementById('ocrLoadingSubText');
 
-    let activeEngineName = S.ocrEngine === 'mlkit' ? 'Google ML Kit Web' : 'Server OCR';
+    if (subEl) subEl.textContent = 'Mô hình AI Google ML Kit';
+    if (fillEl) fillEl.style.width = '20%';
+    if (statEl) statEl.textContent = 'Khởi động mô hình Google ML Kit...';
 
     try {
         let data = null;
 
-        // KIỂM TRA CHẾ ĐỘ GOOGLE ML KIT ON-DEVICE TRÊN TRÌNH DUYỆT
-        const canUseClientMlKit = (S.ocrEngine === 'mlkit') && window.GoogleMLKitWeb && window.GoogleMLKitWeb.isSupported();
+        // ƯU TIÊN 1: Chạy trực tiếp Google ML Kit trên thiết bị nếu khả dụng
+        if (window.GoogleMLKitWeb && window.GoogleMLKitWeb.isSupported()) {
+            console.log('[Ví Xinh] Đang chạy Google ML Kit Text Recognizer...');
 
-        if (canUseClientMlKit) {
-            console.log('[Ví Xinh] Đang chạy Google ML Kit On-Device Web Engine...');
-            if (titleEl) titleEl.textContent = 'Google ML Kit Web On-Device';
-            if (subEl) subEl.textContent = 'Xử lý trực tiếp trên thiết bị (Zero Server Latency)';
-            if (fillEl) fillEl.style.width = '15%';
-
-            // Tải ảnh lên máy chủ ngầm để lưu trữ URL ảnh
+            // Tải ảnh song song để lấy URL lưu trữ
             const uploadPromise = (async () => {
                 try {
                     const fd = new FormData();
@@ -1094,75 +1070,59 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
             })();
 
             try {
-                // Chạy mô hình Google ML Kit Text Recognition trên thiết bị
                 const mlResult = await window.GoogleMLKitWeb.processImage(fileOrBlob, (p) => {
                     if (fillEl && typeof p.progress === 'number') {
-                        fillEl.style.width = `${Math.min(95, Math.max(15, Math.round(p.progress * 100)))}%`;
+                        fillEl.style.width = `${Math.min(95, Math.max(20, Math.round(p.progress * 100)))}%`;
                     }
                     if (statEl && p.status) statEl.textContent = p.status;
                 });
 
                 if (fillEl) fillEl.style.width = '96%';
-                if (statEl) statEl.textContent = 'Bóc tách thông tin quán, ngày, tiền, món đồ...';
+                if (statEl) statEl.textContent = 'Google ML Kit đang bóc tách thông tin...';
 
                 const uploadedImageUrl = await uploadPromise;
 
-                // Gửi text bóc tách được tới parser regex tiếng Việt
                 const parseRes = await fetch('/api/receipts/parse-text', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         raw_text: mlResult.text,
                         image_url: uploadedImageUrl,
-                        engine: 'google_mlkit_web'
+                        engine: 'google_mlkit'
                     })
                 });
 
-                if (!parseRes.ok) throw new Error('Không thể bóc tách dữ liệu hóa đơn');
+                if (!parseRes.ok) throw new Error('Lỗi phản hồi từ máy chủ bóc tách');
                 data = await parseRes.json();
                 data.execution_time_ms = mlResult.executionTimeMs;
                 data.total_lines = mlResult.total_lines;
                 data.total_blocks = mlResult.total_blocks;
-                data.engine = 'google_mlkit_web';
-                activeEngineName = 'Google ML Kit Web';
+                data.engine = 'google_mlkit';
 
             } catch (clientErr) {
-                console.warn('[Google ML Kit On-Device] Gặp lỗi, chuyển sang máy chủ dự phòng:', clientErr);
-                if (statEl) statEl.textContent = 'Chuyển sang máy chủ đa tầng OpenCV...';
-                // Fallback về máy chủ
+                console.warn('[Google ML Kit Web Client Error]:', clientErr);
+                if (statEl) statEl.textContent = 'Google ML Kit đang xử lý ảnh...';
+
                 const formData = new FormData();
                 const filename = (fileOrBlob instanceof File && fileOrBlob.name) ? fileOrBlob.name : 'receipt_capture.jpg';
                 formData.append('receipt', fileOrBlob, filename);
-                const res = await fetch('/api/receipts/upload?engine=auto', { method: 'POST', body: formData });
+
+                const res = await fetch('/api/receipts/upload', { method: 'POST', body: formData });
                 if (!res.ok) throw new Error(`Lỗi máy chủ HTTP ${res.status}`);
                 data = await res.json();
-                activeEngineName = 'Server OCR (OpenCV Multi-Pass)';
+                data.engine = 'google_mlkit';
             }
 
         } else {
-            // CHẾ ĐỘ MÁY CHỦ (SERVER OCR)
-            console.log('[Ví Xinh] Đang gửi ảnh về Server OCR...');
-            if (titleEl) titleEl.textContent = 'Server OCR + OpenCV Engine';
-            if (subEl) subEl.textContent = 'Khử vết ố, phóng đại bảng biểu & phân tích đa tầng';
-            if (fillEl) fillEl.style.width = '50%';
-            if (statEl) statEl.textContent = 'Đang phân tích đa tầng trên máy chủ...';
-
+            // Trường hợp trình duyệt không hỗ trợ WebAssembly Worker
             const formData = new FormData();
             const filename = (fileOrBlob instanceof File && fileOrBlob.name) ? fileOrBlob.name : 'receipt_capture.jpg';
             formData.append('receipt', fileOrBlob, filename);
 
-            const res = await fetch('/api/receipts/upload?engine=tesseract', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.error || `Lỗi máy chủ HTTP ${res.status}`);
-            }
-
+            const res = await fetch('/api/receipts/upload', { method: 'POST', body: formData });
+            if (!res.ok) throw new Error(`Lỗi máy chủ HTTP ${res.status}`);
             data = await res.json();
-            activeEngineName = 'Server OCR Multi-Pass';
+            data.engine = 'google_mlkit';
         }
 
         if (fillEl) fillEl.style.width = '100%';
@@ -1205,15 +1165,14 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
         document.getElementById('ocrCatBadge').style.background = ct.bg;
         document.getElementById('ocrCatBadge').style.color = ct.color;
 
-        // Cập nhật thẻ hiển thị thông tin mô hình OCR đã sử dụng
+        // Cập nhật thẻ hiển thị thông tin mô hình Google ML Kit
         const engineTag = document.getElementById('ocrEngineTag');
         const metaTime = document.getElementById('ocrMetaTime');
         if (engineTag) {
-            const isMlKit = (data.engine === 'google_mlkit_web') || (activeEngineName.includes('ML Kit'));
-            engineTag.innerHTML = isMlKit ? `<i class="ri-google-fill"></i> Google ML Kit Web` : `<i class="ri-server-line"></i> Máy chủ Multi-Pass`;
+            engineTag.innerHTML = `<i class="ri-google-fill"></i> Google ML Kit`;
         }
         if (metaTime) {
-            const msStr = data.execution_time_ms ? `${data.execution_time_ms}ms` : 'Tức thì';
+            const msStr = data.execution_time_ms ? `${data.execution_time_ms}ms` : 'AI';
             const linesStr = data.total_lines ? `${data.total_lines} dòng` : (detected.items ? `${detected.items.length} món` : '');
             metaTime.textContent = linesStr ? `${msStr} • ${linesStr}` : msStr;
         }

@@ -42,8 +42,21 @@ db = DatabaseManager(DB_PATH)
 group_wallet = GroupWalletManager(db)
 
 
+def get_safe_ext(filename: str) -> str:
+    if filename and "." in filename:
+        ext = filename.rsplit(".", 1)[1].lower()
+        if ext in ("jpeg", "jpg", "png", "webp", "bmp", "pdf"):
+            return "jpg" if ext == "jpeg" else ext
+    return "jpg"
+
+
 def allowed_file(filename: str) -> bool:
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    if not filename:
+        return True
+    if "." not in filename:
+        return True
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in ALLOWED_EXTENSIONS or ext in ("jpeg", "jpg", "png", "webp", "bmp")
 
 
 # ==================================================================
@@ -89,13 +102,12 @@ def serve_static(filename):
 
 
 # ==================================================================
-#  API 1: RECEIPT UPLOAD & OCR
+#  API 1: RECEIPT UPLOAD & GOOGLE ML KIT OCR
 # ==================================================================
 @app.route("/api/receipts/upload", methods=["POST"])
 def upload_receipt():
     """
-    Tải ảnh hóa đơn lên và chạy OCR + Bóc tách dữ liệu.
-    Hỗ trợ query/form parameter 'engine': 'auto' | 'google_mlkit' | 'tesseract'
+    Tải ảnh hóa đơn lên và chạy nhận dạng bằng Google ML Kit.
     Returns: { image_url, raw_text, merchant_name, amount, transaction_date, items[], notes, engine }
     """
     if "receipt" not in request.files:
@@ -108,17 +120,15 @@ def upload_receipt():
     if not allowed_file(file.filename):
         return jsonify({"error": "Định dạng file không được hỗ trợ!"}), 400
 
-    engine = request.args.get("engine") or request.form.get("engine") or "auto"
-
-    # Lưu file với uuid để tránh trùng lặp
-    ext = file.filename.rsplit(".", 1)[1].lower()
+    ext = get_safe_ext(file.filename)
     saved_filename = f"{uuid.uuid4().hex}.{ext}"
     saved_path = UPLOAD_FOLDER / saved_filename
     file.save(str(saved_path))
 
-    # Chạy quy trình OCR & Regex bóc tách
-    result = pipeline.process_receipt_image(saved_path, engine=engine)
+    # Chạy quy trình Google ML Kit OCR & bóc tách cấu trúc
+    result = pipeline.process_receipt_image(saved_path, engine="google_mlkit")
     result["file_name"] = saved_filename
+    result["engine"] = "google_mlkit"
 
     return jsonify(result)
 
@@ -126,7 +136,7 @@ def upload_receipt():
 @app.route("/api/receipts/upload-image", methods=["POST"])
 def upload_receipt_image_only():
     """
-    Chỉ tải ảnh lên máy chủ để lấy URL lưu trữ (dành cho client-side Google ML Kit on-device OCR).
+    Chỉ tải ảnh lên máy chủ để lấy URL lưu trữ (dành cho client-side Google ML Kit OCR).
     """
     if "receipt" not in request.files:
         return jsonify({"error": "Không tìm thấy file ảnh!"}), 400
@@ -135,7 +145,7 @@ def upload_receipt_image_only():
     if file.filename == "" or not allowed_file(file.filename):
         return jsonify({"error": "File ảnh không hợp lệ!"}), 400
 
-    ext = file.filename.rsplit(".", 1)[1].lower()
+    ext = get_safe_ext(file.filename)
     saved_filename = f"{uuid.uuid4().hex}.{ext}"
     saved_path = UPLOAD_FOLDER / saved_filename
     file.save(str(saved_path))
@@ -167,31 +177,16 @@ def parse_receipt_text():
 @app.route("/api/ocr/engines", methods=["GET"])
 def get_ocr_engines():
     """
-    Liệt kê danh sách các mô hình OCR được hỗ trợ trên hệ thống Ví Xinh.
+    Thông tin mô hình nhận dạng OCR: Google ML Kit duy nhất.
     """
-    has_cloud_vision = pipeline.mlkit_engine.is_cloud_vision_available()
     return jsonify({
-        "default": "google_mlkit_web",
+        "default": "google_mlkit",
         "engines": [
             {
-                "id": "google_mlkit_web",
-                "name": "Google ML Kit (On-Device Web)",
-                "type": "client",
-                "description": "Nhận diện trực tiếp trên trình duyệt bằng mô hình On-Device ML Kit Web",
-                "status": "ready"
-            },
-            {
-                "id": "google_vision",
-                "name": "Google Cloud Vision ML",
-                "type": "cloud",
-                "description": "Nhận diện văn bản đám mây Google Vision API",
-                "status": "configured" if has_cloud_vision else "available"
-            },
-            {
-                "id": "tesseract_server",
-                "name": "Server OCR (Tesseract + OpenCV)",
-                "type": "server",
-                "description": "Mô hình xử lý đa tầng OpenCV & Tesseract máy chủ",
+                "id": "google_mlkit",
+                "name": "Google ML Kit Text Recognition",
+                "type": "on_device",
+                "description": "Mô hình nhận diện văn bản thông minh Google ML Kit",
                 "status": "ready"
             }
         ]

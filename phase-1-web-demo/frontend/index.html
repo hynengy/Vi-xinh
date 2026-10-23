@@ -605,21 +605,6 @@ setTimeout(function(){
                 <button class="modal-tab" id="tUpload" onclick="swTab('upload')"><i class="ri-upload-cloud-line"></i> Tải ảnh</button>
             </div>
 
-            <!-- BỘ CHỌN MÔ HÌNH OCR GOOGLE ML KIT (HIỂN THỊ TRONG TAB CAMERA / UPLOAD) -->
-            <div id="ocrEngineSelectorBox" class="ocr-engine-pill-group" style="display:none;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:0.4rem 0.65rem;margin-bottom:0.75rem">
-                <div style="display:flex;align-items:center;gap:0.35rem;font-size:0.74rem;font-weight:700;color:var(--text2)">
-                    <i class="ri-google-fill" style="color:var(--primary);font-size:0.85rem"></i> Mô hình OCR:
-                </div>
-                <div style="display:inline-flex;gap:0.25rem;background:var(--card);padding:0.2rem;border-radius:8px;border:1px solid var(--border)">
-                    <button type="button" class="ocr-engine-chip active" id="btnEngineMlKit" onclick="setOcrEngine('mlkit')">
-                        <i class="ri-flashlight-fill" style="font-size:0.75rem"></i> GG ML Kit
-                    </button>
-                    <button type="button" class="ocr-engine-chip" id="btnEngineServer" onclick="setOcrEngine('server')">
-                        <i class="ri-server-line" style="font-size:0.75rem"></i> Máy chủ
-                    </button>
-                </div>
-            </div>
-
             <div id="fManual">
                 <div class="type-sel">
                     <button class="type-btn e active" onclick="setType('expense',this)"><i class="ri-arrow-down-circle-line"></i> Chi tiêu</button>
@@ -667,9 +652,9 @@ setTimeout(function(){
             <div id="fUpload" class="hidden">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;padding:0.45rem 0.65rem;background:rgba(82,134,232,0.08);border:1px solid rgba(82,134,232,0.22);border-radius:var(--r-md)">
                     <span style="font-size:0.75rem;font-weight:700;color:var(--primary);display:inline-flex;align-items:center;gap:0.35rem">
-                        <i class="ri-google-fill" style="color:#5286E8;font-size:0.9rem"></i> Google ML Kit Web + OpenCV
+                        <i class="ri-google-fill" style="color:#5286E8;font-size:0.9rem"></i> Google ML Kit
                     </span>
-                    <span style="font-size:0.64rem;color:#1e3a8a;font-weight:700;background:#e0edff;padding:0.18rem 0.45rem;border-radius:999px">AI Auto-Enhanced</span>
+                    <span style="font-size:0.64rem;color:#1e3a8a;font-weight:700;background:#e0edff;padding:0.18rem 0.45rem;border-radius:999px">On-Device AI</span>
                 </div>
                 <div class="upload" id="dropZone" onclick="document.getElementById('fileIn').click()">
                     <div class="upload-ic"><i class="ri-upload-cloud-line"></i></div>
@@ -684,20 +669,20 @@ setTimeout(function(){
                 <div id="ocrSt" class="hidden" style="text-align:center;padding:1.2rem 1rem;color:var(--text)">
                     <span class="spinner" style="border-color:rgba(82,134,232,0.25);border-top-color:var(--primary);width:32px;height:32px"></span>
                     <div style="margin-top:0.6rem;display:inline-flex;align-items:center;gap:0.35rem;font-size:0.75rem;font-weight:700;color:var(--primary);background:rgba(82,134,232,0.08);padding:0.25rem 0.65rem;border-radius:999px">
-                        <i class="ri-google-fill"></i> <span id="ocrLoadingEngineTitle">Google ML Kit Web On-Device</span>
+                        <i class="ri-google-fill"></i> Google ML Kit Text Recognition
                     </div>
                     <div class="ocr-progress-wrap" style="max-width:240px;margin:0.75rem auto 0.4rem">
-                        <div class="ocr-progress-fill" id="ocrProgressFill" style="width:15%"></div>
+                        <div class="ocr-progress-fill" id="ocrProgressFill" style="width:25%"></div>
                     </div>
                     <p id="ocrLoadingStatusText" style="margin-top:0.2rem;font-weight:700;font-size:0.85rem">Đang nhận diện ký tự & khối chữ...</p>
-                    <p id="ocrLoadingSubText" style="font-size:0.75rem;color:var(--text3);margin-top:0.2rem">Xử lý trực tiếp trên thiết bị (Zero Server Latency)</p>
+                    <p id="ocrLoadingSubText" style="font-size:0.75rem;color:var(--text3);margin-top:0.2rem">Mô hình AI Google ML Kit</p>
                 </div>
                 <div id="ocrData" class="hidden" style="background:var(--bg);border-radius:var(--r-md);padding:0.75rem;margin-top:0.5rem">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.55rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border)">
                         <span class="ocr-badge-tag" id="ocrEngineTag">
-                            <i class="ri-google-fill"></i> Google ML Kit Web
+                            <i class="ri-google-fill"></i> Google ML Kit
                         </span>
-                        <span style="font-size:0.68rem;color:var(--text3);font-weight:600" id="ocrMetaTime">On-Device AI</span>
+                        <span style="font-size:0.68rem;color:var(--text3);font-weight:600" id="ocrMetaTime">AI On-Device</span>
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
                         <span style="font-size:0.78rem;color:var(--text3)">Nơi chi:</span>

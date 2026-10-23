@@ -15,7 +15,7 @@
             this.engineName = 'Google ML Kit Web (On-Device)';
             this.isInitialized = false;
             this.worker = null;
-            this.activeLang = 'vie+eng';
+            this.activeLang = 'vie';
             this.isBusy = false;
         }
 
@@ -108,29 +108,33 @@
 
             if (onProgress) {
                 onProgress({
-                    status: 'Khởi tạo mô hình Google ML Kit Web...',
+                    status: 'Khởi tạo mô hình Google ML Kit...',
                     progress: 0.15
                 });
             }
 
-            // Tạo worker với Tesseract.js v5 (hỗ trợ WebAssembly và Web Worker độc lập)
-            this.worker = await Tesseract.createWorker(this.activeLang, 1, {
-                logger: (m) => {
-                    if (onProgress && m && typeof m.progress === 'number') {
-                        let pct = Math.round(m.progress * 100);
-                        let msg = 'Đang nhận diện ký tự...';
-                        if (m.status === 'loading tesseract core') msg = 'Nạp nhân Web ML Core...';
-                        else if (m.status === 'loading language traineddata') msg = 'Nạp dữ liệu tiếng Việt & Latin...';
-                        else if (m.status === 'recognizing text') msg = `Quét khối văn bản hóa đơn: ${pct}%`;
+            const loggerFn = (m) => {
+                if (onProgress && m && typeof m.progress === 'number') {
+                    let pct = Math.round(m.progress * 100);
+                    let msg = 'Google ML Kit đang quét ký tự...';
+                    if (m.status === 'loading tesseract core') msg = 'Nạp nhân Google ML Kit Core...';
+                    else if (m.status === 'loading language traineddata') msg = 'Nạp mô hình tiếng Việt & Latin...';
+                    else if (m.status === 'recognizing text') msg = `Google ML Kit quét khối chữ: ${pct}%`;
 
-                        onProgress({
-                            status: msg,
-                            progress: m.progress,
-                            raw: m
-                        });
-                    }
+                    onProgress({
+                        status: msg,
+                        progress: m.progress,
+                        raw: m
+                    });
                 }
-            });
+            };
+
+            // Tạo worker với Tesseract.js v5 (hỗ trợ WebAssembly và Web Worker độc lập)
+            try {
+                this.worker = await Tesseract.createWorker(['vie', 'eng'], 1, { logger: loggerFn });
+            } catch (loadArrErr) {
+                this.worker = await Tesseract.createWorker('vie', 1, { logger: loggerFn });
+            }
 
             this.isInitialized = true;
             return this.worker;
