@@ -75,6 +75,13 @@ def sample_file(filename):
     return send_from_directory(str(samples_dir), filename)
 
 
+@app.route("/apple-touch-icon.png")
+@app.route("/apple-touch-icon-precomposed.png")
+@app.route("/favicon.ico")
+def apple_touch_icon():
+    return send_from_directory(str(FRONTEND_DIR / "assets"), "logo.jpg")
+
+
 # Serve static frontend files (css, js, assets)
 @app.route("/<path:filename>")
 def serve_static(filename):
