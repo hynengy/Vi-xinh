@@ -16,6 +16,7 @@ import time
 import logging
 from typing import Dict, Any, List, Optional
 import numpy as np
+import cv2
 
 try:
     import pytesseract
@@ -120,27 +121,69 @@ class OCREngine:
 
             # 2. Gọi OCR Engine (Dùng PSM 3 tự động nhận dạng bố cục bảng biểu / hóa đơn)
             if self.is_configured:
-                # PSM 3: Fully automatic page segmentation (chuẩn cho hóa đơn, bảng biểu)
-                custom_config = r"--oem 3 --psm 3"
+                # Chạy Multi-Pass OCR: PSM 6 (chuẩn dòng hóa đơn/bảng biểu), PSM 4 và PSM 3
+                configs_to_try = [
+                    r"--oem 3 --psm 6",
+                    r"--oem 3 --psm 4",
+                    r"--oem 3 --psm 3",
+                ]
 
-                try:
-                    # Tesseract hoạt động tốt nhất trên ảnh Grayscale vì nó tự có thuật toán Otsu nội bộ
-                    raw_text = pytesseract.image_to_string(gray_img, lang=self.lang, config=custom_config).strip()
-                    target_img = gray_img
-                except Exception as lang_err:
-                    logger.warning(f"Thử lại với tiếng Anh/mặc định do: {lang_err}")
-                    raw_text = pytesseract.image_to_string(gray_img).strip()
-                    target_img = gray_img
+                best_text = ""
+                best_score = -1
+                target_img = gray_img
 
-                # Nếu ảnh xám đọc được quá ít chữ (dưới 15 ký tự), thử ảnh nhị phân
-                if len(raw_text) < 15:
+                for cfg in configs_to_try:
                     try:
-                        text_bin = pytesseract.image_to_string(binary_img, lang=self.lang, config=custom_config).strip()
-                        if len(text_bin) > len(raw_text):
-                            raw_text = text_bin
-                            target_img = binary_img
-                    except Exception:
-                        pass
+                        cur_text = pytesseract.image_to_string(gray_img, lang=self.lang, config=cfg).strip()
+                    except Exception as lang_err:
+                        try:
+                            cur_text = pytesseract.image_to_string(gray_img, config=cfg).strip()
+                        except Exception:
+                            cur_text = ""
+
+                    # Chấm điểm văn bản dựa trên độ dài và từ khóa hóa đơn
+                    score = len(cur_text)
+                    lower_cur = cur_text.lower()
+                    for kw in ["tổng", "thanh toán", "tiền", "thành tiền", "hóa đơn", "cộng", "kiotviet", "thu ngân", "ngày"]:
+                        if kw in lower_cur:
+                            score += 150
+
+                    if score > best_score:
+                        best_score = score
+                        best_text = cur_text
+
+                # Dự phòng: Thử ảnh nhị phân nếu cần
+                if len(best_text) < 40:
+                    for cfg in [r"--oem 3 --psm 6", r"--oem 3 --psm 3"]:
+                        try:
+                            bin_text = pytesseract.image_to_string(binary_img, lang=self.lang, config=cfg).strip()
+                            if len(bin_text) > len(best_text):
+                                best_text = bin_text
+                                target_img = binary_img
+                        except Exception:
+                            pass
+
+                # 3. Header Pass: Quét vùng đầu hóa đơn (35% phía trên) phóng to 2x để trích xuất ngày, số HĐ, bàn VIP, tên quán
+                try:
+                    h_img, w_img = gray_img.shape[:2]
+                    top_crop = gray_img[0:int(h_img * 0.38), 0:w_img]
+                    top_scaled = cv2.resize(top_crop, (0, 0), fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+                    header_txt = ""
+                    for psm_h in [r"--oem 3 --psm 3", r"--oem 3 --psm 4", r"--oem 3 --psm 6"]:
+                        try:
+                            h_cand = pytesseract.image_to_string(top_scaled, lang=self.lang, config=psm_h).strip()
+                            if any(k in h_cand.lower() for k in ["ngày", "ban", "bàn", "vip", "hđ", "hd", "kiotviet", "thaihoamart", "hoá đơn", "hóa đơn", "thu ngân"]):
+                                header_txt = h_cand
+                                break
+                        except Exception:
+                            continue
+                    if header_txt:
+                        raw_text = header_txt + "\n---\n" + best_text
+                    else:
+                        raw_text = best_text
+                except Exception as e:
+                    logger.debug(f"Header pass skipped: {e}")
+                    raw_text = best_text
 
                 # Lấy chi tiết bounding boxes
                 try:

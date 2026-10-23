@@ -126,3 +126,30 @@ def test_pipeline_real_receipt_ocr():
         assert result["amount"] == 132840.0
         assert "HIGHLANDS" in result["raw_text"]
 
+
+def test_pipeline_restaurant_vip_receipt():
+    """Test bóc tách hóa đơn nhà hàng hải sản bàn VIP 2 trị giá 50.662.000 đ."""
+    from backend.core.pipeline import ProcessingPipeline
+    sample_img = Path(__file__).resolve().parent.parent / "data" / "sample_receipts" / "receipt_restaurant_50m.jpg"
+    if sample_img.exists():
+        pipeline = ProcessingPipeline()
+        result = pipeline.process_receipt_image(sample_img)
+        assert result["status"] == "ready_for_review"
+        assert result["amount"] == 50662000.0
+        assert "Nhà Hàng Hải Sản" in result["merchant_name"]
+        assert result["transaction_date"] == "2026-06-18"
+
+
+def test_pipeline_kiotviet_stained_receipt():
+    """Test bóc tách hóa đơn in nhiệt KiotViet bị ố vàng trị giá 42.000 đ."""
+    from backend.core.pipeline import ProcessingPipeline
+    sample_img = Path(__file__).resolve().parent.parent / "data" / "sample_receipts" / "receipt_kiotviet_42k.jpg"
+    if sample_img.exists():
+        pipeline = ProcessingPipeline()
+        result = pipeline.process_receipt_image(sample_img)
+        assert result["status"] == "ready_for_review"
+        assert result["amount"] == 42000.0
+        assert result["merchant_name"] == "KiotViet - Thaihoamart"
+        assert result["transaction_date"] == "2026-10-22"
+
+

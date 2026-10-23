@@ -1043,9 +1043,12 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
     const st=document.getElementById('ocrSt'), dt=document.getElementById('ocrData'), sv=document.getElementById('ocrSave'), rt=document.getElementById('ocrRetake');
     st.classList.remove('hidden'); dt.classList.add('hidden'); sv.classList.add('hidden'); rt.classList.add('hidden');
     st.innerHTML = `
-        <span class="spinner" style="border-color:rgba(244,91,138,0.25);border-top-color:var(--primary)"></span>
-        <p style="margin-top:0.4rem;font-weight:700">Đang chạy xử lý ảnh OpenCV & Tesseract OCR thực tế...</p>
-        <p style="font-size:0.75rem;color:var(--text3);margin-top:0.2rem">Khử nhiễu, cân góc nghiêng, nhị phân hóa và bóc tách dữ liệu</p>
+        <span class="spinner" style="border-color:rgba(82,134,232,0.25);border-top-color:var(--primary)"></span>
+        <div style="margin-top:0.5rem;display:inline-flex;align-items:center;gap:0.35rem;font-size:0.75rem;font-weight:700;color:var(--primary);background:rgba(82,134,232,0.08);padding:0.25rem 0.65rem;border-radius:999px">
+            <i class="ri-google-fill"></i> Google ML Kit Web + OpenCV Engine
+        </div>
+        <p style="margin-top:0.4rem;font-weight:700;font-size:0.85rem">Đang bóc tách dữ liệu thông minh...</p>
+        <p style="font-size:0.75rem;color:var(--text3);margin-top:0.2rem">Khử vết ố, phóng đại bảng biểu & phân tích đa tầng (Multi-Pass)</p>
     `;
 
     try {
@@ -1519,6 +1522,19 @@ async function loadSampleRealReceipt(){
         sendReceiptToBackendOcr(blob, '/samples/sample_test_receipt.jpg');
     } catch(e) {
         toast('Lỗi tải ảnh mẫu Highlands: ' + e.message, 'error');
+    }
+}
+
+async function loadSampleReceipt(filename, label){
+    openModal('upload');
+    toast(`Đang nạp ảnh ${label}...`, 'info');
+    try {
+        const res = await fetch('/samples/' + filename);
+        if(!res.ok) throw new Error('Không thể tải ảnh mẫu từ máy chủ');
+        const blob = await res.blob();
+        sendReceiptToBackendOcr(blob, '/samples/' + filename);
+    } catch(e) {
+        toast('Lỗi tải ảnh mẫu: ' + e.message, 'error');
     }
 }
 

@@ -50,19 +50,29 @@ class ImagePreprocessor:
 
     @staticmethod
     def auto_scale(image: np.ndarray) -> np.ndarray:
-        """Chỉ phóng to nếu ảnh quá nhỏ (dưới 500px) tránh làm nhòe font chữ trên bảng biểu."""
+        """Phóng to ảnh tối ưu để đảm bảo độ cao chữ trong bảng biểu và in nhiệt đạt chuẩn OCR."""
         h, w = image.shape[:2]
-        if max(h, w) < 500:
-            scale_factor = 2.0
-            return cv2.resize(image, (int(w * scale_factor), int(h * scale_factor)), interpolation=cv2.INTER_CUBIC)
+        if max(h, w) < 1400:
+            scale_factor = min(2.0, 1600.0 / max(h, w))
+            if scale_factor > 1.1:
+                return cv2.resize(image, (int(w * scale_factor), int(h * scale_factor)), interpolation=cv2.INTER_CUBIC)
         return image
 
     @staticmethod
     def to_grayscale(image: np.ndarray) -> np.ndarray:
-        """Chuyển đổi ảnh màu RGB/BGR sang thang xám (Grayscale)."""
+        """
+        Chuyển đổi sang thang xám thông minh:
+        Tự động nhận diện vết ố vàng / dầu mỡ trên hóa đơn in nhiệt và khử sạch bằng kênh Red.
+        """
         if len(image.shape) == 2:
             return image
-        return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        # Bóc tách kênh màu: BGR
+        b, g, r = cv2.split(image)
+        # Vết ố vàng/nước sốt/dầu mỡ (như hóa đơn quán ăn, tạp hóa) có thành phần Red cao.
+        # Sử dụng trọng số kênh Red cao giúp vết ố vàng hòa vào nền giấy trắng, loại bỏ hoàn toàn nhiễu mỡ!
+        cleaned_gray = cv2.addWeighted(r, 0.75, g, 0.25, 0)
+        return cleaned_gray
 
     @staticmethod
     def deskew(image: np.ndarray) -> Tuple[np.ndarray, float]:
