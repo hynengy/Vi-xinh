@@ -1,0 +1,24 @@
+{
+  "description": "Bộ dữ liệu hóa đơn mẫu thực tế (Ground Truth) dùng đối soát độ chính xác của pipeline OpenCV + Tesseract OCR và Google ML Kit",
+  "total_receipts": 2,
+  "receipts": [
+    {
+      "id": 1,
+      "file_name": "receipt_restaurant_50m.jpg",
+      "merchant_name": "Nhà Hàng Hải Sản - Bàn VIP 2",
+      "expected_amount": 50662000.0,
+      "expected_date": "2026-06-18",
+      "category": "food",
+      "features": ["Bàn VIP", "Hóa đơn giá trị lớn", "Viết tay/in kim kết hợp", "Bảng kê món ăn"]
+    },
+    {
+      "id": 2,
+      "file_name": "receipt_kiotviet_42k.jpg",
+      "merchant_name": "KiotViet - Thaihoamart",
+      "expected_amount": 42000.0,
+      "expected_date": "2026-10-22",
+      "category": "shopping",
+      "features": ["Hóa đơn in nhiệt", "Vết ố vàng/nước trà", "KiotViet watermark", "Mờ nét"]
+    }
+  ]
+}

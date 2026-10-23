@@ -50,6 +50,9 @@ data/uploads/*
 data/sample_receipts/*
 !data/sample_receipts/README.md
 !data/sample_receipts/.gitkeep
+!data/sample_receipts/*.jpg
+!data/sample_receipts/*.png
+!data/sample_receipts/ground_truth.json
 
 # IDEs & Editors
 .vscode/
