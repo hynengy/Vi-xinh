@@ -452,7 +452,7 @@ class DartReceiptExtractor {
     if (nameLower.contains('nước')) return '💧';
     if (nameLower.contains('wifi') || nameLower.contains('mạng')) return '🌐';
     if (nameLower.contains('phòng')) return '🏠';
-    return '📦';
+    return '';
   }
 
   static List<LineItem> extractLineItems(List<String> lines) {

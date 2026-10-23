@@ -115,31 +115,12 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ],
                   ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      const Icon(
-                        Icons.account_balance_wallet_rounded,
-                        size: 54,
-                        color: Colors.white,
-                      ),
-                      Positioned(
-                        top: 22,
-                        right: 22,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.amberAccent,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.auto_awesome,
-                            size: 14,
-                            color: Color(0xFF8D5B00),
-                          ),
-                        ),
-                      ),
-                    ],
+                  child: const Center(
+                    child: Icon(
+                      Icons.account_balance_wallet_rounded,
+                      size: 52,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),

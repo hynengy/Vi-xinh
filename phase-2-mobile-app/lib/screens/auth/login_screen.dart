@@ -85,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(20)),
-                child: const Text('👛', style: TextStyle(fontSize: 36)),
+                child: const Icon(Icons.account_balance_wallet_outlined, size: 36, color: AppColors.primary),
               ),
               const SizedBox(height: 20),
               Text(_isRegister ? 'Tạo tài khoản' : 'Chào mừng trở lại',

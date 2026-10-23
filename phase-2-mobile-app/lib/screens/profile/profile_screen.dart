@@ -153,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         CircleAvatar(
                           radius: 30,
                           backgroundColor: AppColors.primaryLight,
-                          child: Text(user.fullName.isNotEmpty ? user.fullName.trim().split(' ').last[0] : '👛',
+                          child: Text(user.fullName.isNotEmpty ? user.fullName.trim().split(' ').last[0] : 'V',
                               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
                         ),
                         const SizedBox(width: 16),

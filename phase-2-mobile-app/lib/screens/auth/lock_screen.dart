@@ -58,7 +58,7 @@ class _LockScreenState extends State<LockScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('👛', style: TextStyle(fontSize: 56)),
+              const Icon(Icons.account_balance_wallet_outlined, size: 56, color: AppColors.primary),
               const SizedBox(height: 12),
               Text('Xin chào, $name', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),

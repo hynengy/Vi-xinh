@@ -112,7 +112,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: (type == 'income' ? ['salary', 'other'] : ['food', 'bills', 'shopping', 'transport', 'other']).map((id) {
                   final isSelected = category == id;
                   return ChoiceChip(
-                    label: Text('${AppCategories.iconOf(id)} ${AppCategories.labelOf(id)}',
+                    label: Text(AppCategories.labelOf(id),
                         style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : AppColors.textPrimary)),
                     selected: isSelected,
                     selectedColor: AppColors.primary,
@@ -237,7 +237,7 @@ class _HomeTab extends StatelessWidget {
                       CircleAvatar(
                         radius: 20,
                         backgroundColor: AppColors.primaryLight,
-                        child: Text(user != null && user.fullName.isNotEmpty ? user.fullName.trim().split(' ').last[0] : '👛'),
+                        child: Text(user != null && user.fullName.isNotEmpty ? user.fullName.trim().split(' ').last[0] : 'V'),
                       ),
                       const SizedBox(width: 10),
                       Column(
@@ -413,7 +413,12 @@ class _HomeTab extends StatelessWidget {
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: AppColors.primaryLight,
-                          child: Text(AppCategories.iconOf(tx.category)),
+                          radius: 18,
+                          child: Icon(
+                            isExpense ? Icons.north_east_rounded : Icons.south_west_rounded,
+                            size: 16,
+                            color: isExpense ? AppColors.danger : AppColors.success,
+                          ),
                         ),
                         title: Text(tx.merchantName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         subtitle: Text('${AppCategories.labelOf(tx.category)} · ${tx.transactionDate}', style: const TextStyle(fontSize: 11)),

@@ -519,7 +519,7 @@ function enterApp(){
     document.getElementById('app').classList.add('active');
     document.getElementById('bnav').classList.add('active');
     const h=new Date().getHours();
-    document.getElementById('greeting').textContent=h<12?'Chào buổi sáng ☀️':h<18?'Chào buổi chiều':h<21?'Chào buổi tối':'Chúc ngủ ngon';
+    document.getElementById('greeting').textContent=h<12?'Chào buổi sáng':h<18?'Chào buổi chiều':h<21?'Chào buổi tối':'Chúc ngủ ngon';
     
     const displayName = S.user?.full_name || S.user?.name || 'Người dùng';
     S.user.name = displayName;
@@ -1272,8 +1272,7 @@ function renderOcrItemsAndRawText(detected){
     if(!items.length && detected.amount > 0){
         items = [{
             name: detected.merchant || 'Khoản chi hóa đơn',
-            amount: detected.amount,
-            icon: '☕'
+            amount: detected.amount
         }];
     }
 
@@ -1282,7 +1281,6 @@ function renderOcrItemsAndRawText(detected){
         id: idx,
         name: it.name || `Món ${idx + 1}`,
         amount: Number(it.amount) || 0,
-        icon: it.icon || '☕',
         assignedTo: defaultNames[idx % defaultNames.length]
     }));
 
@@ -1290,9 +1288,9 @@ function renderOcrItemsAndRawText(detected){
 
     if(listEl){
         listEl.innerHTML = items.map(it => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0.45rem;background:var(--bg);border-radius:var(--r-sm);font-size:0.75rem">
-                <span style="font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">
-                    ${it.icon || '☕'} ${it.name}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0.5rem;background:var(--bg);border-radius:var(--r-sm);font-size:0.78rem">
+                <span style="font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">
+                    ${it.name}
                 </span>
                 <strong style="color:var(--primary);white-space:nowrap">${fmt(it.amount)}</strong>
             </div>
@@ -2889,7 +2887,7 @@ function triggerBioSuccess(){
                     actionUrl: 'settings',
                     actionText: 'Xem cài đặt →'
                 });
-                toast('Đã kích hoạt Face ID thành công! ✨', 'success');
+                toast('Đã kích hoạt Face ID thành công!', 'success');
             } else {
                 localStorage.setItem('vx_fingerprint_enabled', '1');
                 if (S.user) localStorage.setItem('vx_last_user', JSON.stringify(S.user));
@@ -2901,7 +2899,7 @@ function triggerBioSuccess(){
                     actionUrl: 'settings',
                     actionText: 'Xem cài đặt →'
                 });
-                toast('Đã kích hoạt cảm biến vân tay thành công! ✨', 'success');
+                toast('Đã kích hoạt cảm biến vân tay thành công!', 'success');
             }
         } else {
             // Login mode
@@ -2924,7 +2922,7 @@ function triggerBioSuccess(){
             localStorage.setItem('vx_last_user', JSON.stringify(u));
             enterApp();
             const bioLabel = (currentBioType === 'faceid') ? 'Face ID' : 'Vân tay';
-            toast(`Đăng nhập bằng ${bioLabel} thành công: ${u.name || u.full_name} ✨`, 'success');
+            toast(`Đăng nhập bằng ${bioLabel} thành công: ${u.name || u.full_name} `, 'success');
         }
     }, 400);
 }
@@ -2961,7 +2959,7 @@ function copyBankAccount(){
         return;
     }
     navigator.clipboard.writeText(S.user.bank_account);
-    toast(`Đã sao chép STK ${S.user.bank_name ? S.user.bank_name + ' ' : ''}: ${S.user.bank_account} ✨`,'success');
+    toast(`Đã sao chép STK ${S.user.bank_name ? S.user.bank_name + ' ' : ''}: ${S.user.bank_account} `,'success');
 }
 
 async function saveProfile(e){
@@ -2999,7 +2997,7 @@ async function saveProfile(e){
         actionUrl: 'settings',
         actionText: 'Xem tài khoản →'
     });
-    toast('Đã cập nhật thông tin cá nhân thành công! ✨','success');
+    toast('Đã cập nhật thông tin cá nhân thành công!','success');
 }
 
 function setTheme(themeName){
@@ -3054,7 +3052,7 @@ function uploadAvatar(e){
         localStorage.setItem('vx_u',JSON.stringify(S.user));
         document.getElementById('profileAvatarImg').src=ev.target.result;
         const ha=document.getElementById('hdrAvatarImg');if(ha)ha.src=ev.target.result;
-        toast('Đã tải lên ảnh đại diện mới! 📸','success');
+        toast('Đã tải lên ảnh đại diện mới!','success');
     };
     r.readAsDataURL(f);
 }
@@ -3140,7 +3138,7 @@ function handleCreateGroupSubmit(e){
     localStorage.setItem('vx_group_fund', JSON.stringify(S.groupFund));
     closeCreateGroupModal();
     updateHomeGroupCard();
-    toast(`Đã tạo ví nhóm "${name}" thành công! 🎉`, 'success');
+    toast(`Đã tạo ví nhóm "${name}" thành công!`, 'success');
     go('group');
 }
 
@@ -3814,7 +3812,7 @@ function markAllNotifsRead(){
     saveNotifications();
     renderNotifications();
     updateNotifBadge();
-    toast('Đã đọc tất cả thông báo! ✨', 'success');
+    toast('Đã đọc tất cả thông báo!', 'success');
 }
 
 function clearAllNotifs(){

@@ -16,7 +16,7 @@ class LineItem {
       name: map['name'] ?? '',
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
       consumption: map['consumption'],
-      icon: map['icon'] ?? '📦',
+      icon: map['icon'] ?? '',
     );
   }
 

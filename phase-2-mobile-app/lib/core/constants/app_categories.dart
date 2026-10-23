@@ -12,17 +12,17 @@ class AppCategories {
   };
 
   static const Map<String, String> icons = {
-    'food': '🍜',
-    'transport': '🛵',
-    'shopping': '🛍️',
-    'entertainment': '🎮',
-    'health': '❤️',
-    'education': '📚',
-    'bills': '🧾',
-    'salary': '💰',
-    'other': '📦',
+    'food': '',
+    'transport': '',
+    'shopping': '',
+    'entertainment': '',
+    'health': '',
+    'education': '',
+    'bills': '',
+    'salary': '',
+    'other': '',
   };
 
   static String labelOf(String id) => labels[id] ?? id;
-  static String iconOf(String id) => icons[id] ?? '📦';
+  static String iconOf(String id) => icons[id] ?? '';
 }

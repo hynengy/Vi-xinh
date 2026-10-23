@@ -291,7 +291,7 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
                       children: ['food', 'bills', 'shopping', 'transport', 'other'].map((id) {
                         final isSel = _selectedCategory == id;
                         return ChoiceChip(
-                          label: Text('${AppCategories.iconOf(id)} ${AppCategories.labelOf(id)}',
+                          label: Text(AppCategories.labelOf(id),
                               style: TextStyle(fontSize: 12, color: isSel ? Colors.white : AppColors.textPrimary)),
                           selected: isSel,
                           selectedColor: AppColors.primary,
@@ -432,8 +432,7 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
                                       });
                                     },
                                   ),
-                                  Text(item.icon ?? '📦', style: const TextStyle(fontSize: 16)),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 4),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,7 +463,6 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
                         return ListTile(
                           dense: true,
                           contentPadding: EdgeInsets.zero,
-                          leading: Text(item.icon ?? '📦', style: const TextStyle(fontSize: 16)),
                           title: Text(item.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                           subtitle: item.consumption != null && item.consumption!.isNotEmpty
                               ? Text(item.consumption!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary))

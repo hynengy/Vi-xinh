@@ -175,13 +175,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Text(AppCategories.iconOf(b.category), style: const TextStyle(fontSize: 16)),
-                              const SizedBox(width: 8),
-                              Text(AppCategories.labelOf(b.category), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                            ],
-                          ),
+                          Text(AppCategories.labelOf(b.category), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                           Row(
                             children: [
                               Text(
@@ -257,10 +251,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     final color = _palette[idx % _palette.length];
                     return PieChartSectionData(
                       value: e.value,
-                      title: AppCategories.iconOf(e.key),
+                      title: '',
                       radius: 46,
                       color: color,
-                      titleStyle: const TextStyle(fontSize: 13),
                     );
                   }).toList(),
                 ),
@@ -422,7 +415,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 initialValue: category,
                 items: AppCategories.labels.entries
                     .where((e) => e.key != 'salary')
-                    .map((e) => DropdownMenuItem(value: e.key, child: Text('${AppCategories.iconOf(e.key)} ${e.value}')))
+                    .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
                     .toList(),
                 onChanged: (v) => setSheet(() => category = v ?? 'food'),
                 decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Danh mục'),

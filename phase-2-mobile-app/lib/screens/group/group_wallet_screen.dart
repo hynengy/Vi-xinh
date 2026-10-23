@@ -321,7 +321,11 @@ class _GroupWalletScreenState extends State<GroupWalletScreen> with SingleTicker
                                 final tx = groupProv.bills[i];
                                 return Card(
                                   child: ListTile(
-                                    leading: Text(AppCategories.iconOf(tx.category), style: const TextStyle(fontSize: 22)),
+                                    leading: const CircleAvatar(
+                                      backgroundColor: AppColors.primaryLight,
+                                      radius: 18,
+                                      child: Icon(Icons.receipt_outlined, size: 16, color: AppColors.primary),
+                                    ),
                                     title: Text(tx.merchantName, style: const TextStyle(fontWeight: FontWeight.bold)),
                                     subtitle: Text('${tx.transactionDate} · ${tx.notes ?? ''}'),
                                     trailing: Text('-${CurrencyFormatter.format(tx.amount)}', style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
