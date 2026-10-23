@@ -690,26 +690,6 @@
                     <div class="upload-sub">Hỗ trợ JPG, PNG, WEBP từ thiết bị</div>
                     <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="handleFile(event)">
                 </div>
-                <!-- CÁC HÓA ĐƠN MẪU THỰC TẾ ĐÃ ĐƯỢC NÂNG CẤP OCR -->
-                <div style="margin-top:0.75rem">
-                    <div style="font-size:0.72rem;font-weight:700;color:var(--text3);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px">Thử ngay hóa đơn thực tế:</div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
-                        <button type="button" class="btn btn-sm btn-s" style="font-size:0.72rem;padding:0.45rem 0.6rem;text-align:left;display:flex;align-items:center;gap:0.4rem;border:1px solid rgba(82,134,232,0.2)" onclick="loadSampleReceipt('receipt_restaurant_50m.jpg', 'Nhà Hàng VIP 2 (50.662.000₫)')">
-                            <span style="font-size:1.15rem">🦞</span>
-                            <div>
-                                <div style="font-weight:700;font-size:0.75rem;color:var(--text)">HĐ Nhà Hàng</div>
-                                <div style="color:var(--primary);font-weight:700;font-size:0.68rem">50.662.000 ₫</div>
-                            </div>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-s" style="font-size:0.72rem;padding:0.45rem 0.6rem;text-align:left;display:flex;align-items:center;gap:0.4rem;border:1px solid rgba(82,134,232,0.2)" onclick="loadSampleReceipt('receipt_kiotviet_42k.jpg', 'KiotViet POS 42.000₫ (vết ố vàng)')">
-                            <span style="font-size:1.15rem">🏪</span>
-                            <div>
-                                <div style="font-weight:700;font-size:0.75rem;color:var(--text)">HĐ KiotViet</div>
-                                <div style="color:var(--primary);font-weight:700;font-size:0.68rem">42.000 ₫ (vết ố)</div>
-                            </div>
-                        </button>
-                    </div>
-                </div>
             </div>
             <!-- KẾT QUẢ QUÉT ẢNH & OCR -->
             <div id="photoResult" class="hidden">
@@ -723,8 +703,20 @@
                         <span style="font-size:0.78rem;color:var(--text3)">Nơi chi:</span>
                         <strong style="font-size:0.88rem" id="ocrMer">--</strong>
                     </div>
+                    <div id="ocrHotlineRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+                        <span style="font-size:0.78rem;color:var(--text3)">Hotline / ĐT:</span>
+                        <strong style="font-size:0.82rem;color:var(--primary)" id="ocrHotline">--</strong>
+                    </div>
+                    <div id="ocrSubtotalRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+                        <span style="font-size:0.78rem;color:var(--text3)">Tạm tính (tiền hàng):</span>
+                        <span style="font-size:0.85rem;color:var(--text3);text-decoration:line-through" id="ocrSubtotal">0 ₫</span>
+                    </div>
+                    <div id="ocrDiscountRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
+                        <span style="font-size:0.78rem;color:var(--text3)">Giảm giá / Ưu đãi:</span>
+                        <strong style="font-size:0.88rem;color:var(--success)" id="ocrDiscount">0 ₫</strong>
+                    </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3)">Tổng tiền:</span>
+                        <span style="font-size:0.78rem;color:var(--text3)">Thanh toán thực tế:</span>
                         <strong style="font-size:1.1rem;color:var(--danger)" id="ocrAmt">0 ₫</strong>
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">

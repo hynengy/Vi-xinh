@@ -8,6 +8,14 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List, Tuple
 from .rules import (
     TOTAL_AMOUNT_KEYWORDS,
+    FINAL_PAYMENT_KEYWORDS,
+    DUE_AMOUNT_KEYWORDS,
+    PAID_AMOUNT_KEYWORDS,
+    CHANGE_KEYWORDS,
+    SUBTOTAL_KEYWORDS,
+    DISCOUNT_KEYWORDS,
+    RECEIPT_METADATA_KEYWORDS,
+    TIME_PATTERN,
     TABLE_HEADER_KEYWORDS,
     AMOUNT_PATTERN,
     FALLBACK_NUMBER_PATTERN,
@@ -27,6 +35,17 @@ class ReceiptParser:
     def clean_text(raw_text: str) -> list[str]:
         """Chuẩn hóa và tách văn bản thành các dòng sạch."""
         return [line.strip() for line in raw_text.splitlines() if line.strip()]
+
+    @staticmethod
+    def is_time_str(s: str) -> bool:
+        """Kiểm tra chuỗi có phải là định dạng giờ (HH:MM hoặc HH.MM) tránh nhầm giờ vào/ra thành số tiền."""
+        s_clean = s.strip()
+        if TIME_PATTERN.search(s_clean):
+            return True
+        # Ví dụ: 20:04, 21:20, 14.02
+        if re.search(r"\b\d{1,2}[:.]\d{2}\b", s_clean):
+            return True
+        return False
 
     @staticmethod
     def is_phone_number_str(s: str) -> bool:
@@ -203,10 +222,14 @@ class ReceiptParser:
 
     @classmethod
     def parse_amount_str(cls, amount_str: str) -> Optional[float]:
-        """Chuyển chuỗi tiền thành float, tự động loại trừ số điện thoại/hotline."""
+        """Chuyển chuỗi tiền thành float, tự động loại trừ số điện thoại/hotline, giờ giấc và năm."""
         cleaned = amount_str.strip()
-        # Nếu là số điện thoại, không parse thành tiền!
-        if cls.is_phone_number_str(cleaned):
+        # Nếu là số điện thoại hoặc giờ, không parse thành tiền!
+        if cls.is_phone_number_str(cleaned) or cls.is_time_str(cleaned):
+            return None
+
+        # Không lấy năm lẻ loi (2024, 2025, 2026, 2027)
+        if cleaned in ("2024", "2025", "2026", "2027", "2028"):
             return None
 
         cleaned = re.sub(r"(?<=\d)\s+(?=\d{3}\b)", "", cleaned)
@@ -252,56 +275,164 @@ class ReceiptParser:
         return len(matches) >= 2
 
     @classmethod
-    def extract_totals_breakdown(cls, lines: list[str]) -> Tuple[float, List[Dict[str, Any]]]:
+    def extract_discount(cls, lines: list[str]) -> Tuple[float, Optional[str]]:
         """
-        Bóc tách các dòng Tổng tiền từ dưới lên (Bottom-Up), loại bỏ hoàn toàn hotline.
+        Trích xuất tiền giảm giá, khuyến mãi, chiết khấu, voucher.
+        Trả về (số_tiền_giảm: float, ghi_chú: str)
         """
-        sub_totals = []
+        for line in lines:
+            line_lower = line.lower()
+            if any(re.search(kw, line_lower) for kw in DISCOUNT_KEYWORDS):
+                # 1. Bắt phần trăm chiết khấu nếu có
+                pct_m = re.search(r"(\d{1,2}(?:\.\d+)?)\s*%", line)
+                pct_val = float(pct_m.group(1)) if pct_m else None
+
+                # 2. Bắt số tiền giảm giá cụ thể
+                for m in AMOUNT_PATTERN.finditer(line):
+                    v = cls.parse_amount_str(m.group(0))
+                    if v and v >= 1000:
+                        pct_info = f" ({pct_val}%)" if pct_val else ""
+                        return v, f"Ưu đãi{pct_info}: -{int(v):,} ₫"
+
+                if pct_val:
+                    return 0.0, f"Ưu đãi: Giảm {pct_val}%"
+
+        return 0.0, None
+
+    @classmethod
+    def extract_totals_full(cls, lines: list[str]) -> Tuple[float, float, float, List[Dict[str, Any]]]:
+        """
+        Bóc tách chính xác:
+        - final_total: Số tiền thanh toán thực tế (Khách phải trả / Net due / Sau khi trừ giảm giá)
+        - subtotal: Tạm tính (tiền hàng trước giảm giá)
+        - discount: Số tiền giảm giá
+        - breakdown: Chi tiết các khoản
+        """
+        due_payment = None
+        paid_cash = None
+        change_amount = None
+        subtotal = None
+        discount_amount, discount_note = cls.extract_discount(lines)
+        breakdown = []
 
         for i in range(len(lines) - 1, -1, -1):
             line = lines[i]
             if cls.is_table_header(line):
                 continue
-
             line_lower = line.lower()
-            # Bỏ qua dòng có hotline / sđt / mst
             if any(k in line_lower for k in ["hotline", "điện thoại", "tel", "phone", "mst", "stk"]):
                 continue
 
-            for kw in TOTAL_AMOUNT_KEYWORDS:
-                if re.search(kw, line_lower):
-                    numbers = AMOUNT_PATTERN.findall(line)
-                    if not numbers and i + 1 < len(lines):
-                        numbers = AMOUNT_PATTERN.findall(lines[i+1])
-                    if not numbers:
-                        numbers = FALLBACK_NUMBER_PATTERN.findall(line)
-                        if not numbers and i + 1 < len(lines):
-                            numbers = FALLBACK_NUMBER_PATTERN.findall(lines[i+1])
+            # Ưu tiên 1 tuyệt đối: Dòng Khách phải trả / Cần thanh toán / Tổng thanh toán
+            if due_payment is None and any(re.search(kw, line_lower) for kw in DUE_AMOUNT_KEYWORDS):
+                numbers = AMOUNT_PATTERN.findall(line)
+                if not numbers and i + 1 < len(lines):
+                    numbers = AMOUNT_PATTERN.findall(lines[i+1])
+                for n in numbers:
+                    val = cls.parse_amount_str(n)
+                    if val and val >= 1_000:
+                        due_payment = val
+                        break
 
-                    for n in numbers:
+            # Tiền thối / Tiền thừa
+            if change_amount is None and any(re.search(kw, line_lower) for kw in CHANGE_KEYWORDS):
+                numbers = AMOUNT_PATTERN.findall(line)
+                if not numbers and i + 1 < len(lines):
+                    numbers = AMOUNT_PATTERN.findall(lines[i+1])
+                for n in numbers:
+                    val = cls.parse_amount_str(n)
+                    if val and val >= 1_000:
+                        change_amount = val
+                        break
+
+            # Tiền mặt / Khách đưa
+            if paid_cash is None and any(re.search(kw, line_lower) for kw in PAID_AMOUNT_KEYWORDS):
+                numbers = AMOUNT_PATTERN.findall(line)
+                if not numbers and i + 1 < len(lines):
+                    numbers = AMOUNT_PATTERN.findall(lines[i+1])
+                for n in numbers:
+                    val = cls.parse_amount_str(n)
+                    if val and val >= 1_000:
+                        paid_cash = val
+                        break
+
+            # Dòng Tạm tính / Tổng tiền hàng
+            if subtotal is None and any(re.search(kw, line_lower) for kw in SUBTOTAL_KEYWORDS):
+                numbers = AMOUNT_PATTERN.findall(line)
+                if not numbers and i + 1 < len(lines):
+                    numbers = AMOUNT_PATTERN.findall(lines[i+1])
+                for n in numbers:
+                    val = cls.parse_amount_str(n)
+                    if val and val >= 1_000:
+                        subtotal = val
+                        break
+
+        # Xác định final_payment (số tiền thực tế ghi nhận vào ví)
+        final_payment = None
+        if due_payment is not None:
+            final_payment = due_payment
+            breakdown.append({"label": "Khách phải trả", "amount": due_payment})
+        elif paid_cash is not None and change_amount is not None and paid_cash > change_amount:
+            # Ví dụ: Khách đưa 500k, thối 50k -> thực chi = 450k
+            final_payment = paid_cash - change_amount
+            breakdown.append({"label": "Thanh toán (Tiền mặt - Tiền thối)", "amount": final_payment})
+        elif subtotal is not None and discount_amount > 0:
+            final_payment = max(0.0, subtotal - discount_amount)
+            breakdown.append({"label": "Thanh toán (Tạm tính - Giảm giá)", "amount": final_payment})
+        elif paid_cash is not None:
+            final_payment = paid_cash
+            breakdown.append({"label": "Tiền khách trả", "amount": paid_cash})
+        elif subtotal is not None:
+            final_payment = subtotal
+            breakdown.append({"label": "Tổng tiền", "amount": subtotal})
+
+        if subtotal is not None and not any(b["label"].startswith("Tạm tính") for b in breakdown):
+            breakdown.append({"label": "Tạm tính (tiền hàng)", "amount": subtotal})
+
+        # Nếu vẫn chưa tìm thấy, quét từ khóa TOTAL_AMOUNT_KEYWORDS chung
+        if final_payment is None:
+            for i in range(len(lines) - 1, -1, -1):
+                line = lines[i]
+                line_lower = line.lower()
+                if any(re.search(kw, line_lower) for kw in TOTAL_AMOUNT_KEYWORDS):
+                    for n in AMOUNT_PATTERN.findall(line):
                         val = cls.parse_amount_str(n)
                         if val and val >= 1_000:
-                            label = line.split(":")[0].strip() if ":" in line else line.strip()
-                            label = re.sub(r"[\d.,đ₫|]", "", label).strip()
-                            if not label:
-                                label = "Tổng tiền"
+                            final_payment = val
+                            breakdown.append({"label": "Tổng tiền", "amount": val})
+                            break
+                    if final_payment:
+                        break
 
-                            if not any(st["amount"] == val for st in sub_totals):
-                                sub_totals.append({"label": label, "amount": val})
-                    break
+        # Thử đọc số tiền bằng chữ
+        if final_payment is None:
+            words_amt = cls.parse_words_to_amount("\n".join(lines))
+            if words_amt:
+                final_payment = words_amt
+                breakdown.append({"label": "Tổng thanh toán (chữ)", "amount": words_amt})
 
-        if sub_totals:
-            priority_items = [st for st in sub_totals if any(k in st["label"].lower() for k in ["thanh toán", "tiền thanh", "thanhtoán", "tổng thanh toán"])]
-            if priority_items:
-                return priority_items[0]["amount"], sub_totals
-            total_sum = sum(item["amount"] for item in sub_totals)
-            return total_sum, sub_totals
+        # Dự phòng cuối: Lấy con số tiền lớn nhất ở nửa dưới hóa đơn (loại trừ hotline, sđt, giờ)
+        if final_payment is None:
+            all_amounts = []
+            for line in lines[len(lines)//2:]:
+                if cls.is_table_header(line) or any(k in line.lower() for k in ["hotline", "tel", "phone", "đt", "mst"]):
+                    continue
+                for match in AMOUNT_PATTERN.findall(line):
+                    val = cls.parse_amount_str(match)
+                    if val and val >= 1_000:
+                        all_amounts.append(val)
+            if all_amounts:
+                final_payment = max(all_amounts)
 
-        words_amt = cls.parse_words_to_amount("\n".join(lines))
-        if words_amt:
-            return words_amt, [{"label": "Tổng thanh toán (chữ)", "amount": words_amt}]
+        total_final = final_payment if final_payment is not None else 0.0
+        sub_final = subtotal if subtotal is not None else (total_final + discount_amount if discount_amount > 0 else total_final)
+        return total_final, sub_final, discount_amount, breakdown
 
-        # Dự phòng: Lấy con số tiền lớn nhất ở nửa dưới hóa đơn (loại trừ hotline)
+    @classmethod
+    def extract_totals_breakdown(cls, lines: list[str]) -> Tuple[float, List[Dict[str, Any]]]:
+        """Tương thích ngược trả về (total, breakdown) cho các unit tests."""
+        total_final, _, _, breakdown = cls.extract_totals_full(lines)
+        return total_final, breakdown
         all_amounts = []
         for line in lines[len(lines)//2:]:
             if cls.is_table_header(line) or any(k in line.lower() for k in ["hotline", "tel", "phone", "đt"]):
@@ -400,13 +531,14 @@ class ReceiptParser:
         """
         items = []
         ignored_phrases = [
+            "thông báo tiền trọ", "thong bao tien tro", "tiền trọ", "tien tro",
             "thông báo", "kính gửi", "bảng tính", "tháng", "dịch vụ cũ",
             "tiêu thụ", "số người", "stt", "hóa đơn", "hoá đơn", "địa chỉ", "thu ngân",
             "cảm ơn", "hẹn gặp lại", "tong tien dv", "tổng tiền dv",
             "chuyển vào stk", "chuyển stk", "hkd simple", "thành tiền",
             "thanh tien", "tong cong", "tổng cộng", "tong tien", "total", "thanh toan",
             "tiền thanh toán", "phụ trách bàn", "chiết khấu", "hotline", "điện thoại",
-            "tel", "phone", "sđt", "sdt", "mst", "thuế", "cashier", "nhân viên", "wifi", "bàn số",
+            "tel", "phone", "sđt", "sdt", "mst", "thuế", "cashier", "nhân viên", "pass wifi", "wifi pass", "bàn số",
             "ngày", "ngay", "date", "giờ", "gio", "đ/c", "đc:", "dc:", "khách hàng"
         ]
 
@@ -414,25 +546,53 @@ class ReceiptParser:
             r"(\d{1,3}(?:[.,\s]\d{3})+|\d{4,9})\s*(?:[đ₫dD]|vn[dđ])?",
             re.IGNORECASE
         )
+        vowels = "aeiouyáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ"
 
-        for line in lines:
+        def is_skip_line(l_str: str) -> bool:
+            l_low = l_str.lower().strip()
+            # Cho phép các dòng dịch vụ trọ (tiền phòng, điện, nước, wifi) đi tiếp
+            if any(k in l_low for k in ["tiền phòng", "tien phong", "điện", "nước", "wifi"]):
+                return False
+            if any(re.search(kw, l_low) for kw in TOTAL_AMOUNT_KEYWORDS):
+                return True
+            if any(re.search(kw, l_low) for kw in DISCOUNT_KEYWORDS):
+                return True
+            if cls.is_table_header(l_str):
+                return True
+            if any(p in l_low for p in ignored_phrases):
+                return True
+            if any(m in l_low for m in RECEIPT_METADATA_KEYWORDS):
+                return True
+            if any(k in l_low for k in ["đơn giá", "don gia", "thành tiền", "thanh tien", "t.tiền", "thực đơn"]) and any(k in l_low for k in ["sl", "s1", "đơn giá", "don gia"]):
+                return True
+            if re.search(r"\b(s[đd]t|hotline|tel|phone|ng[àa]y|date|gi[ờo])\s*[:\s]", l_low):
+                return True
+            if cls.is_phone_number_str(l_str):
+                return True
+            return False
+
+        def clean_item_name(name_raw: str) -> str:
+            cn = re.sub(r"[{}[\]()=><|/\\~¬_#*+!¿‘`“”—\.;:]", " ", name_raw)
+            cn = re.sub(r"^\d+[\.\-\s]+", "", cn).strip()
+            cn = re.sub(r"\b\d+[,.]\d+\b", "", cn)
+            cn = re.sub(r"\b\d{3,9}\b", "", cn)
+            cn = re.sub(r"\s+", " ", cn).strip()
+            return cn
+
+        i = 0
+        while i < len(lines):
+            line = lines[i]
             line_lower = line.lower().strip()
 
-            # Bỏ qua các dòng tổng tiền, metadata, số điện thoại, ngày tháng
-            if any(re.search(kw, line_lower) for kw in TOTAL_AMOUNT_KEYWORDS):
-                continue
-            if any(p in line_lower for p in ignored_phrases):
-                continue
-            if re.search(r"\b(s[đd]t|hotline|tel|phone|ng[àa]y|date)\s*[:\s]", line_lower):
-                continue
-            if cls.is_phone_number_str(line):
+            if is_skip_line(line):
+                i += 1
                 continue
 
-            # Nhận diện dòng Tiền Phòng
+            # 1. Nhận diện dòng Tiền Phòng
             if ("tiền phòng" in line_lower or "tien phong" in line_lower) and not any(it["name"] == "Tiền phòng" for it in items):
                 matches = list(amt_pattern.finditer(line))
                 if matches:
-                    val = cls.parse_amount_str(matches[-1].group(1))
+                    val = cls.parse_amount_str(matches[-1].group(0))
                     if val and val >= 100_000:
                         items.append({
                             "name": "Tiền phòng",
@@ -440,78 +600,109 @@ class ReceiptParser:
                             "consumption": "1 phòng / tháng",
                             "icon": "🏠"
                         })
+                i += 1
                 continue
 
-            # Bóc tách số tiền Thành Tiền từ cuối dòng bằng phân tích Token ngược
+            # 2. Nhận diện các dịch vụ sinh hoạt phòng trọ (Điện, Nước, Wifi, Rác, Xe)
+            handled_service = False
+            for skw, sname, sicon in [
+                ("điện", "Điện", "⚡"),
+                ("nước", "Nước", "💧"),
+                ("wifi", "Wifi", "🌐"),
+                ("rác", "Vệ sinh & Rác", "🧺"),
+                ("gửi xe", "Gửi xe", "🛵")
+            ]:
+                if (line_lower.startswith(skw) or f" {skw} " in f" {line_lower} " or f"{skw}:" in line_lower or f"{skw}|" in line_lower) and not any(it["name"] == sname for it in items):
+                    matches = list(amt_pattern.finditer(line))
+                    if matches:
+                        val = cls.parse_amount_str(matches[-1].group(0))
+                        if val and val >= 1_000:
+                            items.append({
+                                "name": sname,
+                                "amount": val,
+                                "consumption": None,
+                                "icon": sicon
+                            })
+                            handled_service = True
+                            break
+            if handled_service:
+                i += 1
+                continue
+
+            # 3. Thử phân tích Single-Line (Tên món và Thành tiền trên cùng 1 dòng)
             clean_line_strip = re.sub(r"[|\]\)—_!]+$", "", line).strip()
             tokens = clean_line_strip.split()
-            if len(tokens) < 2:
-                continue
-
             amt_val = None
             raw_name = ""
             quantity_str = ""
 
-            j = len(tokens) - 1
-            while j >= 0:
-                tok = re.sub(r"[^\d]", "", tokens[j])
-                if len(tok) == 3 and j > 0:
-                    prev_tok = re.sub(r"[^\d]", "", tokens[j-1])
-                    if 1 <= len(prev_tok) <= 3:
-                        if j >= 2 and len(tok_2 := re.sub(r"[^\d]", "", tokens[j-2])) <= 3 and len(prev_tok) == 3:
-                            amt_val = float(tok_2 + prev_tok + tok)
-                            raw_name = " ".join(tokens[:j-2])
-                            break
-                        else:
-                            amt_val = float(prev_tok + tok)
-                            raw_name = " ".join(tokens[:j-1])
-                            break
-                if tok and 1_000 <= float(tok) <= 2_000_000_000 and not cls.is_phone_number_str(tok):
-                    amt_val = float(tok)
-                    raw_name = " ".join(tokens[:j])
-                    break
-                j -= 1
+            if len(tokens) >= 2:
+                j = len(tokens) - 1
+                while j >= 0:
+                    raw_tok = tokens[j]
+                    if cls.is_time_str(raw_tok) or ":" in raw_tok or raw_tok in ("2024", "2025", "2026", "2027", "2028"):
+                        j -= 1
+                        continue
 
-            if amt_val is None:
-                matches = list(amt_pattern.finditer(line))
-                if matches:
-                    last_m = matches[-1]
-                    amt_val = cls.parse_amount_str(last_m.group(1))
-                    raw_name = line[:last_m.start()].strip()
-                else:
-                    continue
+                    tok = re.sub(r"[^\d]", "", raw_tok)
+                    if len(tok) == 3 and j > 0:
+                        prev_tok = re.sub(r"[^\d]", "", tokens[j-1])
+                        if 1 <= len(prev_tok) <= 3:
+                            if j >= 2 and len(tok_2 := re.sub(r"[^\d]", "", tokens[j-2])) <= 3 and len(prev_tok) == 3:
+                                amt_val = float(tok_2 + prev_tok + tok)
+                                raw_name = " ".join(tokens[:j-2])
+                                break
+                            else:
+                                amt_val = float(prev_tok + tok)
+                                raw_name = " ".join(tokens[:j-1])
+                                break
+                    if tok and 1_000 <= float(tok) <= 2_000_000_000 and not cls.is_phone_number_str(tok):
+                        amt_val = float(tok)
+                        raw_name = " ".join(tokens[:j])
+                        break
+                    j -= 1
 
-            if amt_val is None or amt_val < 1_000:
-                continue
+            # 3. Thử Two-Line Pairing nếu dòng hiện tại không có số tiền nhưng dòng tiếp theo có số tiền
+            if (amt_val is None or amt_val < 1_000) and (i + 1 < len(lines)):
+                next_line = lines[i+1]
+                if not is_skip_line(next_line):
+                    next_matches = list(amt_pattern.finditer(next_line))
+                    if next_matches:
+                        last_m = next_matches[-1]
+                        v = cls.parse_amount_str(last_m.group(1))
+                        if v and v >= 1_000:
+                            amt_val = v
+                            raw_name = line
+                            # Bóc tách số lượng từ next_line nếu có
+                            qty_m = re.search(r"\b([1-9]\d{0,2})\b", next_line[:last_m.start()])
+                            if qty_m and float(qty_m.group(1)) < 100:
+                                quantity_str = f"SL: {qty_m.group(1)}"
+                            i += 1  # Nhảy qua dòng tiếp theo vì đã ghép cặp thành công
 
-            # Bóc tách số lượng nếu có (ví dụ: "Freeze Tra Xanh x2", "Bia Hạ Long 5 lon", "Ốc Hương 1.2 kg")
-            qty_match = re.search(r"(?:x|\*|\bSL:?|\bso luong:?)\s*(\d+(?:[.,]\d+)?)\b", raw_name, re.IGNORECASE)
-            if qty_match:
-                quantity_str = f"SL: {qty_match.group(1)}"
-                raw_name = raw_name[:qty_match.start()] + raw_name[qty_match.end():]
+            if amt_val and amt_val >= 1_000 and raw_name:
+                # Bóc tách số lượng nếu có trong tên món
+                qty_match = re.search(r"(?:x|\*|\bSL:?|\bso luong:?)\s*(\d+(?:[.,]\d+)?)\b", raw_name, re.IGNORECASE)
+                if qty_match:
+                    quantity_str = f"SL: {qty_match.group(1)}"
+                    raw_name = raw_name[:qty_match.start()] + raw_name[qty_match.end():]
 
-            # Làm sạch tên món
-            clean_name = re.sub(r"[{}[\]()=><|/\\~¬_#*+!¿‘`“”—\.;:]", " ", raw_name)
-            clean_name = re.sub(r"^\d+[\.\-\s]+", "", clean_name).strip()  # Bỏ STT đầu dòng như "1.", "2 - "
-            clean_name = re.sub(r"\b\d+[,.]\d+\b", "", clean_name)
-            clean_name = re.sub(r"\b\d{3,9}\b", "", clean_name)
-            clean_name = re.sub(r"\s+", " ", clean_name).strip()
+                clean_name = clean_item_name(raw_name)
+                letters = sum(1 for c in clean_name if c.isalpha())
 
-            letters = sum(1 for c in clean_name if c.isalpha())
-            if letters < 3:
-                continue
+                # Lọc chất lượng tên món: phải có chữ cái, có nguyên âm, không chỉ toàn từ ngắn rời rạc
+                words = [w for w in clean_name.split() if w.isalpha()]
+                if letters >= 4 and any(c in vowels for c in clean_name.lower()) and not (len(words) <= 2 and all(len(w) <= 3 for w in words)):
+                    if not any(m in clean_name.lower() for m in ["trong nhà", "mang về", "thu ngân", "giờ vào", "giờ ra", "bàn", "administrator", "sđ hd"]):
+                        icon = cls._detect_item_icon(clean_name.lower())
+                        if not any(it["name"].lower() == clean_name.lower() for it in items):
+                            items.append({
+                                "name": clean_name,
+                                "amount": amt_val,
+                                "consumption": quantity_str if quantity_str else None,
+                                "icon": icon
+                            })
 
-            # Phân loại icon sinh động
-            icon = cls._detect_item_icon(clean_name.lower())
-
-            # Tránh trùng lặp món
-            if not any(it["name"].lower() == clean_name.lower() for it in items):
-                items.append({
-                    "name": clean_name,
-                    "amount": amt_val,
-                    "consumption": quantity_str if quantity_str else None,
-                    "icon": icon
-                })
+            i += 1
 
         return items
 
@@ -524,18 +715,21 @@ class ReceiptParser:
         hotline = cls.extract_hotline(lines)
         address = cls.extract_address(lines)
         date_str = cls.extract_date(raw_text)
-        total_amount, breakdown = cls.extract_totals_breakdown(lines)
+        total_amount, subtotal, discount, breakdown = cls.extract_totals_full(lines)
         line_items = cls.extract_line_items(lines)
 
-        # Nếu tổng tiền bằng 0 nhưng có danh sách dịch vụ chi tiết, tự tính tổng từ các món
+        # Nếu tổng tiền bằng 0 nhưng có danh sách món chi tiết, tự tính tổng từ các món
         if total_amount == 0 and line_items:
             total_amount = sum(it["amount"] for it in line_items)
+            subtotal = total_amount
 
         notes_parts = []
         if hotline:
             notes_parts.append(f"Hotline: {hotline}")
         if address:
             notes_parts.append(f"ĐC: {address}")
+        if discount > 0:
+            notes_parts.append(f"Ưu đãi: -{int(discount):,} ₫")
         if line_items:
             item_summary = ", ".join(it["name"] for it in line_items[:3])
             if len(line_items) > 3:
@@ -550,6 +744,8 @@ class ReceiptParser:
             "address": address,
             "transaction_date": date_str,
             "amount": total_amount,
+            "subtotal": subtotal,
+            "discount": discount,
             "breakdown": breakdown,
             "items": line_items,
             "notes": notes,

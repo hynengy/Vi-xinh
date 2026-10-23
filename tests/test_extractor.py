@@ -202,4 +202,59 @@ def test_extract_dishes_and_prices_vietnamese_cafe():
     assert res["items"][2]["icon"] in ["🍟", "🍢"]
 
 
+def test_extract_discount_and_subtotal():
+    """Test bóc tách giảm giá, chiết khấu, voucher và số tiền thanh toán thực tế."""
+    raw_text = """
+    PIZZA 4P'S HÀ NỘI
+    ĐC: 43 Tràng Tiền, Hoàn Kiếm, Hà Nội
+    Hotline: 028 3622 0500
+    Ngày: 23/10/2026 19:45
+    1. Pizza 4 Cheese          280.000
+    2. Mì Ý cua sốt kem        220.000
+    Tổng tiền hàng:            500.000 đ
+    Giảm giá voucher:           50.000 đ
+    Khách phải trả:            450.000 đ
+    Tiền mặt:                  500.000 đ
+    Tiền thừa:                  50.000 đ
+    """
+    res = ReceiptParser.parse_all(raw_text)
+    assert res["amount"] == 450000.0  # Phải là tiền khách phải trả thực tế sau giảm giá
+    assert res["subtotal"] == 500000.0
+    assert res["discount"] == 50000.0
+    assert res["hotline"] is not None and "028" in res["hotline"]
+    assert len(res["items"]) >= 2
 
+
+def test_two_line_pos_receipt_kiotviet():
+    """Test bóc tách hóa đơn in nhiệt dạng 2 dòng (dòng 1 tên món, dòng 2 đơn giá & thành tiền)."""
+    raw_text = """
+    TẠP HÓA HOÀNG GIA
+    Hotline: 0987.654.321
+    Giờ vào: 20:04   Giờ ra: 20:15
+    Bánh Chocopie Hộp 12 cái
+    1   60.000   60.000
+    Sữa Tươi Tiệt Trùng Vinamilk 1L
+    2   36.000   72.000
+    Cộng tiền hàng: 132.000
+    Chiết khấu thành viên 10%: 13.200
+    Tổng thanh toán: 118.800 đ
+    """
+    res = ReceiptParser.parse_all(raw_text)
+    assert res["amount"] == 118800.0
+    assert res["subtotal"] == 132000.0
+    assert res["discount"] == 13200.0
+    assert len(res["items"]) == 2
+    item_names = [it["name"] for it in res["items"]]
+    assert any("Chocopie" in n for n in item_names)
+    assert any("Vinamilk" in n for n in item_names)
+    # Tuyệt đối không được coi giờ ra/vào thành món ăn
+    assert not any("20:04" in n or "20:15" in n for n in item_names)
+    assert not any("Giờ vào" in n or "Giờ ra" in n for n in item_names)
+
+
+def test_ignore_time_and_hotline_as_prices():
+    """Test đảm bảo giờ phút (21:20, 14:35) và số điện thoại không bị nhầm thành giá tiền."""
+    assert ReceiptParser.parse_amount_str("21:20") is None
+    assert ReceiptParser.parse_amount_str("20:04") is None
+    assert ReceiptParser.parse_amount_str("0912345678") is None
+    assert ReceiptParser.parse_amount_str("024.3822.9999") is None

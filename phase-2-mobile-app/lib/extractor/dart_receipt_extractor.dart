@@ -234,16 +234,51 @@ class DartReceiptExtractor {
     return DateTime.now().toIso8601String().substring(0, 10);
   }
 
-  static Map<String, dynamic> extractTotal(List<String> lines) {
-    final totalKeywords = [
-      'tổng cộng', 'tong cong', 'tổng tiền', 'tong tien',
-      'thành tiền', 'thanh tien', 'thanh toan', 'thanh toán',
-      'total', 'grand total', 'phải thanh toán', 'phai tra', 'amount due'
+  static Map<String, dynamic> extractDiscount(List<String> lines) {
+    final discountKeywords = [
+      'giảm giá', 'giam gia', 'chiết khấu', 'chiet khau',
+      'khuyến mãi', 'khuyen mai', 'voucher', 'coupon', 'discount', 'km', 'ưu đãi'
     ];
 
-    double foundAmount = 0.0;
+    for (var line in lines) {
+      final lower = line.toLowerCase();
+      if (discountKeywords.any((kw) => lower.contains(kw))) {
+        final matches = RegExp(r'[\d.,]{4,}').allMatches(line);
+        for (var m in matches) {
+          final amt = parseAmountStr(m.group(0)!);
+          if (amt >= 1000) {
+            return {'amount': amt, 'note': 'Ưu đãi: -${amt.toInt()} ₫'};
+          }
+        }
+      }
+    }
+    return {'amount': 0.0, 'note': null};
+  }
 
-    for (var i = 0; i < lines.length; i++) {
+  static Map<String, dynamic> extractTotal(List<String> lines) {
+    final duePaymentKeywords = [
+      'khách phải trả', 'khach phai tra', 'cần thanh toán', 'can thanh toan',
+      'phải thanh toán', 'phai thanh toan', 'tiền thanh toán', 'thanh toan', 'thanh toán',
+      'tổng thanh toán', 'tong thanh toan', 'tổng cộng', 'tong cong', 'amount due', 'net amount'
+    ];
+    final paidKeywords = [
+      'tiền mặt', 'tien mat', 'khách trả', 'khach tra', 'chuyển khoản', 'chuyen khoan', 'quẹt thẻ'
+    ];
+    final changeKeywords = [
+      'tiền thừa', 'tien thua', 'tiền thối', 'tien thoi', 'trả lại', 'tra lai', 'change'
+    ];
+    final subtotalKeywords = [
+      'tổng tiền hàng', 'tong tien hang', 'cộng tiền hàng', 'cong tien hang', 'tạm tính', 'tam tinh', 'tiền hàng'
+    ];
+
+    double dueAmount = 0.0;
+    double paidCash = 0.0;
+    double changeAmount = 0.0;
+    double subtotal = 0.0;
+    final discountData = extractDiscount(lines);
+    final double discount = discountData['amount'] ?? 0.0;
+
+    for (var i = lines.length - 1; i >= 0; i--) {
       final line = lines[i];
       final lower = line.toLowerCase();
       if (lower.contains('hotline') ||
@@ -254,30 +289,81 @@ class DartReceiptExtractor {
         continue;
       }
 
-      for (var kw in totalKeywords) {
-        if (lower.contains(kw)) {
-          final amountMatches = RegExp(r'[\d.,]{4,}').allMatches(line);
-          for (var m in amountMatches) {
-            final parsed = parseAmountStr(m.group(0)!);
-            if (parsed > foundAmount && !isPhoneNumberStr(m.group(0)!)) {
-              foundAmount = parsed;
+      // 1. Ưu tiên cao nhất: Khách phải trả / Tổng thanh toán
+      if (dueAmount == 0.0 && duePaymentKeywords.any((kw) => lower.contains(kw))) {
+        final matches = RegExp(r'[\d.,]{4,}').allMatches(line);
+        for (var m in matches) {
+          final amt = parseAmountStr(m.group(0)!);
+          if (amt >= 1000 && !isPhoneNumberStr(m.group(0)!)) {
+            dueAmount = amt;
+            break;
+          }
+        }
+        if (dueAmount == 0.0 && i + 1 < lines.length) {
+          final nextMatches = RegExp(r'[\d.,]{4,}').allMatches(lines[i + 1]);
+          for (var m in nextMatches) {
+            final amt = parseAmountStr(m.group(0)!);
+            if (amt >= 1000 && !isPhoneNumberStr(m.group(0)!)) {
+              dueAmount = amt;
+              break;
             }
           }
-          if (foundAmount == 0.0 && i + 1 < lines.length) {
-            final nextMatches = RegExp(r'[\d.,]{4,}').allMatches(lines[i + 1]);
-            for (var m in nextMatches) {
-              final parsed = parseAmountStr(m.group(0)!);
-              if (parsed > foundAmount && !isPhoneNumberStr(m.group(0)!)) {
-                foundAmount = parsed;
-              }
-            }
+        }
+      }
+
+      // 2. Tiền thừa / tiền thối
+      if (changeAmount == 0.0 && changeKeywords.any((kw) => lower.contains(kw))) {
+        final matches = RegExp(r'[\d.,]{4,}').allMatches(line);
+        for (var m in matches) {
+          final amt = parseAmountStr(m.group(0)!);
+          if (amt >= 1000 && !isPhoneNumberStr(m.group(0)!)) {
+            changeAmount = amt;
+            break;
+          }
+        }
+      }
+
+      // 3. Tiền mặt khách đưa
+      if (paidCash == 0.0 && paidKeywords.any((kw) => lower.contains(kw))) {
+        final matches = RegExp(r'[\d.,]{4,}').allMatches(line);
+        for (var m in matches) {
+          final amt = parseAmountStr(m.group(0)!);
+          if (amt >= 1000 && !isPhoneNumberStr(m.group(0)!)) {
+            paidCash = amt;
+            break;
+          }
+        }
+      }
+
+      // 4. Dòng tiền hàng / tạm tính
+      if (subtotal == 0.0 && subtotalKeywords.any((kw) => lower.contains(kw))) {
+        final matches = RegExp(r'[\d.,]{4,}').allMatches(line);
+        for (var m in matches) {
+          final amt = parseAmountStr(m.group(0)!);
+          if (amt >= 1000 && !isPhoneNumberStr(m.group(0)!)) {
+            subtotal = amt;
+            break;
           }
         }
       }
     }
 
-    // Fallback: look for largest amount (ignoring phone numbers)
-    if (foundAmount == 0.0) {
+    double finalAmount = 0.0;
+    if (dueAmount > 0.0) {
+      finalAmount = dueAmount;
+    } else if (paidCash > 0.0 && changeAmount > 0.0 && paidCash > changeAmount) {
+      finalAmount = paidCash - changeAmount;
+    } else if (subtotal > 0.0 && discount > 0.0) {
+      finalAmount = subtotal - discount;
+    } else if (paidCash > 0.0) {
+      finalAmount = paidCash;
+    } else if (subtotal > 0.0) {
+      finalAmount = subtotal;
+    }
+
+
+    // Fallback: look for largest amount (ignoring phone numbers & time)
+    if (finalAmount == 0.0) {
       for (var line in lines) {
         final lower = line.toLowerCase();
         if (lower.contains('hotline') ||
@@ -290,14 +376,18 @@ class DartReceiptExtractor {
         final matches = RegExp(r'[\d.,]{5,}').allMatches(line);
         for (var m in matches) {
           final amt = parseAmountStr(m.group(0)!);
-          if (amt >= 5000 && amt <= 2000000000 && amt > foundAmount) {
-            foundAmount = amt;
+          if (amt >= 5000 && amt <= 2000000000 && amt > finalAmount) {
+            finalAmount = amt;
           }
         }
       }
     }
 
-    return {'total': foundAmount};
+    return {
+      'total': finalAmount,
+      'subtotal': subtotal > 0 ? subtotal : finalAmount,
+      'discount': discount
+    };
   }
 
   static String _detectIcon(String nameLower) {
@@ -352,52 +442,88 @@ class DartReceiptExtractor {
       'địa chỉ', 'thu ngân', 'cảm ơn', 'hẹn gặp lại', 'thành tiền', 'tổng cộng',
       'tổng tiền', 'total', 'thanh toán', 'hotline', 'điện thoại', 'tel', 'phone',
       'sđt', 'sdt', 'mst', 'thuế', 'wifi', 'ngày', 'date', 'giờ', 'time',
-      'tiền mặt', 'tiền thừa', 'tiền thối'
+      'tiền mặt', 'tiền thừa', 'tiền thối', 'trong nhà', 'mang về', 'bàn',
+      'administrator', 'đơn giá', 'don gia', 'sl'
     ];
 
-    for (var line in lines) {
-      final lower = line.toLowerCase().trim();
-      if (ignoredWords.any((w) => lower.contains(w))) continue;
-      if (RegExp(r'\b(s[đd]t|hotline|tel|phone|ng[àa]y|date)\s*[:\s]').hasMatch(lower)) continue;
+    bool isSkipLine(String l) {
+      final low = l.toLowerCase().trim();
+      if (ignoredWords.any((w) => low.contains(w))) return true;
+      if (RegExp(r'\b(s[đd]t|hotline|tel|phone|ng[àa]y|date|gi[ờo])\s*[:\s]').hasMatch(low)) return true;
+      if (isPhoneNumberStr(l)) return true;
+      return false;
+    }
 
-      // Extract amount at or near end of line
-      final matches = RegExp(r'[\d.,]{4,}').allMatches(line).toList();
-      if (matches.isEmpty) continue;
+    int i = 0;
+    while (i < lines.length) {
+      final line = lines[i];
+      if (isSkipLine(line)) {
+        i++;
+        continue;
+      }
 
-      final lastMatch = matches.last;
-      final amt = parseAmountStr(lastMatch.group(0)!);
-      if (amt < 1000 || isPhoneNumberStr(lastMatch.group(0)!)) continue;
-
-      var rawName = line.substring(0, lastMatch.start).trim();
-      if (rawName.isEmpty) continue;
-
-      // Check quantity (e.g. x2, 2 lon, 1.5 kg)
+      double? amt;
+      String rawName = '';
       String? qtyStr;
-      final qtyMatch = RegExp(r'(?:x|\*|\bSL:?)\s*(\d+(?:[.,]\d+)?)\b', caseSensitive: false)
-          .firstMatch(rawName);
-      if (qtyMatch != null) {
-        qtyStr = 'SL: ${qtyMatch.group(1)}';
-        rawName = rawName.replaceRange(qtyMatch.start, qtyMatch.end, '').trim();
+
+      // 1. Single-line parsing
+      final matches = RegExp(r'[\d.,]{4,}').allMatches(line).toList();
+      if (matches.isNotEmpty) {
+        final lastM = matches.last;
+        final v = parseAmountStr(lastM.group(0)!);
+        if (v >= 1000 && !isPhoneNumberStr(lastM.group(0)!)) {
+          amt = v;
+          rawName = line.substring(0, lastM.start).trim();
+        }
       }
 
-      var cleanName = rawName
-          .replaceAll(RegExp(r'^\d+[\.\-\s]+'), '') // strip STT "1.", "2 - "
-          .replaceAll(RegExp(r"[{}[\]()=><|/\\~¬_#*+!¿‘`“”—\.;:]"), ' ')
-          .replaceAll(RegExp(r'\s+'), ' ')
-          .trim();
-
-      if (cleanName.length < 3) continue;
-
-      final icon = _detectIcon(cleanName.toLowerCase());
-
-      if (!items.any((it) => it.name.toLowerCase() == cleanName.toLowerCase())) {
-        items.add(LineItem(
-          name: cleanName,
-          amount: amt,
-          icon: icon,
-          consumption: qtyStr,
-        ));
+      // 2. Two-line pairing (POS KiotViet / Supermarket)
+      if (amt == null && i + 1 < lines.length) {
+        final nextLine = lines[i + 1];
+        if (!isSkipLine(nextLine)) {
+          final nextMatches = RegExp(r'[\d.,]{4,}').allMatches(nextLine).toList();
+          if (nextMatches.isNotEmpty) {
+            final lastM = nextMatches.last;
+            final v = parseAmountStr(lastM.group(0)!);
+            if (v >= 1000 && !isPhoneNumberStr(lastM.group(0)!)) {
+              amt = v;
+              rawName = line;
+              i++; // Nhảy qua dòng giá
+            }
+          }
+        }
       }
+
+      if (amt != null && amt >= 1000 && rawName.isNotEmpty) {
+        // Quantity extraction
+        final qtyMatch = RegExp(r'(?:x|\*|\bSL:?)\s*(\d+(?:[.,]\d+)?)\b', caseSensitive: false)
+            .firstMatch(rawName);
+        if (qtyMatch != null) {
+          qtyStr = 'SL: ${qtyMatch.group(1)}';
+          rawName = rawName.replaceRange(qtyMatch.start, qtyMatch.end, '').trim();
+        }
+
+        var cleanName = rawName
+            .replaceAll(RegExp(r'^\d+[\.\-\s]+'), '')
+            .replaceAll(RegExp(r"[{}[\]()=><|/\\~¬_#*+!¿‘`“”—\.;:]"), ' ')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+
+        if (cleanName.length >= 4 &&
+            RegExp(r'[aeiouyáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]', caseSensitive: false).hasMatch(cleanName)) {
+          final icon = _detectIcon(cleanName.toLowerCase());
+          if (!items.any((it) => it.name.toLowerCase() == cleanName.toLowerCase())) {
+            items.add(LineItem(
+              name: cleanName,
+              amount: amt,
+              icon: icon,
+              consumption: qtyStr,
+            ));
+          }
+        }
+      }
+
+      i++;
     }
 
     return items;
@@ -442,6 +568,8 @@ class DartReceiptExtractor {
     final notesList = <String>[];
     if (hotline != null) notesList.add('Hotline: $hotline');
     if (address != null) notesList.add('ĐC: $address');
+    final double discount = totalData['discount'] ?? 0.0;
+    if (discount > 0) notesList.add('Ưu đãi: -${discount.toInt()} ₫');
     if (items.isNotEmpty) {
       final summary = items.take(3).map((it) => it.name).join(', ');
       notesList.add('Món: $summary${items.length > 3 ? ' (+${items.length - 3})' : ''}');

@@ -1099,6 +1099,39 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
         document.getElementById('ocrCatBadge').style.background = ct.bg;
         document.getElementById('ocrCatBadge').style.color = ct.color;
 
+        // Hiển thị Hotline nếu bóc tách được
+        const hlEl = document.getElementById('ocrHotline');
+        const hlRow = document.getElementById('ocrHotlineRow');
+        if(hlRow){
+            if(data.hotline){
+                hlRow.style.display = 'flex';
+                if(hlEl) hlEl.textContent = data.hotline;
+            } else {
+                hlRow.style.display = 'none';
+            }
+        }
+
+        // Hiển thị Tiền Giảm Giá và Tạm Tính nếu có ưu đãi
+        const discEl = document.getElementById('ocrDiscount');
+        const discRow = document.getElementById('ocrDiscountRow');
+        const subEl = document.getElementById('ocrSubtotal');
+        const subRow = document.getElementById('ocrSubtotalRow');
+        if(discRow && discEl){
+            if(data.discount && data.discount > 0){
+                discRow.style.display = 'flex';
+                discEl.textContent = `-${fmt(data.discount)}`;
+                if(subRow && subEl && data.subtotal && data.subtotal > data.amount){
+                    subRow.style.display = 'flex';
+                    subEl.textContent = fmt(data.subtotal);
+                } else if(subRow) {
+                    subRow.style.display = 'none';
+                }
+            } else {
+                discRow.style.display = 'none';
+                if(subRow) subRow.style.display = 'none';
+            }
+        }
+
         // Hiển thị danh sách từng món và toàn văn văn bản OCR
         renderOcrItemsAndRawText(detected);
 
