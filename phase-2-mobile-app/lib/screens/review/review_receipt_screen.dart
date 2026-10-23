@@ -33,6 +33,8 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
   String _selectedCategory = 'bills';
   String _splitMode = 'personal';
   int _splitCount = 3;
+  String _splitType = 'equal'; // 'equal' | 'itemized'
+  final Set<int> _selectedItemIndices = {};
 
   bool get _weakOcr =>
       widget.transaction.amount <= 0 ||
@@ -49,6 +51,10 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
     _dateCtrl = TextEditingController(text: widget.transaction.transactionDate);
     _notesCtrl = TextEditingController(text: widget.transaction.notes ?? '');
     _selectedCategory = widget.transaction.category;
+    // Default select first item if available
+    if (widget.transaction.lineItems.isNotEmpty) {
+      _selectedItemIndices.add(0);
+    }
   }
 
   @override
@@ -62,6 +68,16 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
 
   double _getRawTotalAmount() {
     return double.tryParse(_amountCtrl.text.replaceAll('.', '').replaceAll(',', '')) ?? 0;
+  }
+
+  double _getItemizedTotal() {
+    double total = 0.0;
+    for (final idx in _selectedItemIndices) {
+      if (idx >= 0 && idx < widget.transaction.lineItems.length) {
+        total += widget.transaction.lineItems[idx].amount;
+      }
+    }
+    return total;
   }
 
   Future<void> _saveTransaction() async {
@@ -80,9 +96,25 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
     String finalNotes = _notesCtrl.text.trim();
 
     if (_splitMode == 'quick_split') {
-      savedAmount = totalAmount / _splitCount;
-      final splitNote = 'Chia $_splitCount người (Hóa đơn gốc: ${CurrencyFormatter.format(totalAmount)})';
-      finalNotes = finalNotes.isNotEmpty ? '$finalNotes · $splitNote' : splitNote;
+      if (_splitType == 'itemized' && widget.transaction.lineItems.isNotEmpty) {
+        if (_selectedItemIndices.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Vui lòng chọn ít nhất một món của bạn'), backgroundColor: AppColors.danger),
+          );
+          return;
+        }
+        final itemizedTotal = _getItemizedTotal();
+        savedAmount = itemizedTotal;
+        final selectedNames = _selectedItemIndices
+            .map((i) => widget.transaction.lineItems[i].name)
+            .join(', ');
+        final splitNote = 'Chọn theo món ($selectedNames) · Gốc: ${CurrencyFormatter.format(totalAmount)}';
+        finalNotes = finalNotes.isNotEmpty ? '$finalNotes · $splitNote' : splitNote;
+      } else {
+        savedAmount = totalAmount / _splitCount;
+        final splitNote = 'Chia $_splitCount người (Hóa đơn gốc: ${CurrencyFormatter.format(totalAmount)})';
+        finalNotes = finalNotes.isNotEmpty ? '$finalNotes · $splitNote' : splitNote;
+      }
     } else if (_splitMode == 'group') {
       if (!groupProv.hasGroup) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -148,6 +180,7 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
   @override
   Widget build(BuildContext context) {
     final totalAmount = _getRawTotalAmount();
+    final itemizedTotal = _getItemizedTotal();
     final quickSplitPerPerson = totalAmount > 0 ? (totalAmount / _splitCount) : 0.0;
     final hasGroup = context.watch<GroupProvider>().hasGroup;
 
@@ -282,21 +315,58 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
                     ),
                     if (_splitMode == 'quick_split') ...[
                       const SizedBox(height: 14),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Số người chia', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Row(
-                            children: [
-                              IconButton(onPressed: _splitCount > 2 ? () => setState(() => _splitCount--) : null, icon: const Icon(Icons.remove_circle_outline)),
-                              Text('$_splitCount', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              IconButton(onPressed: _splitCount < 20 ? () => setState(() => _splitCount++) : null, icon: const Icon(Icons.add_circle_outline)),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Text('Mỗi người: ${CurrencyFormatter.format(quickSplitPerPerson)}',
-                          style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      if (widget.transaction.lineItems.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ChoiceChip(
+                                label: const Center(child: Text('Chia đều người', style: TextStyle(fontSize: 11))),
+                                selected: _splitType == 'equal',
+                                onSelected: (_) => setState(() => _splitType = 'equal'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ChoiceChip(
+                                label: const Center(child: Text('Chọn món của tôi', style: TextStyle(fontSize: 11))),
+                                selected: _splitType == 'itemized',
+                                onSelected: (_) => setState(() => _splitType = 'itemized'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      if (_splitType == 'equal' || widget.transaction.lineItems.isEmpty) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Số người chia', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Row(
+                              children: [
+                                IconButton(onPressed: _splitCount > 2 ? () => setState(() => _splitCount--) : null, icon: const Icon(Icons.remove_circle_outline)),
+                                Text('$_splitCount', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                IconButton(onPressed: _splitCount < 20 ? () => setState(() => _splitCount++) : null, icon: const Icon(Icons.add_circle_outline)),
+                              ],
+                            ),
+                          ],
+                        ),
+                        Text('Mỗi người: ${CurrencyFormatter.format(quickSplitPerPerson)}',
+                            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      ] else ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Đã chọn ${_selectedItemIndices.length}/${widget.transaction.lineItems.length} món',
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            Text(CurrencyFormatter.format(itemizedTotal),
+                                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 15)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('Tích chọn các món bạn đã dùng trong danh sách bên dưới',
+                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      ],
                     ],
                     if (_splitMode == 'group')
                       Padding(
@@ -317,14 +387,92 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
-                    children: widget.transaction.lineItems
-                        .map((item) => ListTile(
-                              dense: true,
-                              leading: Text(item.icon ?? '📦'),
-                              title: Text(item.name),
-                              trailing: Text(CurrencyFormatter.format(item.amount), style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ))
-                        .toList(),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Chi tiết các món / dịch vụ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          if (_splitMode == 'quick_split' && _splitType == 'itemized')
+                            const Text('Chạm để chọn', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ...widget.transaction.lineItems.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final item = entry.value;
+                        final isSelected = _selectedItemIndices.contains(idx);
+                        final isItemized = _splitMode == 'quick_split' && _splitType == 'itemized';
+
+                        if (isItemized) {
+                          return InkWell(
+                            onTap: () {
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedItemIndices.remove(idx);
+                                } else {
+                                  _selectedItemIndices.add(idx);
+                                }
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Row(
+                                children: [
+                                  Checkbox(
+                                    value: isSelected,
+                                    activeColor: AppColors.primary,
+                                    onChanged: (val) {
+                                      setState(() {
+                                        if (val == true) {
+                                          _selectedItemIndices.add(idx);
+                                        } else {
+                                          _selectedItemIndices.remove(idx);
+                                        }
+                                      });
+                                    },
+                                  ),
+                                  Text(item.icon ?? '📦', style: const TextStyle(fontSize: 16)),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(item.name,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                              color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                                            )),
+                                        if (item.consumption != null && item.consumption!.isNotEmpty)
+                                          Text(item.consumption!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(CurrencyFormatter.format(item.amount),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                      )),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        return ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          leading: Text(item.icon ?? '📦', style: const TextStyle(fontSize: 16)),
+                          title: Text(item.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                          subtitle: item.consumption != null && item.consumption!.isNotEmpty
+                              ? Text(item.consumption!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary))
+                              : null,
+                          trailing: Text(CurrencyFormatter.format(item.amount), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        );
+                      }),
+                    ],
                   ),
                 ),
               ),
@@ -354,7 +502,7 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
                 icon: const Icon(Icons.check, color: Colors.white),
                 label: Text(
                   _splitMode == 'quick_split'
-                      ? 'Lưu phần của bạn (${CurrencyFormatter.format(quickSplitPerPerson)})'
+                      ? 'Lưu phần của bạn (${CurrencyFormatter.format(_splitType == 'itemized' && widget.transaction.lineItems.isNotEmpty ? itemizedTotal : quickSplitPerPerson)})'
                       : 'Lưu giao dịch (${CurrencyFormatter.format(totalAmount)})',
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 ),

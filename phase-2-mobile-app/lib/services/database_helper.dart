@@ -300,6 +300,30 @@ class DatabaseHelper {
     return (rows.first['s'] as num?)?.toDouble() ?? 0;
   }
 
+  Future<List<Map<String, dynamic>>> getMonthlyTrend({required int userId, int months = 6}) async {
+    final db = await instance.database;
+    final now = DateTime.now();
+    final list = <Map<String, dynamic>>[];
+    for (int i = months - 1; i >= 0; i--) {
+      final targetDate = DateTime(now.year, now.month - i, 1);
+      final monthStr = '${targetDate.year}-${targetDate.month.toString().padLeft(2, '0')}';
+      final incResult = await db.rawQuery(
+        "SELECT SUM(amount) as s FROM transactions WHERE user_id = ? AND type='income' AND transaction_date LIKE ?",
+        [userId, '$monthStr%'],
+      );
+      final expResult = await db.rawQuery(
+        "SELECT SUM(amount) as s FROM transactions WHERE user_id = ? AND type='expense' AND transaction_date LIKE ?",
+        [userId, '$monthStr%'],
+      );
+      list.add({
+        'month': 'T${targetDate.month}',
+        'income': (incResult.first['s'] as num?)?.toDouble() ?? 0.0,
+        'expense': (expResult.first['s'] as num?)?.toDouble() ?? 0.0,
+      });
+    }
+    return list;
+  }
+
   // --- Budgets ---
   Future<List<BudgetModel>> getBudgets(int userId) async {
     final db = await instance.database;

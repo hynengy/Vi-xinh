@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/budget_model.dart';
 import '../models/transaction_model.dart';
 import '../services/database_helper.dart';
+import '../services/sync_service.dart';
 
 class WalletProvider with ChangeNotifier {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
@@ -14,7 +15,9 @@ class WalletProvider with ChangeNotifier {
   List<TransactionModel> _transactions = [];
   List<BudgetModel> _budgets = [];
   Map<String, double> _spendByCategory = {};
+  List<Map<String, dynamic>> _monthlyTrend = [];
   bool _isLoading = false;
+  bool _isSyncing = false;
 
   double get totalBalance => _totalBalance;
   double get monthlyIncome => _monthlyIncome;
@@ -23,7 +26,9 @@ class WalletProvider with ChangeNotifier {
   List<TransactionModel> get transactions => _transactions;
   List<BudgetModel> get budgets => _budgets;
   Map<String, double> get spendByCategory => _spendByCategory;
+  List<Map<String, dynamic>> get monthlyTrend => _monthlyTrend;
   bool get isLoading => _isLoading;
+  bool get isSyncing => _isSyncing;
 
   void toggleBalanceVisibility() {
     _isBalanceVisible = !_isBalanceVisible;
@@ -43,6 +48,7 @@ class WalletProvider with ChangeNotifier {
       _totalBalance = stats['balance'] ?? 0.0;
       _budgets = await _dbHelper.getBudgets(_userId!);
       _spendByCategory = await _dbHelper.getExpenseByCategory(userId: _userId!);
+      _monthlyTrend = await _dbHelper.getMonthlyTrend(userId: _userId!, months: 6);
     } catch (e) {
       debugPrint('Error loading wallet data: $e');
     } finally {
@@ -84,4 +90,27 @@ class WalletProvider with ChangeNotifier {
     if (b == null || b.limitAmount <= 0) return null;
     return (((spentOf(category) + amount) / b.limitAmount) * 100).round();
   }
+
+  /// Đồng bộ giao dịch cục bộ SQLite lên Web Server Backend
+  Future<SyncResult> syncWithServer(SyncService syncService) async {
+    if (_userId == null) {
+      return SyncResult(success: false, message: 'Chưa đăng nhập');
+    }
+    _isSyncing = true;
+    notifyListeners();
+    try {
+      final res = await syncService.syncTransactions(
+        userId: _userId!,
+        transactions: _transactions,
+      );
+      if (res.success) {
+        await loadWalletData(userId: _userId);
+      }
+      return res;
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
+    }
+  }
 }
+

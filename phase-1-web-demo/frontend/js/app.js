@@ -3875,5 +3875,14 @@ document.addEventListener('DOMContentLoaded',()=>{
             for (let k of keys) caches.delete(k);
         }).catch(() => {});
     }
+
+    // Hiệu ứng Splash Screen: hiển thị icon app Ví Xinh rồi chuyển sang màn hình chính/đăng nhập
+    const splash = document.getElementById('appSplashScreen');
+    if (splash) {
+        setTimeout(() => {
+            splash.classList.add('fade-out');
+            setTimeout(() => { try { splash.remove(); } catch(e){} }, 500);
+        }, 1300);
+    }
 });
 

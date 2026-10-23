@@ -9,7 +9,9 @@ import 'providers/group_provider.dart';
 import 'screens/home/dashboard_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/lock_screen.dart';
+import 'screens/splash/splash_screen.dart';
 import 'services/notification_service.dart';
+import 'services/sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +34,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => WalletProvider()),
         ChangeNotifierProvider(create: (_) => GroupProvider()),
         ChangeNotifierProvider(create: (_) => NotificationService()),
+        Provider(create: (_) => SyncService()),
       ],
       child: const ViXinhApp(),
     ),
@@ -70,11 +73,24 @@ class ViXinhApp extends StatelessWidget {
   }
 }
 
-class _RootGate extends StatelessWidget {
+class _RootGate extends StatefulWidget {
   const _RootGate();
 
   @override
+  State<_RootGate> createState() => _RootGateState();
+}
+
+class _RootGateState extends State<_RootGate> {
+  bool _splashDone = false;
+
+  @override
   Widget build(BuildContext context) {
+    if (!_splashDone) {
+      return SplashScreen(
+        onFinish: () => setState(() => _splashDone = true),
+      );
+    }
+
     final auth = context.watch<AuthProvider>();
     if (auth.isLoading) {
       return const Scaffold(

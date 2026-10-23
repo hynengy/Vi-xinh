@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/wallet_provider.dart';
 import '../../services/biometric_service.dart';
+import '../../services/sync_service.dart';
 import '../../services/vietqr_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -210,6 +212,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           value: auth.biometricEnabled,
                           onChanged: _toggleBiometrics,
                           activeThumbColor: AppColors.primary,
+                        ),
+                        Consumer<WalletProvider>(
+                          builder: (context, wallet, _) => ListTile(
+                            leading: const Icon(Icons.cloud_sync_outlined, color: AppColors.primary),
+                            title: const Text('Đồng bộ với Web Server', style: TextStyle(fontWeight: FontWeight.w600)),
+                            subtitle: const Text('Sao lưu dữ liệu SQLite lên máy chủ'),
+                            trailing: wallet.isSyncing
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                            onTap: wallet.isSyncing
+                                ? null
+                                : () async {
+                                    final syncService = context.read<SyncService>();
+                                    final res = await wallet.syncWithServer(syncService);
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(res.message),
+                                        backgroundColor: res.success ? AppColors.success : AppColors.danger,
+                                      ),
+                                    );
+                                  },
+                          ),
                         ),
                         ListTile(
                           leading: const Icon(Icons.logout, color: AppColors.danger),

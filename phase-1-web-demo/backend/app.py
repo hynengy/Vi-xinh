@@ -159,6 +159,47 @@ def get_transactions_range():
     return jsonify(transactions)
 
 
+@app.route("/api/sync", methods=["POST"])
+def sync_transactions():
+    """Đồng bộ giao dịch hai chiều giữa Mobile App (SQLite) và Web Server."""
+    data = request.json or {}
+    user_id = data.get("user_id", 1)
+    client_transactions = data.get("transactions", [])
+
+    synced_count = 0
+    for tx in client_transactions:
+        amount = float(tx.get("amount", 0))
+        if amount <= 0:
+            continue
+        merchant = tx.get("merchant_name") or tx.get("merchantName", "Giao dịch")
+        tx_date = tx.get("transaction_date") or tx.get("transactionDate", datetime.now().strftime("%Y-%m-%d"))
+        category = tx.get("category", "other")
+        tx_type = tx.get("type", "expense")
+        notes = tx.get("notes", "")
+
+        tx_payload = {
+            "user_id": user_id,
+            "merchant_name": merchant,
+            "amount": amount,
+            "type": tx_type,
+            "transaction_date": tx_date,
+            "category": category,
+            "notes": notes,
+            "receipt_image": tx.get("receipt_image") or tx.get("receiptImagePath", ""),
+            "group_id": tx.get("group_id") or tx.get("groupId"),
+        }
+        db.add_transaction(tx_payload)
+        synced_count += 1
+
+    server_transactions = db.get_recent_transactions(user_id=user_id, limit=50)
+    return jsonify({
+        "success": True,
+        "synced_count": synced_count,
+        "transactions": server_transactions,
+    })
+
+
+
 # ==================================================================
 #  API 3: DASHBOARD STATS
 # ==================================================================
