@@ -1,4 +1,4 @@
-# 🗄️ THIẾT KẾ CƠ SỞ DỮ LIỆU "VÍ XINH"
+# THIẾT KẾ CƠ SỞ DỮ LIỆU "VÍ XINH"
 
 Hệ thống sử dụng cơ sở dữ liệu quan hệ chuẩn hóa (SQLite trên Web Backend và `sqflite` trên Mobile Local Storage).
 

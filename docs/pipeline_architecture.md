@@ -1,4 +1,4 @@
-# 🏗️ KIẾN TRÚC PIPELINE XỬ LÝ KỸ THUẬT
+# KIẾN TRÚC PIPELINE XỬ LÝ KỸ THUẬT
 
 Hệ thống xử lý hóa đơn tự động của **Ví Xinh** bao gồm 5 bước liên hoàn từ thu nhận ảnh đến phân bổ tài chính:
 
@@ -27,7 +27,7 @@ sequenceDiagram
 
 ---
 
-## 🔍 Chi Tiết 5 Bước Xử Lý
+## Chi Tiết 5 Bước Xử Lý
 
 ### 1. Thu Nhận Ảnh (Image Ingestion)
 * **Web Demo:** Hỗ trợ kéo thả hoặc tải file (`JPG`, `PNG`, `WEBP`).
