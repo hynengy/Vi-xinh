@@ -243,7 +243,11 @@ class _HomeTab extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Xin chào', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                          Builder(builder: (_) {
+                            final h = DateTime.now().hour;
+                            final g = h < 12 ? 'Chào buổi sáng ☀️' : h < 18 ? 'Chào buổi chiều 🌤️' : h < 21 ? 'Chào buổi tối 🌙' : 'Chúc ngủ ngon 🌙';
+                            return Text(g, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12));
+                          }),
                           Text(user?.fullName ?? 'Ví Xinh', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                         ],
                       ),

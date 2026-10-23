@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/wallet_provider.dart';
-import '../../services/biometric_service.dart';
 import '../../services/sync_service.dart';
 import '../../services/vietqr_service.dart';
 
@@ -16,38 +15,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final BiometricService _biometricService = BiometricService();
-  String _biometricName = 'Face ID / Vân tay';
-
-  @override
-  void initState() {
-    super.initState();
-    _checkBiometrics();
-  }
-
-  Future<void> _checkBiometrics() async {
-    final name = await _biometricService.getBiometricDisplayName();
-    if (mounted) setState(() => _biometricName = name);
-  }
-
-  Future<void> _toggleBiometrics(bool value) async {
-    final auth = context.read<AuthProvider>();
-    if (value) {
-      final available = await _biometricService.isBiometricsAvailable();
-      if (!available) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Thiết bị không hỗ trợ sinh trắc học'), backgroundColor: AppColors.danger),
-        );
-        return;
-      }
-      final success = await _biometricService.authenticate(reason: 'Xác thực để bật khóa Ví Xinh');
-      if (success) {
-        await auth.setBiometricEnabled(true);
-      }
-    } else {
-      await auth.setBiometricEnabled(false);
-    }
-  }
 
   void _editProfile() {
     final user = context.read<AuthProvider>().user;
@@ -204,13 +171,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           subtitle: const Text('Bật để nhận thông báo trong app'),
                           value: auth.reminderEnabled,
                           onChanged: auth.setReminderEnabled,
-                          activeThumbColor: AppColors.primary,
-                        ),
-                        SwitchListTile(
-                          title: const Text('Khóa sinh trắc học', style: TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Text(_biometricName),
-                          value: auth.biometricEnabled,
-                          onChanged: _toggleBiometrics,
                           activeThumbColor: AppColors.primary,
                         ),
                         Consumer<WalletProvider>(
