@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/biometric_service.dart';
+import '../../services/vietqr_service.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  final bool asTab;
+  const ProfileScreen({Key? key, this.asTab = false}) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -11,8 +15,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final BiometricService _biometricService = BiometricService();
-  bool _biometricEnabled = false;
-  bool _reminderEnabled = true;
   String _biometricName = 'Face ID / Vân tay';
 
   @override
@@ -23,208 +25,215 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _checkBiometrics() async {
     final name = await _biometricService.getBiometricDisplayName();
-    if (mounted) {
-      setState(() {
-        _biometricName = name;
-      });
-    }
+    if (mounted) setState(() => _biometricName = name);
   }
 
   Future<void> _toggleBiometrics(bool value) async {
+    final auth = context.read<AuthProvider>();
     if (value) {
-      final success = await _biometricService.authenticate(
-        reason: 'Xác thực sinh trắc học để kích hoạt bảo vệ Ví Xinh',
-      );
+      final available = await _biometricService.isBiometricsAvailable();
+      if (!available) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Thiết bị không hỗ trợ sinh trắc học'), backgroundColor: AppColors.danger),
+        );
+        return;
+      }
+      final success = await _biometricService.authenticate(reason: 'Xác thực để bật khóa Ví Xinh');
       if (success) {
-        setState(() => _biometricEnabled = true);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Đã kích hoạt $_biometricName thành công! ✨'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Xác thực không thành công. Chưa bật bảo mật.'),
-              backgroundColor: AppColors.danger,
-            ),
-          );
-        }
+        await auth.setBiometricEnabled(true);
       }
     } else {
-      setState(() => _biometricEnabled = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã tắt khóa sinh trắc học.')),
-      );
+      await auth.setBiometricEnabled(false);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Cá nhân'),
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.textPrimary,
-        elevation: 0.5,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // User Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: AppColors.primaryLight,
-                    child: const Text('👛', style: TextStyle(fontSize: 28)),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Người dùng', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                        SizedBox(height: 4),
-                        Text('Tài khoản cá nhân', style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600)),
-                        SizedBox(height: 2),
-                        Text('Chưa liên kết tài khoản', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
+  void _editProfile() {
+    final user = context.read<AuthProvider>().user;
+    if (user == null) return;
+    final nameCtrl = TextEditingController(text: user.fullName);
+    final phoneCtrl = TextEditingController(text: user.phone ?? '');
+    final emailCtrl = TextEditingController(text: user.email ?? '');
+    String? bankBin = user.bankBin;
+    final accCtrl = TextEditingController(text: user.bankAccount ?? '');
 
-            // Bank VietQR Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.qr_code_2, color: AppColors.primary),
-                          SizedBox(width: 8),
-                          Text('Tài khoản nhận tiền (VietQR)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        ],
-                      ),
-                      Icon(Icons.check_circle, color: AppColors.success, size: 18),
-                    ],
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: StatefulBuilder(
+          builder: (context, setSheet) => SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Cập nhật hồ sơ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                const SizedBox(height: 12),
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Họ tên', border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Số điện thoại', border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: bankBin != null && VietQrService.banks.any((b) => b.bin == bankBin) ? bankBin : null,
+                  items: VietQrService.banks.map((b) => DropdownMenuItem(value: b.bin, child: Text(b.name))).toList(),
+                  onChanged: (v) => setSheet(() => bankBin = v),
+                  decoration: const InputDecoration(labelText: 'Ngân hàng', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 10),
+                TextField(controller: accCtrl, decoration: const InputDecoration(labelText: 'Số tài khoản', border: OutlineInputBorder())),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                    onPressed: () {
+                      final bank = VietQrService.banks.where((b) => b.bin == bankBin);
+                      final updated = user.copyWith(
+                        fullName: nameCtrl.text.trim(),
+                        phone: phoneCtrl.text.trim(),
+                        email: emailCtrl.text.trim(),
+                        bankBin: bankBin,
+                        bankName: bank.isEmpty ? user.bankName : bank.first.name,
+                        bankAccount: accCtrl.text.trim(),
+                      );
+                      context.read<AuthProvider>().updateProfile(updated);
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Lưu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
-                  const Divider(height: 20),
-                  _buildInfoRow('Ngân hàng', 'Chưa thiết lập'),
-                  const SizedBox(height: 8),
-                  _buildInfoRow('Số tài khoản', '---'),
-                  const SizedBox(height: 8),
-                  _buildInfoRow('Chủ tài khoản', '---'),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-
-            // Settings Section
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Column(
-                children: [
-                  _buildSettingTile(
-                    icon: Icons.notifications_active_outlined,
-                    title: 'Nhắc hẹn chi tiêu',
-                    subtitle: 'Thông báo định kỳ theo lịch cá nhân',
-                    trailing: Switch(
-                      value: _reminderEnabled,
-                      onChanged: (v) => setState(() => _reminderEnabled = v),
-                      activeColor: AppColors.primary,
-                    ),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _buildSettingTile(
-                    icon: Icons.document_scanner_outlined,
-                    title: 'Quét OCR On-Device',
-                    subtitle: 'Google ML Kit bảo mật ngoại tuyến',
-                    trailing: const Text('Bật', style: TextStyle(color: AppColors.success, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                  const Divider(height: 1, indent: 56),
-                  _buildSettingTile(
-                    icon: Icons.fingerprint,
-                    title: 'Bảo mật sinh trắc học',
-                    subtitle: _biometricName,
-                    trailing: Switch(
-                      value: _biometricEnabled,
-                      onChanged: _toggleBiometrics,
-                      activeColor: AppColors.primary,
-                    ),
-                  ),
-
-                  const Divider(height: 1, indent: 56),
-                  _buildSettingTile(
-                    icon: Icons.info_outline,
-                    title: 'Phiên bản ứng dụng',
-                    subtitle: 'Ví Xinh v1.0.0 (Bản chính thức)',
-                    trailing: const Text('Mới nhất', style: TextStyle(color: AppColors.success, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  static Widget _buildInfoRow(String label, String value) {
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final user = auth.user;
+    final qrUrl = user != null && user.hasVietQr
+        ? VietQrService.imageUrl(
+            bankBin: user.bankBin!,
+            accountNo: user.bankAccount!,
+            accountName: user.fullName,
+          )
+        : null;
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Cá nhân'),
+        automaticallyImplyLeading: !widget.asTab,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
+        elevation: 0.5,
+        actions: [
+          IconButton(onPressed: _editProfile, icon: const Icon(Icons.edit_outlined, color: AppColors.primary)),
+        ],
+      ),
+      body: user == null
+          ? const Center(child: Text('Chưa đăng nhập'))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: AppColors.primaryLight,
+                          child: Text(user.fullName.isNotEmpty ? user.fullName.trim().split(' ').last[0] : '👛',
+                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                              Text(user.email ?? '', style: const TextStyle(color: AppColors.primary, fontSize: 13)),
+                              Text(user.phone ?? '', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+                    child: Column(
+                      children: [
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('Tài khoản nhận tiền (VietQR)', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                        const Divider(height: 20),
+                        _info('Ngân hàng', user.bankName ?? 'Chưa thiết lập'),
+                        const SizedBox(height: 8),
+                        _info('Số tài khoản', user.bankAccount ?? '---'),
+                        const SizedBox(height: 8),
+                        _info('Chủ tài khoản', user.fullName),
+                        if (qrUrl != null) ...[
+                          const SizedBox(height: 12),
+                          Image.network(qrUrl, height: 180, errorBuilder: (_, __, ___) => const Text('Không tải được VietQR')),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
+                    child: Column(
+                      children: [
+                        SwitchListTile(
+                          title: const Text('Nhắc hẹn chi tiêu', style: TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: const Text('Bật để nhận thông báo trong app'),
+                          value: auth.reminderEnabled,
+                          onChanged: auth.setReminderEnabled,
+                          activeColor: AppColors.primary,
+                        ),
+                        SwitchListTile(
+                          title: const Text('Khóa sinh trắc học', style: TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text(_biometricName),
+                          value: auth.biometricEnabled,
+                          onChanged: _toggleBiometrics,
+                          activeColor: AppColors.primary,
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.logout, color: AppColors.danger),
+                          title: const Text('Đăng xuất', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
+                          onPressed: () => auth.logout(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Ví Xinh v1.0.0', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _info(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
         Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
       ],
-    );
-  }
-
-  static Widget _buildSettingTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Widget trailing,
-  }) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(10)),
-        child: Icon(icon, color: AppColors.primary, size: 20),
-      ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-      subtitle: Text(subtitle, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-      trailing: trailing,
     );
   }
 }

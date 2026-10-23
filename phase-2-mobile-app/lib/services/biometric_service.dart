@@ -8,7 +8,6 @@ class BiometricService {
 
   final LocalAuthentication _auth = LocalAuthentication();
 
-  /// Kiểm tra thiết bị có phần cứng sinh trắc học và đã cài vân tay/FaceID chưa
   Future<bool> isBiometricsAvailable() async {
     try {
       final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
@@ -19,7 +18,6 @@ class BiometricService {
     }
   }
 
-  /// Lấy danh sách các phương thức sinh trắc học khả dụng (Face ID, Vân tay, Mống mắt)
   Future<List<BiometricType>> getAvailableBiometrics() async {
     try {
       return await _auth.getAvailableBiometrics();
@@ -28,22 +26,17 @@ class BiometricService {
     }
   }
 
-  /// Thực hiện quét sinh trắc học (Mở khóa Face ID hoặc chạm vân tay)
   Future<bool> authenticate({
     String reason = 'Xác thực sinh trắc học để mở khóa Ví Xinh',
   }) async {
     try {
       final bool isAvailable = await isBiometricsAvailable();
-      if (!isAvailable) {
-        // Fallback cho môi trường test hoặc thiết bị không hỗ trợ
-        return true;
-      }
-
+      if (!isAvailable) return false;
       return await _auth.authenticate(
         localizedReason: reason,
         options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: false, // Cho phép nhập mã PIN/Pattern nếu vân tay lỗi
+          biometricOnly: false,
           useErrorDialogs: true,
         ),
       );
@@ -52,7 +45,6 @@ class BiometricService {
     }
   }
 
-  /// Lấy tên thân thiện hiển thị cho người dùng (Face ID / Vân tay)
   Future<String> getBiometricDisplayName() async {
     final types = await getAvailableBiometrics();
     if (types.contains(BiometricType.face)) {

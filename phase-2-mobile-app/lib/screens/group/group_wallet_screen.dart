@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../core/constants/app_categories.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/group_provider.dart';
+import '../../services/vietqr_service.dart';
 import '../camera/receipt_scanner_screen.dart';
 
 class GroupWalletScreen extends StatefulWidget {
-  const GroupWalletScreen({Key? key}) : super(key: key);
+  final bool asTab;
+  const GroupWalletScreen({Key? key, this.asTab = false}) : super(key: key);
 
   @override
   State<GroupWalletScreen> createState() => _GroupWalletScreenState();
@@ -21,55 +25,102 @@ class _GroupWalletScreenState extends State<GroupWalletScreen> with SingleTicker
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<GroupProvider>().loadGroupDetail(1);
+      final uid = context.read<AuthProvider>().userId;
+      if (uid > 0) context.read<GroupProvider>().loadForUser(uid);
     });
   }
 
-  void _showContributeDialog() {
-    final amountCtrl = TextEditingController(text: '');
-    final group = context.read<GroupProvider>().currentGroup;
-    final groupName = group?.name ?? 'Quỹ Nhóm';
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
+  void _showCreateGroup() {
+    final nameCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Góp $groupName', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Tạo ví nhóm'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Nhập số tiền bạn muốn đóng vào $groupName:'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: amountCtrl,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: 'Nhập số tiền...',
-                suffixText: '₫',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Tên nhóm', hintText: 'VD: Phòng trọ 302')),
+            TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Mô tả')),
           ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () {
-              final amt = double.tryParse(amountCtrl.text) ?? 0;
-              if (amt <= 0) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Vui lòng nhập số tiền hợp lệ')),
-                );
-                return;
-              }
-              context.read<GroupProvider>().contributeFund(group?.id ?? 1, amt);
+              if (nameCtrl.text.trim().isEmpty) return;
+              context.read<GroupProvider>().createGroup(
+                    name: nameCtrl.text,
+                    description: descCtrl.text,
+                    createdBy: context.read<AuthProvider>().userId,
+                  );
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đã nộp quỹ thành công! ✨'), backgroundColor: AppColors.success),
-              );
             },
-            child: const Text('Xác nhận nộp', style: TextStyle(color: Colors.white)),
+            child: const Text('Tạo'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddMember() {
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Thêm thành viên'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Họ tên')),
+            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Số điện thoại'), keyboardType: TextInputType.phone),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          ElevatedButton(
+            onPressed: () {
+              if (nameCtrl.text.trim().isEmpty) return;
+              context.read<GroupProvider>().addMember(fullName: nameCtrl.text, phone: phoneCtrl.text);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Thêm'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showContributeDialog() {
+    final amountCtrl = TextEditingController();
+    final group = context.read<GroupProvider>().currentGroup;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Góp ${group?.name ?? 'quỹ'}'),
+        content: TextField(
+          controller: amountCtrl,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(hintText: 'Số tiền', suffixText: '₫'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          ElevatedButton(
+            onPressed: () {
+              final amt = double.tryParse(amountCtrl.text.replaceAll('.', '').replaceAll(',', '')) ?? 0;
+              if (amt <= 0) return;
+              final uid = context.read<AuthProvider>().userId;
+              context.read<GroupProvider>().contributeFund(group!.id, amt, userId: uid);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Nộp quỹ'),
           ),
         ],
       ),
@@ -77,50 +128,61 @@ class _GroupWalletScreenState extends State<GroupWalletScreen> with SingleTicker
   }
 
   void _showQrReminder(String memberName, double debt) {
+    final user = context.read<AuthProvider>().user;
+    final qrUrl = user != null && user.hasVietQr
+        ? VietQrService.imageUrl(
+            bankBin: user.bankBin!,
+            accountNo: user.bankAccount!,
+            accountName: user.fullName,
+            amount: debt,
+            addInfo: 'Tra no $memberName',
+          )
+        : null;
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(height: 4, width: 40, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            const Text('Mã VietQR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
+            const Text('Nhắc nợ VietQR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
             Text(CurrencyFormatter.format(debt), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-              child: const Column(
-                children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Chủ TK:'), Text('---', style: TextStyle(fontWeight: FontWeight.bold))]),
-                  SizedBox(height: 6),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Ngân hàng:'), Text('Chưa thiết lập', style: TextStyle(fontWeight: FontWeight.bold))]),
-                  SizedBox(height: 6),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Số tài khoản:'), Text('---', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary))]),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                onPressed: () {
-                  final msg = 'Tiền phòng T10: phần của $memberName là ${CurrencyFormatter.format(debt)}. Vui lòng thanh toán sớm nhé!';
-                  Clipboard.setData(ClipboardData(text: msg));
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Đã sao chép tin nhắn!'), backgroundColor: AppColors.success),
-                  );
-                },
-                icon: const Icon(Icons.copy, color: Colors.white),
-                label: const Text('Sao chép tin nhắn', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
+            if (qrUrl != null)
+              Image.network(qrUrl, height: 180, errorBuilder: (_, __, ___) => const Text('Không tải được mã QR'))
+            else
+              const Text('Hãy lưu STK ngân hàng trong mục Cá nhân để hiện VietQR.', textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            Text('${user?.bankName ?? 'Chưa ngân hàng'} · ${user?.bankAccount ?? '---'}'),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: 'Nhắc $memberName thanh toán ${CurrencyFormatter.format(debt)} cho quỹ nhóm Ví Xinh.'));
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Sao chép tin'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final members = context.read<GroupProvider>().group?.members ?? [];
+                      final m = members.where((e) => e.fullName == memberName);
+                      if (m.isNotEmpty) context.read<GroupProvider>().settleDebt(m.first.userId);
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Đã trả'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -130,208 +192,167 @@ class _GroupWalletScreenState extends State<GroupWalletScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    final group = context.watch<GroupProvider>().group;
+    final groupProv = context.watch<GroupProvider>();
+    final group = groupProv.group;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Quỹ & Ví Nhóm'),
+        automaticallyImplyLeading: !widget.asTab,
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,
         elevation: 0.5,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.camera_alt, color: AppColors.primary),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const ReceiptScannerScreen()));
-            },
-          ),
+          if (group != null)
+            IconButton(icon: const Icon(Icons.person_add_alt, color: AppColors.primary), onPressed: _showAddMember),
         ],
       ),
-      body: Column(
-        children: [
-          // Quỹ Card
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: AppColors.groupGradient,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(color: const Color(0xFF6366F1).withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: group == null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.groups_outlined, size: 72, color: AppColors.primary),
+                    const SizedBox(height: 12),
+                    const Text('Chưa có ví nhóm', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 8),
+                    const Text('Tạo quỹ phòng trọ, du lịch hoặc gia đình để chia tiền và nhắc nợ.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary)),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _showCreateGroup,
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                      child: const Text('Tạo ví nhóm', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(group?.name ?? 'Quỹ Chi Tiêu Chung', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-                      child: Text('${group?.members.length ?? 0} thành viên', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Text('Số dư quỹ', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                const SizedBox(height: 4),
-                Text(
-                  CurrencyFormatter.format(group?.balance ?? 2400000.0),
-                  style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF6366F1),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: _showContributeDialog,
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Nộp quỹ', style: TextStyle(fontWeight: FontWeight.bold)),
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.groupGradient,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(group.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      const Text('Số dư quỹ', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      Text(CurrencyFormatter.format(group.balance), style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _showContributeDialog,
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Nộp quỹ'),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.primary),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => const ReceiptScannerScreen()));
+                              },
+                              icon: const Icon(Icons.receipt_long, size: 18),
+                              label: const Text('Quét hóa đơn'),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.white24, foregroundColor: Colors.white),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.25),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => const ReceiptScannerScreen()));
-                        },
-                        icon: const Icon(Icons.receipt_long, size: 18),
-                        label: const Text('Quét hóa đơn', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+                TabBar(
+                  controller: _tabController,
+                  labelColor: AppColors.primary,
+                  unselectedLabelColor: AppColors.textSecondary,
+                  tabs: const [Tab(text: 'Thành viên'), Tab(text: 'Hóa đơn'), Tab(text: 'Lịch sử quỹ')],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      group.members.isEmpty
+                          ? const Center(child: Text('Chưa có thành viên'))
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: group.members.length,
+                              itemBuilder: (ctx, idx) {
+                                final m = group.members[idx];
+                                final isAdmin = m.role == 'admin';
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: AppColors.primaryLight,
+                                      child: Text(m.fullName.isNotEmpty ? m.fullName.trim().split(' ').last[0] : '?'),
+                                    ),
+                                    title: Text(m.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    subtitle: Text(
+                                      isAdmin
+                                          ? 'Trưởng nhóm · đã nộp ${CurrencyFormatter.format(m.paidFund)}'
+                                          : (m.debt > 0 ? 'Nợ ${CurrencyFormatter.format(m.debt)}' : 'Đã hết nợ · nộp ${CurrencyFormatter.format(m.paidFund)}'),
+                                      style: TextStyle(color: m.debt > 0 ? AppColors.danger : AppColors.success, fontWeight: FontWeight.w600, fontSize: 12),
+                                    ),
+                                    trailing: m.debt > 0
+                                        ? TextButton(onPressed: () => _showQrReminder(m.fullName, m.debt), child: const Text('Thu QR'))
+                                        : const Icon(Icons.verified, color: AppColors.success),
+                                  ),
+                                );
+                              },
+                            ),
+                      groupProv.bills.isEmpty
+                          ? const Center(child: Text('Chưa có hóa đơn nhóm'))
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: groupProv.bills.length,
+                              itemBuilder: (_, i) {
+                                final tx = groupProv.bills[i];
+                                return Card(
+                                  child: ListTile(
+                                    leading: Text(AppCategories.iconOf(tx.category), style: const TextStyle(fontSize: 22)),
+                                    title: Text(tx.merchantName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    subtitle: Text('${tx.transactionDate} · ${tx.notes ?? ''}'),
+                                    trailing: Text('-${CurrencyFormatter.format(tx.amount)}', style: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
+                                  ),
+                                );
+                              },
+                            ),
+                      groupProv.ledger.isEmpty
+                          ? const Center(child: Text('Chưa có biến động quỹ'))
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: groupProv.ledger.length,
+                              itemBuilder: (_, i) {
+                                final item = groupProv.ledger[i];
+                                final inFund = item.type == 'contribute';
+                                return ListTile(
+                                  leading: Icon(inFund ? Icons.arrow_upward : Icons.arrow_downward, color: inFund ? AppColors.success : AppColors.danger),
+                                  title: Text(item.note.isEmpty ? item.memberName : item.note),
+                                  subtitle: Text('${item.memberName} · ${item.createdAt.split('T').first}'),
+                                  trailing: Text(
+                                    '${inFund ? '+' : '-'}${CurrencyFormatter.format(item.amount)}',
+                                    style: TextStyle(color: inFund ? AppColors.success : AppColors.danger, fontWeight: FontWeight.bold),
+                                  ),
+                                );
+                              },
+                            ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-
-          // Tabs
-          TabBar(
-            controller: _tabController,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textSecondary,
-            indicatorColor: AppColors.primary,
-            indicatorWeight: 3,
-            tabs: const [
-              Tab(text: 'Thành viên'),
-              Tab(text: 'Hóa đơn'),
-              Tab(text: 'Lịch sử quỹ'),
-            ],
-          ),
-
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Tab 1: Thành viên & Nợ
-                ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: group?.members.length ?? 0,
-                  itemBuilder: (ctx, idx) {
-                    final m = group!.members[idx];
-                    final isHien = m.userId == 1;
-
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.primaryLight,
-                          child: Text(
-                            m.fullName.split(' ').last[0],
-                            style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        title: Text(m.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(
-                          isHien ? 'Trưởng phòng (Người ứng tiền)' : 'Nợ tiền phòng T10: ${CurrencyFormatter.format(m.debt)}',
-                          style: TextStyle(
-                            color: isHien ? AppColors.success : AppColors.danger,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                        trailing: !isHien
-                            ? ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryLight,
-                                  foregroundColor: AppColors.primary,
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                ),
-                                onPressed: () => _showQrReminder(m.fullName, m.debt),
-                                child: const Text('Thu tiền QR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                              )
-                            : const Icon(Icons.verified, color: AppColors.success),
-                      ),
-                    );
-                  },
-                ),
-
-                // Tab 2: Hóa đơn phòng
-                ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      child: ListTile(
-                        leading: const Icon(Icons.home, color: AppColors.danger, size: 36),
-                        title: const Text('Tiền trọ Tháng 10/2026', style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: const Text('4.500.000 ₫ · Đã chia cho 4 bạn (1.125.000 ₫/bạn)'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {},
-                      ),
-                    ),
-                    Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      child: ListTile(
-                        leading: const Icon(Icons.shopping_cart, color: AppColors.warning, size: 36),
-                        title: const Text('Mua sắm gia vị & nước mắm', style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: const Text('180.000 ₫ · Trừ quỹ phòng'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {},
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Tab 3: Nhật ký quỹ
-                ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: const [
-                    ListTile(
-                      leading: Icon(Icons.arrow_upward, color: AppColors.success),
-                      title: Text('Đóng quỹ phòng định kỳ'),
-                      subtitle: Text('5 thành viên x 500.000 ₫ = 2.500.000 ₫'),
-                      trailing: Text('+2.500.000 ₫', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
-                    ),
-                    Divider(),
-                    ListTile(
-                      leading: Icon(Icons.arrow_downward, color: AppColors.danger),
-                      title: Text('Trừ tiền sửa vòi nước bồn rửa'),
-                      subtitle: Text('05/10/2026'),
-                      trailing: Text('-100.000 ₫', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -5,55 +5,13 @@ class NotificationService extends ChangeNotifier {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
 
-  NotificationService._internal() {
-    _initDefaultNotifications();
-  }
+  NotificationService._internal();
 
   final List<AppNotificationModel> _notifications = [];
 
   List<AppNotificationModel> get notifications => List.unmodifiable(_notifications);
 
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
-
-  void _initDefaultNotifications() {
-    final now = DateTime.now();
-    final t1 = now.subtract(const Duration(minutes: 25));
-    final t2 = now.subtract(const Duration(hours: 3));
-    final t3 = now.subtract(const Duration(hours: 14));
-
-    _notifications.addAll([
-      AppNotificationModel(
-        id: 'notif_exp_1',
-        title: 'Biến động số dư: Chi tiêu 💸',
-        body: 'Đã chi -45.000 ₫ tại Highlands Coffee (Ăn uống) vào lúc ${t1.hour.toString().padLeft(2, '0')}:${t1.minute.toString().padLeft(2, '0')} ngày ${t1.day.toString().padLeft(2, '0')}/${t1.month.toString().padLeft(2, '0')}/${t1.year}.',
-        timestamp: t1,
-        type: NotificationType.expense,
-      ),
-      AppNotificationModel(
-        id: 'notif_1',
-        title: 'Nhắc nhở đóng quỹ chung',
-        body: 'Đến kỳ đóng quỹ sinh hoạt tháng này. Hãy kiểm tra và nộp đúng hạn nhé!',
-        timestamp: t2,
-        type: NotificationType.fund,
-        actionRoute: '/group',
-      ),
-      AppNotificationModel(
-        id: 'notif_2',
-        title: 'Cảnh báo hạn mức Ăn uống 🍔',
-        body: 'Cảnh báo lúc ${t2.hour.toString().padLeft(2, '0')}:${t2.minute.toString().padLeft(2, '0')}: Bạn đã chi tiêu 82% hạn mức ngân sách Ăn uống trong tháng này.',
-        timestamp: t2,
-        type: NotificationType.budget,
-      ),
-      AppNotificationModel(
-        id: 'notif_3',
-        title: 'Nhắc quét hóa đơn tối nay ✨',
-        body: 'Đừng quên quét hóa đơn các khoản chi trong ngày để ví xinh luôn chính xác.',
-        timestamp: t3,
-        type: NotificationType.daily,
-        actionRoute: '/scanner',
-      ),
-    ]);
-  }
 
   /// Thêm thông báo mới vào đầu danh sách
   void addNotification({
@@ -78,6 +36,20 @@ class NotificationService extends ChangeNotifier {
   }
 
   /// Thông báo chi tiêu biến động số dư với ngày giờ cụ thể
+  void notifyIncome({
+    required String merchantName,
+    required double amount,
+    DateTime? timestamp,
+  }) {
+    final dt = timestamp ?? DateTime.now();
+    addNotification(
+      title: 'Biến động số dư: Thu nhập 💰',
+      body: 'Đã ghi +${amount.toStringAsFixed(0)} ₫ từ $merchantName.',
+      type: NotificationType.expense,
+      timestamp: dt,
+    );
+  }
+
   void notifyExpense({
     required String merchantName,
     required double amount,
