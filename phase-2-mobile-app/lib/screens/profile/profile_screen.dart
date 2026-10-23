@@ -99,11 +99,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Nguyễn Thúy Hiền', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                        Text('Người dùng', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
                         SizedBox(height: 4),
                         Text('Tài khoản cá nhân', style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600)),
                         SizedBox(height: 2),
-                        Text('0912 345 678 · hien@vixinh.vn', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                        Text('Chưa liên kết tài khoản', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -141,7 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 8),
                   _buildInfoRow('Số tài khoản', '---'),
                   const SizedBox(height: 8),
-                  _buildInfoRow('Chủ tài khoản', 'Nguyễn Thúy Hiền'),
+                  _buildInfoRow('Chủ tài khoản', '---'),
                 ],
               ),
             ),

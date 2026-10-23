@@ -19,22 +19,18 @@ const S = {
     }
 };
 
-const USERS = [
-    {email:'hien@vixinh.vn',pw:'123456',name:'Nguyễn Thúy Hiền',phone:'0912 345 678',avatar:'assets/logo.jpg',icon:'ri-user-star-line'},
-    {email:'diu@vixinh.vn',pw:'123456',name:'Lê Thị Dịu',phone:'0987 654 321',avatar:'assets/logo.jpg',icon:'ri-user-heart-line'},
-    {email:'duy@vixinh.vn',pw:'123456',name:'Lê Ngọc Duy',phone:'0903 112 233',avatar:'assets/logo.jpg',icon:'ri-user-settings-line'},
-];
+const USERS = [];
 
 const CATS = {
-    food:          {label:'Ăn uống',   ic:'ri-restaurant-line',         color:'#F6BD60', bg:'#FFF8EB'},
-    transport:     {label:'Di chuyển', ic:'ri-taxi-line',               color:'#4DABF7', bg:'#EBF5FF'},
-    shopping:      {label:'Mua sắm',   ic:'ri-shopping-bag-3-line',     color:'#FF6584', bg:'#FFF0F4'},
-    entertainment: {label:'Giải trí',  ic:'ri-gamepad-line',            color:'#E599F7', bg:'#FCF2FF'},
-    health:        {label:'Sức khỏe',  ic:'ri-heart-pulse-line',        color:'#38D9A9', bg:'#E8FAF4'},
-    education:     {label:'Học tập',   ic:'ri-book-open-line',          color:'#F783AC', bg:'#FFF0F6'},
-    bills:         {label:'Hoá đơn',   ic:'ri-bill-line',               color:'#FA8B74', bg:'#FFF2F0'},
-    salary:        {label:'Lương',     ic:'ri-money-dollar-circle-line',color:'#20C997', bg:'#E6FCF5'},
-    other:         {label:'Khác',      ic:'ri-archive-line',            color:'#ADB5BD', bg:'#F8F9FA'},
+    food:          {label:'Ăn uống',   ic:'ri-restaurant-line',         color:'#0071E3', bg:'#F5F5F7'},
+    transport:     {label:'Di chuyển', ic:'ri-taxi-line',               color:'#0071E3', bg:'#F5F5F7'},
+    shopping:      {label:'Mua sắm',   ic:'ri-shopping-bag-3-line',     color:'#0071E3', bg:'#F5F5F7'},
+    entertainment: {label:'Giải trí',  ic:'ri-gamepad-line',            color:'#0071E3', bg:'#F5F5F7'},
+    health:        {label:'Sức khỏe',  ic:'ri-heart-pulse-line',        color:'#0071E3', bg:'#F5F5F7'},
+    education:     {label:'Học tập',   ic:'ri-book-open-line',          color:'#0071E3', bg:'#F5F5F7'},
+    bills:         {label:'Hoá đơn',   ic:'ri-bill-line',               color:'#0071E3', bg:'#F5F5F7'},
+    salary:        {label:'Lương',     ic:'ri-money-dollar-circle-line',color:'#0071E3', bg:'#F5F5F7'},
+    other:         {label:'Khác',      ic:'ri-archive-line',            color:'#0071E3', bg:'#F5F5F7'},
 };
 
 const SAVICONS = {
@@ -47,88 +43,12 @@ const SAVICONS = {
     gift:   'ri-gift-line'
 };
 
-const DEMO_TX = [
-    {id:1,  name:'Highlands Coffee',  amt:59000,    cat:'food',          date:'2026-10-17',time:'08:30',type:'expense'},
-    {id:2,  name:'Grab Taxi',         amt:45000,    cat:'transport',     date:'2026-10-17',time:'07:15',type:'expense'},
-    {id:3,  name:'Lương tháng 10',    amt:12000000, cat:'salary',        date:'2026-10-17',time:'00:00',type:'income'},
-    {id:4,  name:'Circle K',          amt:127000,   cat:'shopping',      date:'2026-10-16',time:'21:00',type:'expense'},
-    {id:5,  name:'Cơm Tấm Sài Gòn',  amt:235000,   cat:'food',          date:'2026-10-16',time:'12:30',type:'expense'},
-    {id:6,  name:'Fahasa',            amt:189000,   cat:'education',     date:'2026-10-16',time:'15:45',type:'expense'},
-    {id:7,  name:'CGV Cinemas',       amt:150000,   cat:'entertainment', date:'2026-10-15',time:'19:00',type:'expense'},
-    {id:8,  name:'Phúc Long',         amt:49000,    cat:'food',          date:'2026-10-15',time:'14:20',type:'expense'},
-    {id:9,  name:'Tiền điện T10',     amt:350000,   cat:'bills',         date:'2026-10-15',time:'09:00',type:'expense'},
-    {id:10, name:'Pharmacity',        amt:85000,    cat:'health',        date:'2026-10-14',time:'16:30',type:'expense'},
-    {id:11, name:'Shopee',            amt:320000,   cat:'shopping',      date:'2026-10-14',time:'22:15',type:'expense'},
-    {id:12, name:'Bún Bò Huế',       amt:55000,    cat:'food',          date:'2026-10-14',time:'11:45',type:'expense'},
-    {id:13, name:'Freelance thiết kế',amt:3500000,  cat:'salary',        date:'2026-10-14',time:'10:00',type:'income'},
-    {id:14, name:'Grab Bike',         amt:25000,    cat:'transport',     date:'2026-10-13',time:'08:00',type:'expense'},
-    {id:15, name:'Lotteria',          amt:99000,    cat:'food',          date:'2026-10-13',time:'12:00',type:'expense'},
-    {id:16, name:'WiFi T10',          amt:200000,   cat:'bills',         date:'2026-10-13',time:'10:00',type:'expense'},
-    {id:17, name:'Thưởng dự án',      amt:2000000,  cat:'salary',        date:'2026-10-10',time:'09:00',type:'income'},
-];
+const DEMO_TX = [];
+const DEMO_BGT = [];
+const DEMO_SAV = [];
+const DEMO_REC = [];
 
-const DEMO_BGT = [
-    {cat:'food',limit:3000000},{cat:'transport',limit:800000},{cat:'shopping',limit:1500000},
-    {cat:'entertainment',limit:500000},{cat:'bills',limit:1000000},{cat:'education',limit:500000},
-];
-const DEMO_SAV = [
-    {id:1,name:'Mua Laptop mới',icon:'laptop',target:15000000,saved:8500000},
-    {id:2,name:'Du lịch Đà Lạt',icon:'travel',target:5000000,saved:2200000},
-    {id:3,name:'Quỹ khẩn cấp',icon:'gift',target:10000000,saved:4300000},
-];
-const DEMO_REC = [
-    {id:1,name:'Tiền nhà',amt:3500000,freq:'monthly',cat:'bills',on:true},
-    {id:2,name:'Tiền điện',amt:400000,freq:'monthly',cat:'bills',on:true},
-    {id:3,name:'Internet',amt:200000,freq:'monthly',cat:'bills',on:true},
-    {id:4,name:'Spotify',amt:59000,freq:'monthly',cat:'entertainment',on:true},
-    {id:5,name:'Cà phê sáng',amt:35000,freq:'daily',cat:'food',on:false},
-];
-
-const DEMO_GROUP = {
-    name: 'Quỹ Chi Tiêu Chung',
-    balance: 2400000,
-    members: [
-        {id:1, name:'Nguyễn Thúy Hiền', role:'Trưởng phòng', phone:'0912 345 678', icon:'ri-user-star-line', paidFund:1500000, debt:0},
-        {id:2, name:'Lê Thị Dịu', role:'Thành viên', phone:'0987 654 321', icon:'ri-user-heart-line', paidFund:1500000, debt:0},
-        {id:3, name:'Lê Ngọc Duy', role:'Thành viên', phone:'0903 112 233', icon:'ri-user-settings-line', paidFund:1500000, debt:0},
-        {id:4, name:'Lê Tiến Quân', role:'Thành viên', phone:'0934 567 890', icon:'ri-user-line', paidFund:1500000, debt:1125000},
-        {id:5, name:'Nguyễn Việt Anh', role:'Thành viên', phone:'0978 123 456', icon:'ri-user-line', paidFund:0, debt:0}
-    ],
-    bills: [
-        {
-            id: 1,
-            name: 'Tiền phòng trọ Tháng 10',
-            amt: 4500000,
-            date: '2026-10-15',
-            payerId: 1,
-            payerName: 'Nguyễn Thúy Hiền',
-            mode: 'split',
-            shares: [
-                {id:1, name:'Nguyễn Thúy Hiền', amt:1125000, isPayer:true, status:'payer'},
-                {id:2, name:'Lê Thị Dịu', amt:1125000, isPayer:false, status:'paid'},
-                {id:3, name:'Lê Ngọc Duy', amt:1125000, isPayer:false, status:'paid'},
-                {id:4, name:'Lê Tiến Quân', amt:1125000, isPayer:false, status:'unpaid'}
-            ]
-        },
-        {
-            id: 2,
-            name: 'Tiền điện & nước Tháng 9',
-            amt: 840000,
-            date: '2026-10-05',
-            payerId: 'fund',
-            payerName: 'Quỹ Chi Tiêu Chung',
-            mode: 'fund',
-            note: 'Đã trích 840.000 ₫ từ Quỹ chung'
-        }
-    ],
-    history: [
-        {id:1, type:'in', title:'Dịu nộp quỹ tháng 10', amt:500000, date:'2026-10-01', user:'Lê Thị Dịu'},
-        {id:2, type:'in', title:'Hiền nộp quỹ tháng 10', amt:500000, date:'2026-10-01', user:'Nguyễn Thúy Hiền'},
-        {id:3, type:'in', title:'Duy nộp quỹ tháng 10', amt:500000, date:'2026-10-02', user:'Lê Ngọc Duy'},
-        {id:4, type:'in', title:'Quân nộp quỹ tháng 10', amt:500000, date:'2026-10-02', user:'Lê Tiến Quân'},
-        {id:5, type:'out', title:'Trích quỹ thanh toán Điện Nước T9', amt:840000, date:'2026-10-05', user:'Nguyễn Thúy Hiền'}
-    ]
-};
+const DEMO_GROUP = null;
 
 // ===== UTILS =====
 const fmt = n => new Intl.NumberFormat('vi-VN').format(n)+' ₫';
@@ -612,7 +532,8 @@ function enterApp(){
     const savedTheme=localStorage.getItem('vx_theme')||'pink-gold';
     document.documentElement.setAttribute('data-theme',savedTheme);
     S.transactions=[...DEMO_TX]; S.budgets=[...DEMO_BGT]; S.savings=DEMO_SAV.map(x=>({...x})); S.recurring=DEMO_REC.map(x=>({...x}));
-    if(!S.groupFund) S.groupFund = JSON.parse(JSON.stringify(DEMO_GROUP));
+    const savedGroup = localStorage.getItem('vx_group_fund');
+    S.groupFund = savedGroup ? JSON.parse(savedGroup) : null;
     renderAll();
     initNotifications();
 }
@@ -640,10 +561,7 @@ function renderAll(){
     renderChart('week');
     renderHomeTx();
     updStats();
-    if(S.groupFund){
-        const hb=document.getElementById('homeFundBal');
-        if(hb)hb.textContent=fmt(S.groupFund.balance);
-    }
+    updateHomeGroupCard();
 }
 function updStats(){
     const exp=S.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amt,0);
@@ -3150,10 +3068,116 @@ function switchUser(email){
     toast(`Đã chuyển sang tài khoản ${u.name}!`,'success');
 }
 
+// ===== DYNAMIC GROUP STATE MANAGEMENT =====
+function updateHomeGroupCard(){
+    const titleEl = document.getElementById('homeGroupTitle');
+    const subEl = document.getElementById('homeGroupSub');
+    const iconEl = document.getElementById('homeGroupIcon');
+    if(!titleEl) return;
+    if(!S.groupFund){
+        titleEl.textContent = 'Tạo Ví Nhóm & Quỹ Chung';
+        if(subEl) subEl.textContent = 'Chưa có nhóm · Chạm để tạo nhóm chia tiền & quản lý quỹ';
+        if(iconEl) iconEl.innerHTML = '<i class="ri-add-circle-line"></i>';
+    } else {
+        titleEl.textContent = S.groupFund.name;
+        const memCount = (S.groupFund.members && S.groupFund.members.length) || 1;
+        if(subEl) subEl.innerHTML = `Quỹ: <strong id="homeFundBal">${fmt(S.groupFund.balance)}</strong> · ${memCount} thành viên`;
+        if(iconEl) iconEl.innerHTML = '<i class="ri-community-line"></i>';
+    }
+}
+
+function handleGroupClick(){
+    if(!S.groupFund){
+        openCreateGroupModal();
+    } else {
+        go('group');
+    }
+}
+
+function openCreateGroupModal(){
+    const m = document.getElementById('createGroupModal');
+    if(m) {
+        m.classList.add('active');
+        const inp = document.getElementById('newGroupName');
+        if(inp) { inp.value = ''; inp.focus(); }
+        const desc = document.getElementById('newGroupDesc');
+        if(desc) desc.value = '';
+        const bal = document.getElementById('newGroupInitialBal');
+        if(bal) bal.value = 0;
+    }
+}
+
+function closeCreateGroupModal(){
+    document.getElementById('createGroupModal')?.classList.remove('active');
+}
+
+function handleCreateGroupSubmit(e){
+    e.preventDefault();
+    const name = document.getElementById('newGroupName').value.trim();
+    if(!name){ toast('Vui lòng nhập tên nhóm!', 'error'); return; }
+    const desc = document.getElementById('newGroupDesc').value.trim() || 'Quỹ chi tiêu chung';
+    const initialBal = parseFloat(document.getElementById('newGroupInitialBal').value) || 0;
+    
+    S.groupFund = {
+        id: Date.now(),
+        name: name,
+        desc: desc,
+        balance: initialBal,
+        members: [
+            { id: 1, name: S.user?.full_name || S.user?.name || 'Tôi', role: 'Trưởng nhóm', phone: S.user?.phone || 'Chủ ví', paidFund: initialBal, debt: 0, icon: 'ri-user-star-line' }
+        ],
+        bills: [],
+        history: initialBal > 0 ? [{
+            type: 'in',
+            title: 'Khởi tạo số dư ban đầu',
+            user: S.user?.full_name || S.user?.name || 'Tôi',
+            date: new Date().toISOString().slice(0, 10),
+            amt: initialBal
+        }] : []
+    };
+    localStorage.setItem('vx_group_fund', JSON.stringify(S.groupFund));
+    closeCreateGroupModal();
+    updateHomeGroupCard();
+    toast(`Đã tạo ví nhóm "${name}" thành công! 🎉`, 'success');
+    go('group');
+}
+
 // ===== GROUP FUND & SPLIT BILLS =====
 function renderGroup(){
-    if(!S.groupFund) S.groupFund = JSON.parse(JSON.stringify(DEMO_GROUP));
+    updateHomeGroupCard();
+    const noGroup = document.getElementById('noGroupState');
+    const hasGroup = document.getElementById('hasGroupState');
+    const headerBtn = document.getElementById('groupHeaderActionBtn');
+    const headerTitle = document.getElementById('groupPageHeaderTitle');
+    
+    if(!S.groupFund){
+        if(noGroup) noGroup.style.display = 'block';
+        if(hasGroup) hasGroup.style.display = 'none';
+        if(headerBtn) {
+            headerBtn.style.display = 'flex';
+            headerBtn.onclick = openCreateGroupModal;
+            headerBtn.title = 'Tạo ví nhóm';
+            headerBtn.innerHTML = '<i class="ri-add-line"></i>';
+        }
+        if(headerTitle) headerTitle.textContent = 'Ví Nhóm & Quỹ Chung';
+        return;
+    }
+    
+    if(noGroup) noGroup.style.display = 'none';
+    if(hasGroup) hasGroup.style.display = 'block';
+    if(headerBtn) {
+        headerBtn.style.display = 'flex';
+        headerBtn.onclick = openFundModal;
+        headerBtn.title = 'Góp quỹ';
+        headerBtn.innerHTML = '<i class="ri-hand-coin-line"></i>';
+    }
+    if(headerTitle) headerTitle.textContent = S.groupFund.name;
+    
     const g = S.groupFund;
+    const badge = document.getElementById('groupBadgeName');
+    if(badge) badge.innerHTML = `<i class="ri-community-line"></i> ${g.name}`;
+    const desc = document.getElementById('groupFundDesc');
+    if(desc) desc.textContent = `${(g.members||[]).length} thành viên · ${g.desc || 'Quỹ chi tiêu chung'}`;
     
     // Balance
     const balEl = document.getElementById('groupFundBal');
@@ -3161,7 +3185,7 @@ function renderGroup(){
     const homeBal = document.getElementById('homeFundBal');
     if(homeBal) homeBal.textContent = fmt(g.balance);
     const cntEl = document.getElementById('gBillCount');
-    if(cntEl) cntEl.textContent = g.bills.length;
+    if(cntEl) cntEl.textContent = (g.bills||[]).length;
     
     // Tab 1: Bills List
     const bl = document.getElementById('groupBillsList');

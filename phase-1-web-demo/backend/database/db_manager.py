@@ -12,8 +12,9 @@ from pathlib import Path
 class DatabaseManager:
     """Quản lý kết nối và các câu truy vấn tới SQLite."""
 
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path, seed_demo: bool = False):
         self.db_path = str(db_path)
+        self.seed_demo = seed_demo
         self.init_database()
 
     def get_connection(self) -> sqlite3.Connection:
@@ -161,15 +162,39 @@ class DatabaseManager:
             )
             """)
 
-            # Tạo dữ liệu mẫu
-            cursor.execute("SELECT COUNT(*) FROM users")
+            # Khởi tạo danh mục mặc định
+            cursor.execute("SELECT COUNT(*) FROM categories")
             if cursor.fetchone()[0] == 0:
-                self._seed_data(cursor)
+                self._seed_categories(cursor)
+
+            # Chỉ nạp tài khoản mẫu khi bật seed_demo (phục vụ unit test)
+            if self.seed_demo:
+                cursor.execute("SELECT COUNT(*) FROM users")
+                if cursor.fetchone()[0] == 0:
+                    self._seed_data(cursor)
 
             conn.commit()
 
+    def _seed_categories(self, cursor: sqlite3.Cursor) -> None:
+        """Khởi tạo danh mục chi tiêu chuẩn của hệ thống."""
+        seed_cats = [
+            ("food", "Ăn uống", "ri-restaurant-line", "expense"),
+            ("transport", "Di chuyển", "ri-taxi-line", "expense"),
+            ("shopping", "Mua sắm", "ri-shopping-bag-3-line", "expense"),
+            ("entertainment", "Giải trí", "ri-gamepad-line", "expense"),
+            ("health", "Sức khỏe", "ri-heart-pulse-line", "expense"),
+            ("education", "Học tập", "ri-book-open-line", "expense"),
+            ("bills", "Hoá đơn", "ri-bill-line", "expense"),
+            ("salary", "Lương", "ri-money-dollar-circle-line", "income"),
+            ("other", "Khác", "ri-archive-line", "expense"),
+        ]
+        cursor.executemany(
+            "INSERT OR IGNORE INTO categories (key, name, icon, type) VALUES (?, ?, ?, ?)",
+            seed_cats
+        )
+
     def _seed_data(self, cursor: sqlite3.Cursor) -> None:
-        """Tạo dữ liệu mẫu cho nhóm 5 thành viên."""
+        """Tạo dữ liệu mẫu cho nhóm 5 thành viên (dùng cho test suite)."""
         # Users
         seed_users = [
             ("thuyhien", "Nguyễn Thúy Hiền", "hien@vixinh.vn", "0912 345 678", "123456"),
@@ -183,22 +208,6 @@ class DatabaseManager:
             seed_users
         )
 
-        # Categories
-        seed_cats = [
-            ("food", "Ăn uống", "ri-restaurant-line", "expense"),
-            ("transport", "Di chuyển", "ri-taxi-line", "expense"),
-            ("shopping", "Mua sắm", "ri-shopping-bag-3-line", "expense"),
-            ("entertainment", "Giải trí", "ri-gamepad-line", "expense"),
-            ("health", "Sức khỏe", "ri-heart-pulse-line", "expense"),
-            ("education", "Học tập", "ri-book-open-line", "expense"),
-            ("bills", "Hoá đơn", "ri-bill-line", "expense"),
-            ("salary", "Lương", "ri-money-dollar-circle-line", "income"),
-            ("other", "Khác", "ri-archive-line", "expense"),
-        ]
-        cursor.executemany(
-            "INSERT INTO categories (key, name, icon, type) VALUES (?, ?, ?, ?)",
-            seed_cats
-        )
 
         # Tạo nhóm mẫu
         cursor.execute(

@@ -163,7 +163,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Xin chào ✨', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                            Text('Nguyễn Thúy Hiền', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text('Ví Xinh', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           ],
                         ),
                       ],

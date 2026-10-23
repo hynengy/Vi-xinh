@@ -692,12 +692,17 @@ def server_error(e):
 
 
 if __name__ == "__main__":
+    if sys.platform == "win32":
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
     port = int(os.environ.get("PORT", 5000))
     print("\n" + "=" * 60)
-    print("🚀 Ví Xinh Backend Server đang khởi chạy...")
-    print(f"👉 Trang chủ:      http://127.0.0.1:{port}")
-    print(f"👉 Xác thực OCR:   http://127.0.0.1:{port}/review")
-    print(f"👉 Ví nhóm:        http://127.0.0.1:{port}/groups")
-    print(f"👉 API Docs & Doc: http://127.0.0.1:{port}/api/stats")
+    print(">> Vi Xinh Backend Server dang khoi chay...")
+    print(f">> Trang chu:      http://127.0.0.1:{port}")
+    print(f">> Xac thuc OCR:   http://127.0.0.1:{port}/review")
+    print(f">> Vi nhom:        http://127.0.0.1:{port}/groups")
+    print(f">> API Docs & Doc: http://127.0.0.1:{port}/api/stats")
     print("=" * 60 + "\n")
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)

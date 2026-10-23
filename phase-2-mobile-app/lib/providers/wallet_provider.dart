@@ -5,9 +5,9 @@ import '../services/database_helper.dart';
 class WalletProvider with ChangeNotifier {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
-  double _totalBalance = 8250000.0;
-  double _monthlyIncome = 12000000.0;
-  double _monthlyExpense = 3750000.0;
+  double _totalBalance = 0.0;
+  double _monthlyIncome = 0.0;
+  double _monthlyExpense = 0.0;
   bool _isBalanceVisible = true;
   List<TransactionModel> _transactions = [];
   bool _isLoading = false;
@@ -31,9 +31,9 @@ class WalletProvider with ChangeNotifier {
     try {
       _transactions = await _dbHelper.getRecentTransactions();
       final stats = await _dbHelper.getSummaryStats();
-      _monthlyIncome = stats['income'] ?? 12000000.0;
-      _monthlyExpense = stats['expense'] ?? 3750000.0;
-      _totalBalance = stats['balance'] ?? 8250000.0;
+      _monthlyIncome = stats['income'] ?? 0.0;
+      _monthlyExpense = stats['expense'] ?? 0.0;
+      _totalBalance = stats['balance'] ?? 0.0;
     } catch (e) {
       debugPrint('Error loading wallet data: $e');
     } finally {

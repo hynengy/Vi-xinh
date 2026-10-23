@@ -110,7 +110,6 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
   Widget build(BuildContext context) {
     final totalAmount = _getRawTotalAmount();
     final quickSplitPerPerson = totalAmount > 0 ? (totalAmount / _splitCount) : 0.0;
-    final roomSplitPerPerson = totalAmount > 0 ? (totalAmount / 5) : 0.0;
 
     return Scaffold(
       backgroundColor: AppColors.background,

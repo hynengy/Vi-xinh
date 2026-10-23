@@ -1,7 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/transaction_model.dart';
-import '../models/user_model.dart';
 import '../models/group_model.dart';
 
 class DatabaseHelper {
@@ -93,52 +92,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // Seed default users & group 302
-    await _seedInitialData(db);
-  }
-
-  Future<void> _seedInitialData(Database db) async {
-    final members = [
-      {'id': 1, 'username': 'thuyhien', 'full_name': 'Nguyễn Thúy Hiền', 'phone': '0912 345 678', 'email': 'hien@vixinh.vn'},
-      {'id': 2, 'username': 'thidiu', 'full_name': 'Lê Thị Dịu', 'phone': '0923 456 789', 'email': 'diu@vixinh.vn'},
-      {'id': 3, 'username': 'tienquan', 'full_name': 'Lê Tiến Quân', 'phone': '0934 567 890', 'email': 'quan@vixinh.vn'},
-      {'id': 4, 'username': 'ngocduy', 'full_name': 'Lê Ngọc Duy', 'phone': '0945 678 901', 'email': 'duy@vixinh.vn'},
-      {'id': 5, 'username': 'vietanh', 'full_name': 'Nguyễn Việt Anh', 'phone': '0956 789 012', 'email': 'vietanh@vixinh.vn'},
-    ];
-
-    for (var m in members) {
-      await db.insert('users', m);
-    }
-
-    await db.insert('groups', {
-      'id': 1,
-      'name': 'Quỹ Chi Tiêu Chung',
-      'description': 'Ví chi tiêu nhóm dùng chung cho các thành viên',
-      'created_by': 1,
-      'balance': 0.0,
-    });
-
-    for (var m in members) {
-      await db.insert('group_members', {
-        'group_id': 1,
-        'user_id': m['id'],
-        'role': m['id'] == 1 ? 'admin' : 'member',
-        'paid_fund': 500000.0,
-        'debt': m['id'] == 1 ? 0.0 : 1125000.0,
-      });
-    }
-
-    // Sample transaction: Tiền trọ T10
-    await db.insert('transactions', {
-      'user_id': 1,
-      'merchant_name': 'Tiền trọ Phòng 302 (Tháng 10)',
-      'amount': 4500000.0,
-      'type': 'expense',
-      'transaction_date': '2026-10-01',
-      'group_id': 1,
-      'category': 'bills',
-      'notes': 'Nguyễn Thúy Hiền đã ứng trước nộp cho chủ trọ',
-    });
+    // Khởi tạo CSDL sạch, không nạp tài khoản mẫu
   }
 
   // --- CRUD Transactions ---
@@ -162,8 +116,8 @@ class DatabaseHelper {
     final incResult = await db.rawQuery("SELECT SUM(amount) as s FROM transactions WHERE type='income'");
     final expResult = await db.rawQuery("SELECT SUM(amount) as s FROM transactions WHERE type='expense'");
 
-    double inc = (incResult.first['s'] as num?)?.toDouble() ?? 12000000.0;
-    double exp = (expResult.first['s'] as num?)?.toDouble() ?? 3750000.0;
+    double inc = (incResult.first['s'] as num?)?.toDouble() ?? 0.0;
+    double exp = (expResult.first['s'] as num?)?.toDouble() ?? 0.0;
 
     return {
       'income': inc,

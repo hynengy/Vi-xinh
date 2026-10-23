@@ -5,13 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ví Xinh - Quản Lý Tài Chính Thông Minh</title>
     <meta name="description" content="Ví Xinh - Ứng dụng quản lý chi tiêu cá nhân & nhóm thông minh.">
-    <link rel="stylesheet" href="css/style.css?v=2.0.5">
+    <link rel="stylesheet" href="css/style.css?v=3.2.0">
     <link rel="manifest" href="manifest.webmanifest">
-    <meta name="theme-color" content="#FF6584">
+    <meta name="theme-color" content="#5286E8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ví Xinh">
     <link rel="apple-touch-icon" href="assets/logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.min.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👛</text></svg>">
 </head>
@@ -229,11 +232,11 @@
         </div>
 
         <div class="sec" style="margin-top:0.75rem">
-            <div class="group-preview-card" onclick="go('group')">
-                <div class="gpc-icon"><i class="ri-community-line"></i></div>
+            <div class="group-preview-card" onclick="handleGroupClick()">
+                <div class="gpc-icon" id="homeGroupIcon"><i class="ri-add-circle-line"></i></div>
                 <div class="gpc-info">
-                    <div class="gpc-title" id="homeGroupTitle">Ví Nhóm & Quỹ Chung</div>
-                    <div class="gpc-sub">Quỹ: <strong id="homeFundBal">2.400.000 ₫</strong> · <span style="color:var(--primary);font-weight:700">Chi tiêu minh bạch</span></div>
+                    <div class="gpc-title" id="homeGroupTitle">Tạo Ví Nhóm & Quỹ Chung</div>
+                    <div class="gpc-sub" id="homeGroupSub">Chưa có nhóm · Chạm để tạo nhóm chia tiền & quản lý quỹ</div>
                 </div>
                 <div class="gpc-arrow"><i class="ri-arrow-right-s-line"></i></div>
             </div>
@@ -413,30 +416,46 @@
     <div class="pv" id="pgGroup">
         <div class="top-bar">
             <button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button>
-            <span class="top-title">Quỹ & Ví Nhóm</span>
-            <button class="hdr-btn" onclick="openFundModal()" title="Góp quỹ phòng"><i class="ri-hand-coin-line"></i></button>
+            <span class="top-title" id="groupPageHeaderTitle">Ví Nhóm & Quỹ Chung</span>
+            <button class="hdr-btn" id="groupHeaderActionBtn" onclick="openCreateGroupModal()" title="Tạo nhóm"><i class="ri-add-line"></i></button>
         </div>
-        <div class="sec" style="margin-top:0.7rem">
+        
+        <!-- Màn hình chưa có nhóm (Empty State - Yêu cầu tự tạo) -->
+        <div id="noGroupState" class="sec" style="margin-top:1.5rem;text-align:center">
+            <div class="empty" style="padding:2.5rem 1.5rem">
+                <div class="empty-ic" style="width:72px;height:72px;margin:0 auto 1.2rem;background:#EEF4FD;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:2rem">
+                    <i class="ri-community-line"></i>
+                </div>
+                <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:0.5rem;color:var(--text)">Bạn chưa có ví nhóm nào</h3>
+                <p style="font-size:0.85rem;color:var(--text3);max-width:320px;margin:0 auto 1.5rem;line-height:1.5">Tạo ví nhóm để cùng bạn bè, bạn cùng phòng chia tiền hóa đơn, bóc tách hóa đơn ăn uống và quản lý quỹ chung minh bạch.</p>
+                <button type="button" class="btn btn-p" onclick="openCreateGroupModal()" style="padding:0.75rem 1.75rem;font-size:0.9rem;border-radius:9999px">
+                    <i class="ri-add-line"></i> Tạo ví nhóm ngay
+                </button>
+            </div>
+        </div>
+
+        <!-- Màn hình khi ĐÃ CÓ NHÓM -->
+        <div id="hasGroupState" class="sec" style="margin-top:0.7rem;display:none">
             <!-- Thẻ Quỹ Chung Phòng Trọ -->
             <div class="fund-card">
                 <div class="fund-top">
                     <div>
-                        <div class="fund-badge"><i class="ri-community-line"></i> Quỹ Chi Tiêu Chung</div>
+                        <div class="fund-badge" id="groupBadgeName"><i class="ri-community-line"></i> Quỹ nhóm</div>
                         <div class="fund-label">Số dư quỹ</div>
                     </div>
                     <span class="badge" style="background:#E6FCF5;color:#0CA678;font-weight:700">Hoạt động</span>
                 </div>
-                <div class="fund-bal" id="groupFundBal">2.400.000 ₫</div>
-                <div class="fund-desc">5 thành viên · 500.000 ₫/tháng chi phí sinh hoạt chung</div>
+                <div class="fund-bal" id="groupFundBal">0 ₫</div>
+                <div class="fund-desc" id="groupFundDesc">0 thành viên · Quỹ chi tiêu chung</div>
                 <div class="fund-btn-row">
                     <button class="btn btn-p btn-sm" onclick="openFundModal()"><i class="ri-add-line"></i> Nộp quỹ</button>
-                    <button class="btn btn-s btn-sm" onclick="loadSampleRoomRentInvoice()"><i class="ri-file-upload-line"></i> Quét hóa đơn</button>
+                    <button class="btn btn-s btn-sm" onclick="openModal('camera')"><i class="ri-camera-lens-line"></i> Quét hóa đơn chia</button>
                 </div>
             </div>
 
             <!-- Tabs Ví Nhóm -->
             <div class="pg-tabs" id="groupTabs" style="margin-top:0.85rem">
-                <button class="pg-tab active" onclick="swGroupTab(this,'bills')"><i class="ri-receipt-line"></i> Hóa đơn (<span id="gBillCount">2</span>)</button>
+                <button class="pg-tab active" onclick="swGroupTab(this,'bills')"><i class="ri-receipt-line"></i> Hóa đơn (<span id="gBillCount">0</span>)</button>
                 <button class="pg-tab" onclick="swGroupTab(this,'members')"><i class="ri-group-line"></i> Thành viên</button>
                 <button class="pg-tab" onclick="swGroupTab(this,'history')"><i class="ri-history-line"></i> Lịch sử quỹ</button>
             </div>
@@ -444,15 +463,14 @@
             <!-- Tab 1: Danh Sách Hóa Đơn Chia Tiền -->
             <div id="gTabBills">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin:0.85rem 0 0.5rem">
-                    <span style="font-size:0.8rem;font-weight:700;color:var(--text)">Khoản chi gần đây</span>
-                    <button class="btn btn-sm btn-o" onclick="loadSampleRoomRentInvoice()"><i class="ri-file-text-line"></i> Mẫu tiền phòng</button>
+                    <span style="font-size:0.8rem;font-weight:700;color:var(--text)">Khoản chi nhóm</span>
                 </div>
                 <div id="groupBillsList"></div>
             </div>
 
             <!-- Tab 2: Danh Sách Thành Viên & Công Nợ -->
             <div id="gTabMembers" class="hidden">
-                <div style="margin:0.85rem 0 0.5rem;font-size:0.8rem;font-weight:700;color:var(--text)">Thành viên phòng</div>
+                <div style="margin:0.85rem 0 0.5rem;font-size:0.8rem;font-weight:700;color:var(--text)">Thành viên nhóm</div>
                 <div id="groupMembersList"></div>
             </div>
 
@@ -484,10 +502,10 @@
                 </div>
                 <div class="ph2-info">
                     <div class="ph2-name-row">
-                        <h3 class="ph2-name" id="profileName">Nguyễn Thúy Hiền</h3>
-                        <span class="ph2-role-badge" id="profileGroupRole">Tài khoản chính</span>
+                        <h3 class="ph2-name" id="profileName">Người dùng</h3>
+                        <span class="ph2-role-badge" id="profileGroupRole">Cá nhân</span>
                     </div>
-                    <div class="ph2-meta" id="profileMeta">0912 345 678 · hien@vixinh.vn</div>
+                    <div class="ph2-meta" id="profileMeta">Tài khoản cá nhân</div>
                 </div>
                 <button type="button" class="ph2-edit-btn" onclick="openEditProfileModal()" title="Chỉnh sửa thông tin">
                     <i class="ri-pencil-line"></i>
@@ -830,11 +848,7 @@
                 <div class="fg">
                     <label class="fl">Người nộp</label>
                     <select class="fc" id="fundPayerSelect">
-                        <option value="1">Nguyễn Thúy Hiền (Trưởng phòng)</option>
-                        <option value="2">Lê Thị Dịu</option>
-                        <option value="3">Lê Ngọc Duy</option>
-                        <option value="4">Lê Tiến Quân</option>
-                        <option value="5">Nguyễn Việt Anh</option>
+                        <option value="1">Tôi (Chủ tài khoản)</option>
                     </select>
                 </div>
                 <div class="fg">
@@ -1093,7 +1107,37 @@
     </div>
 </div>
 
+<!-- ===== CREATE GROUP MODAL ===== -->
+<div class="modal-bg" id="createGroupModal">
+    <div class="modal-box">
+        <div class="modal-handle"></div>
+        <div class="modal-hdr">
+            <h2 class="modal-title">Tạo ví nhóm mới</h2>
+            <button class="modal-x" onclick="closeCreateGroupModal()"><i class="ri-close-line"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="createGroupForm" onsubmit="handleCreateGroupSubmit(event)">
+                <div class="fg">
+                    <label class="fl">Tên nhóm / Quỹ chung</label>
+                    <input type="text" id="newGroupName" class="fc" placeholder="VD: Phòng Trọ 302, Đi Du Lịch Đà Nẵng..." required autofocus>
+                </div>
+                <div class="fg">
+                    <label class="fl">Mục đích chi tiêu (tuỳ chọn)</label>
+                    <input type="text" id="newGroupDesc" class="fc" placeholder="VD: Quỹ ăn uống, tiền điện nước phòng...">
+                </div>
+                <div class="fg">
+                    <label class="fl">Số dư quỹ ban đầu (₫)</label>
+                    <input type="number" id="newGroupInitialBal" class="fc" placeholder="0" min="0" value="0">
+                </div>
+                <button type="submit" class="btn btn-p btn-block" style="margin-top:0.75rem;padding:0.75rem">
+                    <i class="ri-check-line"></i> Tạo nhóm ngay
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="toast-box" id="toastBox"></div>
-<script src="js/app.js?v=2.0.7"></script>
+<script src="js/app.js?v=3.2.0"></script>
 </body>
 </html>

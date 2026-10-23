@@ -18,7 +18,7 @@ def db():
     """Tạo CSDL tạm cho mỗi test."""
     with tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False) as f:
         db_path = Path(f.name)
-    manager = DatabaseManager(db_path)
+    manager = DatabaseManager(db_path, seed_demo=True)
     yield manager
     db_path.unlink(missing_ok=True)
 

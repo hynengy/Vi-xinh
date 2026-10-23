@@ -77,8 +77,6 @@ class _GroupWalletScreenState extends State<GroupWalletScreen> with SingleTicker
   }
 
   void _showQrReminder(String memberName, double debt) {
-    final group = context.read<GroupProvider>().currentGroup;
-    final memo = 'DONG QUY ${group?.name.toUpperCase().replaceAll(' ', '') ?? 'NHOM'}';
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -98,11 +96,11 @@ class _GroupWalletScreenState extends State<GroupWalletScreen> with SingleTicker
               decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
               child: const Column(
                 children: [
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Chủ TK:'), Text('Nguyễn Thúy Hiền', style: TextStyle(fontWeight: FontWeight.bold))]),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Chủ TK:'), Text('---', style: TextStyle(fontWeight: FontWeight.bold))]),
                   SizedBox(height: 6),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Ngân hàng:'), Text('MB Bank', style: TextStyle(fontWeight: FontWeight.bold))]),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Ngân hàng:'), Text('Chưa thiết lập', style: TextStyle(fontWeight: FontWeight.bold))]),
                   SizedBox(height: 6),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Số tài khoản:'), Text('0912 345 678', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary))]),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Số tài khoản:'), Text('---', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary))]),
                 ],
               ),
             ),
@@ -113,7 +111,7 @@ class _GroupWalletScreenState extends State<GroupWalletScreen> with SingleTicker
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 onPressed: () {
-                  final msg = 'Tiền phòng T10: phần của $memberName là ${CurrencyFormatter.format(debt)}. STK: 0912 345 678 (MB Bank - Thúy Hiền).';
+                  final msg = 'Tiền phòng T10: phần của $memberName là ${CurrencyFormatter.format(debt)}. Vui lòng thanh toán sớm nhé!';
                   Clipboard.setData(ClipboardData(text: msg));
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
