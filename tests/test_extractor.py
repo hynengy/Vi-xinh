@@ -258,3 +258,34 @@ def test_ignore_time_and_hotline_as_prices():
     assert ReceiptParser.parse_amount_str("20:04") is None
     assert ReceiptParser.parse_amount_str("0912345678") is None
     assert ReceiptParser.parse_amount_str("024.3822.9999") is None
+
+
+def test_google_mlkit_engine_and_parse_text():
+    """Test mô hình Google ML Kit Engine và API bóc tách trực tiếp chuỗi text."""
+    from backend.ocr.google_mlkit_engine import GoogleMLKitEngine
+    from backend.core.pipeline import ProcessingPipeline
+
+    ml_engine = GoogleMLKitEngine()
+    info = ml_engine.get_engine_info()
+    assert "Google ML Kit" in info["name"]
+    assert info["web_client_available"] is True
+
+    pipeline = ProcessingPipeline()
+    sample_mlkit_text = """
+    PHÚC LONG COFFEE & TEA
+    Hotline: 1800 6779
+    Ngày: 22/10/2026
+    1. Trà Sữa Phúc Long     50.000
+    2. Trà Đào Cam Sả        55.000
+    Cộng tiền: 105.000
+    Khuyến mãi: 10.000
+    TỔNG THANH TOÁN: 95.000 VNĐ
+    """
+    result = pipeline.parse_extracted_text(sample_mlkit_text, image_url="/uploads/mlkit_sample.jpg")
+    assert result["status"] == "ready_for_review"
+    assert "PHÚC LONG" in result["merchant_name"].upper()
+    assert result["amount"] == 95000.0
+    assert result["subtotal"] == 105000.0
+    assert result["discount"] == 10000.0
+    assert len(result["items"]) == 2
+

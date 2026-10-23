@@ -95,7 +95,8 @@ def serve_static(filename):
 def upload_receipt():
     """
     Tải ảnh hóa đơn lên và chạy OCR + Bóc tách dữ liệu.
-    Returns: { image_url, raw_text, merchant_name, amount, transaction_date, items[], notes }
+    Hỗ trợ query/form parameter 'engine': 'auto' | 'google_mlkit' | 'tesseract'
+    Returns: { image_url, raw_text, merchant_name, amount, transaction_date, items[], notes, engine }
     """
     if "receipt" not in request.files:
         return jsonify({"error": "Không tìm thấy file ảnh tải lên!"}), 400
@@ -107,6 +108,8 @@ def upload_receipt():
     if not allowed_file(file.filename):
         return jsonify({"error": "Định dạng file không được hỗ trợ!"}), 400
 
+    engine = request.args.get("engine") or request.form.get("engine") or "auto"
+
     # Lưu file với uuid để tránh trùng lặp
     ext = file.filename.rsplit(".", 1)[1].lower()
     saved_filename = f"{uuid.uuid4().hex}.{ext}"
@@ -114,10 +117,85 @@ def upload_receipt():
     file.save(str(saved_path))
 
     # Chạy quy trình OCR & Regex bóc tách
-    result = pipeline.process_receipt_image(saved_path)
+    result = pipeline.process_receipt_image(saved_path, engine=engine)
     result["file_name"] = saved_filename
 
     return jsonify(result)
+
+
+@app.route("/api/receipts/upload-image", methods=["POST"])
+def upload_receipt_image_only():
+    """
+    Chỉ tải ảnh lên máy chủ để lấy URL lưu trữ (dành cho client-side Google ML Kit on-device OCR).
+    """
+    if "receipt" not in request.files:
+        return jsonify({"error": "Không tìm thấy file ảnh!"}), 400
+
+    file = request.files["receipt"]
+    if file.filename == "" or not allowed_file(file.filename):
+        return jsonify({"error": "File ảnh không hợp lệ!"}), 400
+
+    ext = file.filename.rsplit(".", 1)[1].lower()
+    saved_filename = f"{uuid.uuid4().hex}.{ext}"
+    saved_path = UPLOAD_FOLDER / saved_filename
+    file.save(str(saved_path))
+
+    return jsonify({
+        "success": True,
+        "image_url": f"/uploads/{saved_filename}",
+        "file_name": saved_filename
+    })
+
+
+@app.route("/api/receipts/parse-text", methods=["POST"])
+def parse_receipt_text():
+    """
+    Bóc tách hóa đơn trực tiếp từ chuỗi văn bản do Google ML Kit Web on-device trích xuất.
+    Nhận: { raw_text: str, image_url: str, engine: str }
+    Trả về: kết quả bóc tách chuẩn cấu trúc { merchant_name, amount, date, items, discount, hotline, ... }
+    """
+    data = request.json or {}
+    raw_text = data.get("raw_text", "")
+    image_url = data.get("image_url", "")
+    engine = data.get("engine", "google_mlkit_web")
+
+    result = pipeline.parse_extracted_text(raw_text, image_url=image_url)
+    result["engine"] = engine
+    return jsonify(result)
+
+
+@app.route("/api/ocr/engines", methods=["GET"])
+def get_ocr_engines():
+    """
+    Liệt kê danh sách các mô hình OCR được hỗ trợ trên hệ thống Ví Xinh.
+    """
+    has_cloud_vision = pipeline.mlkit_engine.is_cloud_vision_available()
+    return jsonify({
+        "default": "google_mlkit_web",
+        "engines": [
+            {
+                "id": "google_mlkit_web",
+                "name": "Google ML Kit (On-Device Web)",
+                "type": "client",
+                "description": "Nhận diện trực tiếp trên trình duyệt bằng mô hình On-Device ML Kit Web",
+                "status": "ready"
+            },
+            {
+                "id": "google_vision",
+                "name": "Google Cloud Vision ML",
+                "type": "cloud",
+                "description": "Nhận diện văn bản đám mây Google Vision API",
+                "status": "configured" if has_cloud_vision else "available"
+            },
+            {
+                "id": "tesseract_server",
+                "name": "Server OCR (Tesseract + OpenCV)",
+                "type": "server",
+                "description": "Mô hình xử lý đa tầng OpenCV & Tesseract máy chủ",
+                "status": "ready"
+            }
+        ]
+    })
 
 
 # ==================================================================

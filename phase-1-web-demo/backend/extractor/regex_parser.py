@@ -742,8 +742,11 @@ class ReceiptParser:
                 # Loại trừ triệt để tiêu đề, tổng kết, chân trang khỏi tên món
                 if any(t in clean_name_lower for t in [
                     "phiếu", "phieu", "hóa đơn", "hoa don", "tổng cộng", "tong cong",
-                    "tổng tiền", "tống cộng", "tổng", "chiết khấu", "giảm giá",
-                    "tiền mặt", "khách trả", "cảm ơn", "hẹn gặp lại", "wifi", "pass", "lắp đặt",
+                    "tổng tiền", "tống cộng", "tổng", "cộng tiền", "cong tien", "tiền hàng", "tien hang",
+                    "tạm tính", "tam tinh", "chiết khấu", "chiet khau", "giảm giá", "giam gia",
+                    "khuyến mãi", "khuyen mai", "ưu đãi", "uu dai", "thanh toán", "thanh toan",
+                    "tiền mặt", "tien mat", "khách trả", "khach tra", "tiền thừa", "tien thua",
+                    "cảm ơn", "cam on", "hẹn gặp lại", "wifi", "pass", "lắp đặt",
                     "wir", "pose", "taphoa"
                 ]):
                     i += 1

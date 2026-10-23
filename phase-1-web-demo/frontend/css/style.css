@@ -1816,3 +1816,51 @@ body {
     100% { transform: scale(1); opacity: 1; }
 }
 
+/* Google ML Kit Web Selector & Progress Elements */
+.ocr-engine-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.32rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.ocr-engine-chip.active {
+    background: #5286E8 !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 2px 8px rgba(82, 134, 232, 0.35);
+}
+.ocr-progress-wrap {
+    width: 100%;
+    background: rgba(82, 134, 232, 0.12);
+    border-radius: 999px;
+    height: 6px;
+    overflow: hidden;
+    margin: 0.6rem 0 0.3rem;
+}
+.ocr-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #5286E8, #3b82f6);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+}
+.ocr-badge-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    background: #e0edff;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid rgba(82, 134, 232, 0.25);
+}
+
+
