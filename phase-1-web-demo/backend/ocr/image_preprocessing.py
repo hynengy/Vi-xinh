@@ -160,7 +160,38 @@ class ImagePreprocessor:
         thresh = cv2.adaptiveThreshold(
             gray_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 10
         )
-        return thresh
+    @staticmethod
+    def remove_table_grid(gray_image: np.ndarray) -> np.ndarray:
+        """
+        Tự động phát hiện và xóa các đường kẻ bảng (Grid lines) trong hóa đơn/phiếu dạng bảng.
+        Giúp OCR đọc tên món, đơn giá, thành tiền mà không bị các ký tự '|' hoặc gạch nối làm sai lệch.
+        """
+        h, w = gray_image.shape[:2]
+        thresh = cv2.adaptiveThreshold(~gray_image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2)
+
+        # Phát hiện đường kẻ ngang
+        scale_w = max(20, int(w / 30))
+        h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (scale_w, 1))
+        horizontal = cv2.erode(thresh, h_kernel)
+        horizontal = cv2.dilate(horizontal, h_kernel)
+
+        # Phát hiện đường kẻ dọc
+        scale_h = max(20, int(h / 30))
+        v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, scale_h))
+        vertical = cv2.erode(thresh, v_kernel)
+        vertical = cv2.dilate(vertical, v_kernel)
+
+        table_mask = cv2.add(horizontal, vertical)
+        line_pixels = cv2.countNonZero(table_mask)
+
+        # Nếu phát hiện số pixel đường kẻ đáng kể (> 0.4% diện tích ảnh), xóa đường kẻ
+        if line_pixels > (h * w * 0.004):
+            kernel_clean = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+            table_mask = cv2.dilate(table_mask, kernel_clean)
+            cleaned = gray_image.copy()
+            cleaned[table_mask > 0] = 255
+            return cleaned
+        return gray_image
 
     @classmethod
     def full_pipeline(
@@ -170,11 +201,12 @@ class ImagePreprocessor:
         Toàn bộ luồng tiền xử lý ảnh hoàn chỉnh của Nguyễn Thúy Hiền:
         1. Đọc ảnh gốc
         2. Cân chỉnh góc nghiêng (Deskew)
-        3. Chuyển sang thang xám
-        4. Khử bóng đổ & đồng đều ánh sáng (Shadow Removal)
-        5. Tăng tương phản nét chữ (CLAHE)
-        6. Lọc nhiễu bảo toàn cạnh (Bilateral Denoise)
-        7. Nhị phân hóa đen trắng thích nghi (Adaptive Threshold)
+        3. Chuyển sang thang xám & Khử vết ố vàng bằng kênh Red
+        4. Tự động phát hiện & xóa đường kẻ bảng (Grid lines removal)
+        5. Khử bóng đổ & đồng đều ánh sáng (Shadow Removal)
+        6. Tăng tương phản nét chữ (CLAHE)
+        7. Lọc nhiễu bảo toàn cạnh (Bilateral Denoise)
+        8. Nhị phân hóa đen trắng thích nghi (Adaptive Threshold)
         """
         # 1. Đọc ảnh & Tự động nâng độ phân giải tối ưu nếu ảnh nhỏ
         raw_img = cls.read_image(image_path)
@@ -183,19 +215,22 @@ class ImagePreprocessor:
         # 2. Xoay thẳng
         deskewed, rotation_angle = cls.deskew(original)
 
-        # 3. Chuyển xám
-        gray = cls.to_grayscale(deskewed)
+        # 3. Chuyển xám thông minh (khử ố vàng)
+        gray_raw = cls.to_grayscale(deskewed)
 
-        # 4. Khử bóng
+        # 4. Khử đường kẻ ô/bảng biểu nếu có
+        gray = cls.remove_table_grid(gray_raw)
+
+        # 5. Khử bóng
         shadow_free = cls.remove_shadows(gray)
 
-        # 5. Tăng tương phản
+        # 6. Tăng tương phản
         contrast_boosted = cls.enhance_contrast(shadow_free)
 
-        # 6. Khử nhiễu
+        # 7. Khử nhiễu
         denoised = cls.denoise(contrast_boosted)
 
-        # 7. Nhị phân hóa đen trắng
+        # 8. Nhị phân hóa đen trắng
         final_binary = cls.adaptive_binarization(denoised)
 
         stages = {
