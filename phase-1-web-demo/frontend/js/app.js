@@ -888,6 +888,25 @@ function deleteTx(id){
     }
 }
 
+function formatTxCardSubtitle(t, ct){
+    const baseCat = ct ? ct.label : 'Chi tiêu';
+    if(!t.note) return baseCat;
+
+    // 1. Kiểm tra nếu là hóa đơn nhiều món: "Gồm X món: ..." hoặc "Gồm X món"
+    const countMatch = t.note.match(/Gồm\s+(\d+)\s+món/i);
+    if(countMatch){
+        const count = countMatch[1];
+        return `${baseCat} · <span class="tx-badge-count"><i class="ri-shopping-basket-line"></i> ${count} món</span>`;
+    }
+
+    // 2. Nếu là ghi chú dài thông thường, chỉ lấy tối đa 26 ký tự để tuyệt đối không tràn
+    let shortNote = t.note.trim();
+    if(shortNote.length > 26){
+        shortNote = shortNote.substring(0, 24) + '...';
+    }
+    return `${baseCat} · ${shortNote}`;
+}
+
 function openTxDetailModal(id){
     const tx = S.transactions.find(t => t.id === id);
     if(!tx) return;
@@ -909,7 +928,48 @@ function openTxDetailModal(id){
     }
     const dt = document.getElementById('tdTime'); if(dt) dt.textContent = `${tx.date} lúc ${tx.time || '10:00'}`;
     const ds = document.getElementById('tdScope'); if(ds) ds.textContent = tx.name.includes('phần') ? 'Chia tiền bạn bè' : (tx.name.includes('Quỹ') ? 'Quỹ chi tiêu chung' : 'Ví cá nhân');
-    const dnt = document.getElementById('tdNote'); if(dnt) dnt.textContent = tx.note || 'Giao dịch chi tiêu thường nhật';
+    const dnt = document.getElementById('tdNote');
+
+    // Bóc tách danh sách món nếu có (khi người dùng bấm vào xem chi tiết)
+    const itemsBox = document.getElementById('tdItemsBox');
+    const itemsList = document.getElementById('tdItemsList');
+    let items = [];
+
+    if(tx.items && Array.isArray(tx.items) && tx.items.length > 0){
+        items = tx.items.map(it => ({ name: it.name, qty: it.quantity || 1, amt: it.amount || 0 }));
+    } else if(tx.note && /Gồm\s+\d+\s+món:/i.test(tx.note)){
+        const afterColon = tx.note.split(/Gồm\s+\d+\s+món:\s*/i)[1] || '';
+        const rawParts = afterColon.split(/,\s*/);
+        items = rawParts.map(p => {
+            const qMatch = p.match(/(.*?)\s*\(x(\d+)\)/);
+            if(qMatch){
+                return { name: qMatch[1].trim(), qty: qMatch[2], amt: 0 };
+            }
+            return { name: p.trim(), qty: 1, amt: 0 };
+        }).filter(it => it.name);
+    }
+
+    if(itemsBox && itemsList){
+        if(items.length > 0){
+            itemsBox.style.display = 'block';
+            itemsList.innerHTML = items.map((it, idx) => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-bottom:1px dashed var(--divider)">
+                    <div style="display:flex;align-items:center;gap:0.4rem;overflow:hidden">
+                        <span style="width:18px;height:18px;border-radius:50%;background:rgba(82,134,232,0.12);color:var(--primary);font-size:0.65rem;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">${idx+1}</span>
+                        <span style="color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px" title="${it.name}">${it.name}</span>
+                    </div>
+                    <span style="color:var(--primary);font-weight:700;font-size:0.75rem;white-space:nowrap;margin-left:0.5rem">SL: x${it.qty}${it.amt > 0 ? ` · ${fmt(it.amt)}` : ''}</span>
+                </div>
+            `).join('');
+            if(dnt) dnt.textContent = `Hóa đơn bóc tách (${items.length} món)`;
+        } else {
+            itemsBox.style.display = 'none';
+            itemsList.innerHTML = '';
+            if(dnt) dnt.textContent = tx.note || 'Giao dịch chi tiêu thường nhật';
+        }
+    } else {
+        if(dnt) dnt.textContent = tx.note || 'Giao dịch chi tiêu thường nhật';
+    }
 
     document.getElementById('txDetailModal')?.classList.add('active');
 }
@@ -928,12 +988,13 @@ function confirmDeleteCurrentTx(){
 function renderSingleTxCard(t, i){
     const ct = CATS[t.cat] || CATS.other;
     const isI = t.type === 'income';
+    const subHtml = formatTxCardSubtitle(t, ct);
     return `
         <div class="tx-item" style="animation:fadeUp 0.3s ease ${i*0.03}s both" onclick="openTxDetailModal(${t.id})">
             <div class="tx-ic" style="background:${ct.bg};color:${ct.color}"><i class="${ct.ic}"></i></div>
             <div class="tx-info">
-                <div class="tx-name">${t.name}</div>
-                <div class="tx-cat">${ct.label}${t.note ? ' · ' + t.note : ''}</div>
+                <div class="tx-name" title="${t.name}">${t.name}</div>
+                <div class="tx-cat">${subHtml}</div>
             </div>
             <div class="tx-right">
                 <div class="tx-amt ${isI ? 'inc' : 'exp'}">${isI ? '+' : '-'}${fmt(t.amt)}</div>

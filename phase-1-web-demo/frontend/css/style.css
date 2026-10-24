@@ -1874,136 +1874,206 @@ body {
 
 /* Thẻ số dư ví chính (Balance Card) */
 .bal-card {
-    padding: 1.75rem 1.45rem !important;
-    border-radius: 24px !important;
+    padding: 1.4rem 1.25rem !important;
+    border-radius: 20px !important;
 }
 .bal-label {
-    font-size: 0.85rem !important;
+    font-size: 0.74rem !important;
     font-weight: 600 !important;
     letter-spacing: 0.06em !important;
 }
 .bal-amt {
-    font-size: 2.45rem !important;
+    font-size: 1.95rem !important;
     font-weight: 800 !important;
-    letter-spacing: -0.03em !important;
-    margin-bottom: 0.9rem !important;
-    line-height: 1.15;
+    letter-spacing: -0.025em !important;
+    margin-bottom: 0.75rem !important;
+    line-height: 1.2;
 }
 .bal-mini-lbl {
-    font-size: 0.82rem !important;
+    font-size: 0.72rem !important;
     font-weight: 600 !important;
 }
 .bal-mini-val {
-    font-size: 1.1rem !important;
+    font-size: 0.95rem !important;
     font-weight: 800 !important;
-    margin-top: 0.15rem !important;
+    margin-top: 0.1rem !important;
 }
 
 /* Nút hành động nhanh trên thẻ số dư */
 .bal-actions {
-    margin-top: 1.1rem !important;
-    padding-top: 1.05rem !important;
-    gap: 0.5rem !important;
+    margin-top: 0.85rem !important;
+    padding-top: 0.85rem !important;
+    gap: 0.35rem !important;
 }
 .bal-act {
-    padding: 0.55rem 0.2rem !important;
-    border-radius: 14px !important;
+    padding: 0.35rem 0.15rem !important;
+    border-radius: 12px !important;
 }
 .bal-act-ic {
-    width: 44px !important;
-    height: 44px !important;
-    font-size: 1.3rem !important;
-    border-radius: 14px !important;
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 1.15rem !important;
+    border-radius: 12px !important;
 }
 .bal-act-lbl {
-    font-size: 0.78rem !important;
+    font-size: 0.7rem !important;
     font-weight: 600 !important;
-    margin-top: 0.2rem !important;
-    line-height: 1.25 !important;
+    margin-top: 0.15rem !important;
+    line-height: 1.2 !important;
 }
 
 /* Tiêu đề mục & Xem tất cả */
 .sec {
     padding: 0 1.25rem !important;
-    margin-top: 1.35rem !important;
+    margin-top: 1rem !important;
 }
 .sec-hdr {
-    margin-bottom: 0.85rem !important;
+    margin-bottom: 0.65rem !important;
 }
 .sec-title {
-    font-size: 1.1rem !important;
+    font-size: 0.95rem !important;
     font-weight: 700 !important;
-    letter-spacing: -0.015em !important;
+    letter-spacing: -0.01em !important;
 }
 .sec-link {
-    font-size: 0.88rem !important;
+    font-size: 0.75rem !important;
     font-weight: 600 !important;
-    padding: 0.3rem 0.4rem !important;
+    padding: 0.2rem 0.3rem !important;
 }
 
 /* Lưới tiện ích nhanh (Service Grid) */
 .svc-grid {
-    gap: 0.55rem !important;
+    gap: 0.45rem !important;
 }
 .svc-item {
-    padding: 0.75rem 0.2rem !important;
-    border-radius: 16px !important;
-    min-height: 82px !important;
+    padding: 0.55rem 0.15rem !important;
+    border-radius: 14px !important;
+    min-height: 68px !important;
 }
 .svc-ic {
-    width: 50px !important;
-    height: 50px !important;
-    font-size: 1.35rem !important;
-    border-radius: 16px !important;
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 1.2rem !important;
+    border-radius: 12px !important;
 }
 .svc-lbl {
-    font-size: 0.8rem !important;
+    font-size: 0.72rem !important;
     font-weight: 600 !important;
-    margin-top: 0.25rem !important;
-    line-height: 1.3 !important;
+    margin-top: 0.15rem !important;
+    line-height: 1.2 !important;
 }
 
 /* Banner Quỹ Nhóm & Tiết Kiệm */
 .promo {
-    padding: 1.15rem 1.25rem !important;
-    border-radius: 20px !important;
+    padding: 0.95rem 1.1rem !important;
+    border-radius: 18px !important;
 }
 .promo h3 {
-    font-size: 1.05rem !important;
+    font-size: 0.92rem !important;
     font-weight: 700 !important;
-    margin-bottom: 0.2rem !important;
+    margin-bottom: 0.15rem !important;
 }
 .promo p {
-    font-size: 0.85rem !important;
-    line-height: 1.4 !important;
+    font-size: 0.76rem !important;
+    line-height: 1.35 !important;
 }
 
-/* Danh sách giao dịch & Lịch sử chi tiêu */
+/* Danh sách giao dịch & Lịch sử chi tiêu (Bo Gọn Tinh Tế, Tuyệt Đối Không Phình To) */
 .tx-item {
-    padding: 0.95rem 1.1rem !important;
-    gap: 0.85rem !important;
+    padding: 0.65rem 0.85rem !important;
+    gap: 0.75rem !important;
+    min-height: 56px !important;
+    max-height: 64px !important;
+    height: 60px !important;
+    box-sizing: border-box !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    margin-bottom: 0.4rem !important;
 }
-.tx-icon {
-    width: 44px !important;
-    height: 44px !important;
-    font-size: 1.25rem !important;
-    border-radius: 14px !important;
+.tx-ic, .tx-icon {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 1.15rem !important;
+    border-radius: 12px !important;
+    flex-shrink: 0 !important;
+}
+.tx-info {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
 }
 .tx-name {
-    font-size: 1.02rem !important;
-    font-weight: 600 !important;
-    line-height: 1.3 !important;
+    font-size: 0.88rem !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
     color: var(--text) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
-.tx-sub, .tx-date, .tx-cat {
-    font-size: 0.82rem !important;
+.tx-cat, .tx-sub {
+    font-size: 0.73rem !important;
     color: var(--text3) !important;
-    margin-top: 0.15rem !important;
+    margin-top: 2px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.25 !important;
+    max-width: 100% !important;
+    display: block !important;
+}
+.tx-date {
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    color: var(--text3) !important;
+    padding: 0 0.2rem !important;
+    margin-bottom: 0.45rem !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+.tx-badge-count {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 2px !important;
+    background: #EEF4FD !important;
+    color: #5286E8 !important;
+    padding: 1px 6px !important;
+    border-radius: 999px !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    vertical-align: middle !important;
+    margin-left: 2px !important;
+    line-height: 1.2 !important;
+}
+.tx-right {
+    text-align: right !important;
+    flex-shrink: 0 !important;
+    margin-left: 0.4rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
 }
 .tx-amt {
-    font-size: 1.08rem !important;
-    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    font-weight: 800 !important;
     letter-spacing: -0.01em !important;
+    white-space: nowrap !important;
+    line-height: 1.2 !important;
+}
+.tx-time {
+    font-size: 0.68rem !important;
+    color: var(--text3) !important;
+    margin-top: 2px !important;
+    white-space: nowrap !important;
 }
 
 /* Biểu đồ chi tiêu & Ngân sách */
