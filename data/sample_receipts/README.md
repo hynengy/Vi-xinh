@@ -1,4 +1,4 @@
-# 📸 BỘ DỮ LIỆU HÓA ĐƠN MẪU (TEST CASES)
+# BỘ DỮ LIỆU HÓA ĐƠN MẪU (TEST CASES)
 
 > Phụ trách: **Toàn bộ 05 thành viên nhóm cùng thu thập và đóng góp.**
 

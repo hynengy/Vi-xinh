@@ -4,7 +4,7 @@ Hệ thống trích xuất dữ liệu hóa đơn và quản trị chi tiêu **V
 
 ---
 
-## 🔄 Sơ Đồ Tuần Tự (Sequence Diagram)
+## Sơ Đồ Tuần Tự (Sequence Diagram)
 
 ```mermaid
 sequenceDiagram
@@ -32,7 +32,7 @@ sequenceDiagram
 
 ---
 
-## 🛠️ Chi Tiết 5 Thành Phần Kỹ Thuật Trọng Tâm
+## Chi Tiết 5 Thành Phần Kỹ Thuật Trọng Tâm
 
 ### 1. Thu Nhận & Tối Ưu Hóa Dữ Liệu Đầu Vào (Image Compression & Latency Reduction)
 * **Mục tiêu:** Giảm thiểu độ trễ mạng và tiết kiệm chi phí băng thông khi truyền ảnh lên Cloud LLM API.

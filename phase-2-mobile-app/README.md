@@ -1,10 +1,10 @@
-# 📱 GIAI ĐOẠN 2: ỨNG DỤNG DI ĐỘNG HOÀN CHỈNH "VÍ XINH" (FLUTTER & GOOGLE ML KIT)
+# GIAI ĐOẠN 2: ỨNG DỤNG DI ĐỘNG HOÀN CHỈNH "VÍ XINH" (FLUTTER & GOOGLE ML KIT)
 
 > Phụ trách: **Cả 5 thành viên chuyển đổi từ Web sang Mobile theo phân công đồ án.**
 
 ---
 
-## 🎯 1. Tổng Quan Kiến Trúc Ứng Dụng Mobile
+## 1. Tổng Quan Kiến Trúc Ứng Dụng Mobile
 
 Ứng dụng di động **Ví Xinh** được phát triển trên nền tảng **Flutter 3.x** đa nền tảng (Android & iOS), ứng dụng trực tiếp công nghệ **Google ML Kit Text Recognition on-device** cho tốc độ bóc tách tức thì (< 500ms) không cần gửi ảnh lên server.
 
@@ -20,7 +20,7 @@ graph TD
 
 ---
 
-## 📂 2. Cấu Trúc Mã Nguồn Mobile (`phase-2-mobile-app`)
+## 2. Cấu Trúc Mã Nguồn Mobile (`phase-2-mobile-app`)
 
 ```
 phase-2-mobile-app/
@@ -61,7 +61,7 @@ phase-2-mobile-app/
 
 ---
 
-## 👥 3. Phân Công Trách Nhiệm Thành Viên Giai Đoạn 2
+## 3. Phân Công Trách Nhiệm Thành Viên Giai Đoạn 2
 
 | Thành Viên | Phụ Trách Kỹ Thuật | Module Hoàn Thành |
 |:---|:---|:---|
@@ -73,7 +73,7 @@ phase-2-mobile-app/
 
 ---
 
-## 🚀 4. Hướng Dẫn Cài Đặt & Chạy Thử Trên Android & iOS
+## 4. Hướng Dẫn Cài Đặt & Chạy Thử Trên Android & iOS
 
 Ứng dụng được thiết kế kiến trúc chuẩn **Cross-Platform (Flutter)**, hỗ trợ 100% cả **Android** và **iOS** dùng chung một cơ sở mã nguồn (`lib/`).
 
@@ -84,7 +84,7 @@ phase-2-mobile-app/
 
 ---
 
-### 🤖 A. Khởi chạy & Đóng gói trên Android
+### A. Khởi chạy & Đóng gói trên Android
 
 ```bash
 # 1. Di chuyển vào thư mục Mobile
@@ -106,7 +106,7 @@ flutter build appbundle --release
 
 ---
 
-### 🍏 B. Khởi chạy & Đóng gói trên iOS (iPhone / iPad)
+### B. Khởi chạy & Đóng gói trên iOS (iPhone / iPad)
 
 Cấu hình quyền Camera (`NSCameraUsageDescription`), Thư viện ảnh (`NSPhotoLibraryUsageDescription`), Microphone (`NSMicrophoneUsageDescription`) và Podfile đã được cấu hình sẵn tại `ios/Runner/Info.plist` và `ios/Podfile`.
 
@@ -132,10 +132,9 @@ open ios/Runner.xcworkspace
 
 ---
 
-### 🌐 C. Dùng ngay không cần cài máy ảo (PWA - Cài màn hình chính cho cả iOS & Android)
+### C. Dùng ngay không cần cài máy ảo (PWA - Cài màn hình chính cho cả iOS & Android)
 
 Bên cạnh mã nguồn native Flutter, bản Web Demo (`phase-1-web-demo`) cũng đã được tích hợp công nghệ **PWA (Progressive Web App)**:
 - **Trên iPhone (Safari):** Truy cập địa chỉ web -> Bấm nút **Chia sẻ (Share)** -> Chọn **"Thêm vào Màn hình chính" (Add to Home Screen)**.
 - **Trên Android (Chrome):** Truy cập địa chỉ web -> Bấm menu 3 chấm -> Chọn **"Cài đặt ứng dụng" (Install App)**.
 - Ứng dụng lập tức xuất hiện icon ngoài màn hình điện thoại, hoạt động độc lập toàn màn hình như ứng dụng tải từ App Store / Google Play.
-

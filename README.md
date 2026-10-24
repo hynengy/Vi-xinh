@@ -1,26 +1,26 @@
-# 👛 VÍ XINH — Ứng Dụng Quản Lý Tài Chính & Trích Xuất Dữ Liệu Hóa Đơn Bằng Mô Hình Ngôn Ngữ Lớn (LLM API)
+# VÍ XINH — Ứng Dụng Quản Lý Tài Chính & Trích Xuất Dữ Liệu Hóa Đơn Bằng Mô Hình Ngôn Ngữ Lớn (LLM API)
 
 > **Đồ án Thực tập Chuyên môn** — Lớp **23CN1** — **Nhóm 05**  
 > **Định hướng Đề tài:** **Hướng 3 — Ứng dụng dùng Model Ngôn ngữ lớn qua API (Gemini API)**  
-> **Trọng tâm Nghiên cứu:** Thiết kế lời nhắc (Prompt Engineering), Kiểm soát định dạng đầu ra (Structured JSON Output), và Xử trị Chi phí & Độ trễ (Cost & Latency Optimization).
+> **Trọng tâm Nghiên cứu:** Thiết kế lời nhắc (Prompt Engineering), Kiểm soát định dạng đầu ra (Structured JSON Output), và Xử lý Chi phí & Độ trễ (Cost & Latency Optimization).
 
 ---
 
-## ✨ Tính Năng Nổi Bật Của Hệ Thống
+## Tính Năng Nổi Bật Của Hệ Thống
 
-- 🤖 **Trích xuất thông tin có cấu trúc bằng LLM Multimodal:** Tiếp nhận ảnh chụp hóa đơn / chứng từ thực tế (siêu thị, quán ăn, nhà hàng, hóa đơn phòng trọ), sử dụng Gemini API từ Backend để đọc hiểu ngữ nghĩa và bóc tách đầy đủ: Tên nơi bán, Ngày giờ giao dịch, Chi tiết danh sách từng món hàng (`Tên sản phẩm`, `Số lượng`, `Đơn giá`, `Thành tiền`), `Tiền giảm giá`, `Thuế VAT` và `Phân loại danh mục tự động`.
-- 🎯 **Prompt Engineering & Kiểm soát định dạng đầu ra (JSON Schema):** Thiết kế System Prompt chuẩn mực cho chuyên gia dữ liệu tài chính, áp dụng kỹ thuật Few-shot Prompting kết hợp ràng buộc định dạng đầu ra JSON (Structured Output), loại bỏ hoàn toàn lỗi hallucination và markdown rác, đảm bảo dữ liệu chuẩn hóa 100% để lưu trực tiếp vào CSDL SQLite.
-- ⚡ **Tối ưu Hóa Chi Phí & Độ Trễ (Cost & Latency Management):**
+- **Trích xuất thông tin có cấu trúc bằng LLM Multimodal:** Tiếp nhận ảnh chụp hóa đơn / chứng từ thực tế (siêu thị, quán ăn, nhà hàng, hóa đơn phòng trọ), sử dụng Gemini API từ Backend để đọc hiểu ngữ nghĩa và bóc tách đầy đủ: Tên nơi bán, Ngày giờ giao dịch, Chi tiết danh sách từng món hàng (`Tên sản phẩm`, `Số lượng`, `Đơn giá`, `Thành tiền`), `Tiền giảm giá`, `Thuế VAT` và `Phân loại danh mục tự động`.
+- **Prompt Engineering & Kiểm soát định dạng đầu ra (JSON Schema):** Thiết kế System Prompt chuẩn mực cho chuyên gia dữ liệu tài chính, áp dụng kỹ thuật Few-shot Prompting kết hợp ràng buộc định dạng đầu ra JSON (Structured Output), loại bỏ hoàn toàn lỗi hallucination và markdown rác, đảm bảo dữ liệu chuẩn hóa 100% để lưu trực tiếp vào CSDL SQLite.
+- **Tối ưu Hóa Chi Phí & Độ Trễ (Cost & Latency Management):**
   - Khai thác dòng mô hình phản hồi siêu tốc và tiết kiệm chi phí (`gemini-1.5-flash` / `gemini-flash-latest`).
   - Tiền xử lý, tối ưu hóa kích thước và nén ảnh trước khi truyền qua mạng nhằm giảm thiểu băng thông và latency.
   - Đo lường và hiển thị trực quan thông số vận hành: **Thời gian xử lý (Latency - ms)**, **Số lượng Token tiêu thụ (Input/Output Tokens)** và **Ước tính chi phí API ($ / VNĐ)** trực tiếp trên giao diện kiểm tra.
-- 💡 **AI Tóm tắt & Đề xuất Hành động Tài chính (Spending Summary & Financial Advice):** Mô hình đọc hiểu lịch sử chi tiêu cá nhân/nhóm trong tháng, tự động tóm tắt 3 khoản chi tiêu lớn nhất, cảnh báo danh mục vượt định mức và đề xuất 3 hành động thực tế giúp tiết kiệm ngân sách.
-- 👥 **Quỹ nhóm & Chia tiền linh hoạt:** Quản lý chi tiêu minh bạch, chia đều hoặc chia theo món, tính toán công nợ và tự động tạo mã thanh toán chuẩn **VietQR**.
-- 🌐 **Kiến trúc Đa nền tảng:** Hỗ trợ Web Demo Fullstack (Flask Backend + PWA Client) và Mobile App Native (Flutter cho Android & iOS).
+- **AI Tóm tắt & Đề xuất Hành động Tài chính (Spending Summary & Financial Advice):** Mô hình đọc hiểu lịch sử chi tiêu cá nhân/nhóm trong tháng, tự động tóm tắt 3 khoản chi tiêu lớn nhất, cảnh báo danh mục vượt định mức và đề xuất 3 hành động thực tế giúp tiết kiệm ngân sách.
+- **Quỹ nhóm & Chia tiền linh hoạt:** Quản lý chi tiêu minh bạch, chia đều hoặc chia theo món, tính toán công nợ và tự động tạo mã thanh toán chuẩn **VietQR**.
+- **Kiến trúc Đa nền tảng:** Hỗ trợ Web Demo Fullstack (Flask Backend + PWA Client) và Mobile App Native (Flutter cho Android & iOS).
 
 ---
 
-## 👥 Phân Công Nhiệm Vụ Thành Viên (Theo Chuẩn Hướng 3)
+## Phân Công Nhiệm Vụ Thành Viên (Theo Chuẩn Hướng 3)
 
 | STT | Thành Viên | Module Phụ Trách | Nhiệm Vụ Chi Tiết |
 |:---:|:---|:---|:---|
@@ -32,18 +32,18 @@
 
 ---
 
-## 🏗️ Kiến Trúc Xử Lý Kỹ Thuật (Pipeline Hướng 3)
+## Kiến Trúc Xử Lý Kỹ Thuật (Pipeline Hướng 3)
 
 ```mermaid
 graph TD
-    A[📷 Ảnh Hóa Đơn / Giấy Tờ] --> B[⚙️ Preprocessing & Resizing<br/>Nén ảnh giảm độ trễ]
-    B --> C[📝 Prompt Engineering<br/>System Prompt + Few-Shot Rules]
-    C --> D[🤖 Gemini Multimodal LLM API<br/>Model: Gemini 1.5 Flash]
-    D --> E[🔒 Structured Output Controller<br/>Strict JSON Schema Validation]
-    E --> F[✏️ Review & Xác Thực Giao Diện<br/>Hiển thị Latency ms & Token Usage]
-    F --> G[(💾 SQLite Database)]
-    G --> H[📊 AI Tóm Tắt Chi Tiêu & Đề Xuất Hành Động]
-    G --> I[👥 Ví Nhóm / Sinh Mã VietQR]
+    A[Ảnh Hóa Đơn / Giấy Tờ] --> B[Preprocessing & Resizing<br/>Nén ảnh giảm độ trễ]
+    B --> C[Prompt Engineering<br/>System Prompt + Few-Shot Rules]
+    C --> D[Gemini Multimodal LLM API<br/>Model: Gemini 1.5 Flash]
+    D --> E[Structured Output Controller<br/>Strict JSON Schema Validation]
+    E --> F[Review & Xác Thực Giao Diện<br/>Hiển thị Latency ms & Token Usage]
+    F --> G[(SQLite Database)]
+    G --> H[AI Tóm Tắt Chi Tiêu & Đề Xuất Hành Động]
+    G --> I[Ví Nhóm / Sinh Mã VietQR]
 
     subgraph Cost_Latency_Tracking [Hệ Thống Theo Dõi Chi Phí & Độ Trễ]
         D -.-> T1[Đo Latency ms]
@@ -54,7 +54,7 @@ graph TD
 
 ---
 
-## 📂 Cấu Trúc Dự Án (Monorepo)
+## Cấu Trúc Dự Án (Monorepo)
 
 ```
 Ví Xinh/
@@ -78,9 +78,9 @@ Ví Xinh/
 
 ---
 
-## 🚀 Hướng Dẫn Khởi Chạy Nhanh
+## Hướng Dẫn Khởi Chạy Nhanh
 
-### 🌐 1. Chạy Web Demo (Phase 1)
+### 1. Chạy Web Demo (Phase 1)
 ```bash
 cd phase-1-web-demo
 python -m venv venv
@@ -92,11 +92,11 @@ pip install -r requirements.txt
 
 python run.py
 ```
-👉 Truy cập giao diện tại: `http://localhost:5000`.
+Truy cập giao diện tại: `http://localhost:5000`.
 
 ---
 
-### 📱 2. Chạy Mobile App Flutter (Phase 2)
+### 2. Chạy Mobile App Flutter (Phase 2)
 ```bash
 cd phase-2-mobile-app
 flutter pub get
@@ -110,7 +110,7 @@ flutter build apk --release
 
 ---
 
-## 📑 Tài Liệu Tham Khảo Thêm
+## Tài Liệu Tham Khảo Thêm
 * [Kiến Trúc Pipeline Xử Lý LLM & Structured Output](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/docs/pipeline_architecture.md)
 * [Đặc Tả Cơ Sở Dữ Liệu & ERD](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/docs/database_design.md)
 * [Quy Ước Đóng Góp & Git Workflow](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/CONTRIBUTING.md)

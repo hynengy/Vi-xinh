@@ -1,10 +1,10 @@
-# 🤝 HƯỚNG DẪN ĐÓNG GÓP & QUY TẮC LÀM VIỆC NHÓM (GIT CONVENTION)
+# HƯỚNG DẪN ĐÓNG GÓP & QUY TẮC LÀM VIỆC NHÓM (GIT CONVENTION)
 
 Nhằm đảm bảo quá trình làm việc nhóm 05 thành viên trên GitHub không bị xung đột (conflict) mã nguồn và dễ dàng theo dõi lịch sử commit, toàn bộ thành viên tuân thủ các quy tắc sau:
 
 ---
 
-## 🌿 1. Quy Tắc Phân Nhánh (Git Branching Strategy)
+## 1. Quy Tắc Phân Nhánh (Git Branching Strategy)
 
 - **`main` / `master`**: Nhánh ổn định cao nhất, chỉ merge khi tính năng đã hoàn thiện và được kiểm thử kỹ lưỡng.
 - **`develop`**: Nhánh phát triển chung.
@@ -18,7 +18,7 @@ Nhằm đảm bảo quá trình làm việc nhóm 05 thành viên trên GitHub k
 
 ---
 
-## 💬 2. Chuẩn Thông Điệp Commit (Conventional Commits)
+## 2. Chuẩn Thông Điệp Commit (Conventional Commits)
 
 Định dạng commit:
 ```
@@ -35,7 +35,7 @@ Nhằm đảm bảo quá trình làm việc nhóm 05 thành viên trên GitHub k
 
 ---
 
-## 🔄 3. Quy Trình Đẩy Code & Pull Request (PR)
+## 3. Quy Trình Đẩy Code & Pull Request (PR)
 
 1. Cập nhật nhánh nhánh chính trước khi code:
    ```bash
