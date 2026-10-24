@@ -212,6 +212,10 @@ function switchAuthTab(tab){
     }
 }
 
+function swAuthTab(tab){
+    switchAuthTab(tab);
+}
+
 function quickFillAccount(email, pw){
     switchAuthTab('login');
     const emInp = document.getElementById('loginEmail');
@@ -254,7 +258,11 @@ async function handleLogin(e){
             body: JSON.stringify({ identifier: em, password: pw })
         });
 
-        const data = await res.json();
+        let data = {};
+        try {
+            data = await res.json();
+        } catch(_) {}
+
         if(res.ok && data.success){
             const u = data.user;
             u.name = u.full_name || u.name || em.split('@')[0];
@@ -380,7 +388,11 @@ async function handleRegister(e){
             body: JSON.stringify({ full_name: fullName, email: email, phone: phone, password: pw })
         });
 
-        const data = await res.json();
+        let data = {};
+        try {
+            data = await res.json();
+        } catch(_) {}
+
         if(res.ok && data.success){
             const u = data.user;
             u.name = u.full_name || fullName;

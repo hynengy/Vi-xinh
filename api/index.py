@@ -10,4 +10,5 @@ if str(PHASE1_DIR) not in sys.path:
 from backend.app import app
 
 # WSGI handler for Vercel Serverless
+handler = app
 app.debug = False
