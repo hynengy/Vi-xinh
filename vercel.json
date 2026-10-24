@@ -1,5 +1,4 @@
 {
-  "cleanUrls": true,
   "functions": {
     "api/index.py": {
       "includeFiles": "phase-1-web-demo/**"
@@ -8,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index"
+      "destination": "/api/index.py?__path__=/api/$1"
     }
   ]
 }

@@ -29,6 +29,7 @@ except (ImportError, ValueError):
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder=str(FRONTEND_DIR), static_url_path="")
+app.url_map.strict_slashes = False
 CORS(app)
 
 
@@ -98,8 +99,12 @@ def apple_touch_icon():
 
 
 # Serve static frontend files (css, js, assets)
-@app.route("/<path:filename>")
+@app.route("/<path:filename>", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 def serve_static(filename):
+    if filename.startswith("api/") or filename == "api":
+        return jsonify({"error": f"Endpoint API /{filename} không tồn tại."}), 404
+    if request.method not in ("GET", "HEAD"):
+        return jsonify({"error": "Method not allowed for static file"}), 405
     return send_from_directory(str(FRONTEND_DIR), filename)
 
 
