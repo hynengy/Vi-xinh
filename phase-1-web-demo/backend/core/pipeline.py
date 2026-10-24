@@ -1,19 +1,19 @@
 """
-Module Tích Hợp Pipeline Toàn Diện (OCR -> Regex -> Review -> Database)
+Module Tích Hợp Pipeline Toàn Diện (Multimodal LLM -> Validation -> Review -> Database)
 Phụ trách: Thành viên 5 - Nguyễn Việt Anh
-Nhiệm vụ: Kết nối các thành phần kỹ thuật, điều phối luồng dữ liệu mượt mà
+Nhiệm vụ: Kết nối các thành phần kỹ thuật, điều phối luồng dữ liệu trích xuất LLM mượt mà
 """
 import logging
 from typing import Dict, Any
 from pathlib import Path
 
 try:
-    from ..ocr.google_mlkit_engine import GoogleMLKitEngine
+    from ..llm.gemini_extractor import ReceiptLLMExtractor, GoogleMLKitEngine
     from ..extractor.regex_parser import ReceiptParser
     from ..database.db_manager import DatabaseManager
     from .config import DB_PATH
 except (ImportError, ValueError):
-    from ocr.google_mlkit_engine import GoogleMLKitEngine
+    from llm.gemini_extractor import ReceiptLLMExtractor, GoogleMLKitEngine
     from extractor.regex_parser import ReceiptParser
     from database.db_manager import DatabaseManager
     from core.config import DB_PATH
@@ -22,12 +22,14 @@ logger = logging.getLogger(__name__)
 
 
 class ProcessingPipeline:
-    """Điều phối toàn bộ quy trình từ ảnh hóa đơn tới dữ liệu cấu trúc."""
+    """Điều phối toàn bộ quy trình từ ảnh hóa đơn tới dữ liệu cấu trúc bằng Multimodal LLM."""
 
     def __init__(self):
-        self.mlkit_engine = GoogleMLKitEngine()
+        self.llm_engine = ReceiptLLMExtractor()
+        self.mlkit_engine = self.llm_engine  # Alias tương thích ngược
         self.parser = ReceiptParser()
         self.db_manager = DatabaseManager(DB_PATH)
+
 
     def process_receipt_image(self, image_path: Path, engine: str = "google_mlkit") -> Dict[str, Any]:
         """
@@ -40,10 +42,18 @@ class ProcessingPipeline:
         raw_text = ml_res.get("raw_text", "")
 
         response = self.parse_extracted_text(raw_text, image_url=f"/uploads/{image_path.name}")
-        response["engine"] = ml_res.get("engine", "tesseract_fallback")
-        response["engine_note"] = ml_res.get("engine_note", "")
+        response["success"] = ml_res.get("success", True)
+        if not ml_res.get("success"):
+            response["error"] = ml_res.get("error", "Lỗi nhận dạng ảnh")
+            response["error_code"] = ml_res.get("error_code", "ocr_error")
+        response["engine"] = ml_res.get("engine", "google_vision_cloud")
+        response["engine_note"] = ml_res.get("engine_note", "") or ml_res.get("error", "")
+        response["model_name"] = ml_res.get("model_name", "Gemini 1.5 Flash")
+        response["token_usage"] = ml_res.get("token_usage", {})
+        response["cost_estimate"] = ml_res.get("cost_estimate", {})
+        response["latency_ms"] = ml_res.get("latency_ms", ml_res.get("execution_time_ms", 0))
         response["has_vie_lang"] = ml_res.get("has_vie_lang", True)
-        response["is_cloud"] = ml_res.get("is_cloud", False)
+        response["is_cloud"] = ml_res.get("is_cloud", True)
         response["confidence"] = ml_res.get("confidence", 0.0)
         response["confidence_score"] = ml_res.get("confidence_score", response["confidence"])
         response["boxes_count"] = ml_res.get("boxes_count", 0)

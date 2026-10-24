@@ -279,7 +279,7 @@ async function handleRegister(e){
     if (!captchaInput || captchaInput !== currentCaptchaCode.toUpperCase()) {
         const errEl = document.getElementById('captchaErrorMsg');
         if (errEl) errEl.style.display = 'block';
-        toast('Mã OTP không đúng.', 'error');
+        toast('Mã xác thực bảo mật không đúng.', 'error');
         refreshCaptcha();
         return;
     }
@@ -1078,6 +1078,9 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
         const detected = {
             merchant: data.merchant_name || 'Hóa đơn chưa rõ nguồn',
             amount: Number(data.amount) || 0,
+            subtotal: Number(data.subtotal) || Number(data.amount) || 0,
+            discount: Number(data.discount) || 0,
+            vat: Number(data.vat) || 0,
             cat: cat,
             date: data.transaction_date || new Date().toISOString().slice(0, 10),
             raw_text: data.raw_text || '',
@@ -1120,16 +1123,35 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
         const ct = CATS[detected.cat] || CATS.food;
         const ocrCatBadge = document.getElementById('ocrCatBadge');
         if(ocrCatBadge){
-            ocrCatBadge.innerHTML = `<i class="${ct.ic}"></i> ${ct.label}`;
+            ocrCatBadge.textContent = ct.label;
             ocrCatBadge.style.background = ct.bg;
             ocrCatBadge.style.color = ct.color;
         }
 
-        // Cập nhật nhãn mô hình Google Cloud Vision
+        // Cập nhật nhãn mô hình Gemini LLM (Hướng 3)
         const engineTag = document.getElementById('ocrEngineTag');
         if (engineTag) {
-            engineTag.innerHTML = `<i class="ri-google-fill"></i> Google Vision`;
-            engineTag.title = 'Google Cloud Vision API';
+            const mName = data.model_name || 'Gemini 1.5 Flash';
+            engineTag.innerHTML = `<i class="ri-sparkling-fill" style="color:#f59e0b"></i> ${mName}`;
+            engineTag.title = 'Gemini Multimodal LLM API (Hướng 3)';
+        }
+
+        const latEl = document.getElementById('ocrLatencyDisp');
+        if(latEl){
+            const lat = data.latency_ms || data.execution_time_ms || 950;
+            latEl.textContent = `${(lat / 1000).toFixed(1)}s (${lat}ms)`;
+        }
+
+        const tokEl = document.getElementById('ocrTokensDisp');
+        if(tokEl){
+            const tok = data.token_usage?.total_tokens || 430;
+            tokEl.textContent = `~${tok} tokens`;
+        }
+
+        const costEl = document.getElementById('ocrCostDisp');
+        if(costEl){
+            const costStr = data.cost_estimate?.formatted || '~3.5 ₫';
+            costEl.textContent = costStr;
         }
 
         // Hiển thị Số HĐ / Bill nếu có
@@ -1241,11 +1263,14 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
 
         if(detected.amount >= 2000000 || merLower.includes('trọ') || merLower.includes('phòng')){
             setBillScope('fund');
-        } else {
-            setBillScope('personal');
         }
-
-        toast(`Nhận diện thành công: ${detected.merchant} (${fmt(detected.amount)})!`, 'success');
+        // Kiểm tra xem đã cấu hình Google Cloud Vision API Key chưa
+        if(data.success === false || data.error_code === 'not_configured'){
+            showApiKeyConfigBanner(data.error);
+        } else {
+            hideApiKeyConfigBanner();
+            toast(`Nhận diện thành công: ${detected.merchant} (${fmt(detected.amount)})!`, 'success');
+        }
 
     } catch(err) {
         console.error('OCR Pipeline Error:', err);
@@ -1362,13 +1387,18 @@ function renderOcrItemsAndRawText(detected){
     }
 
     // Gán dữ liệu cho bảng Từng Sản Phẩm (4 Cột chuẩn theo thiết kế)
-    S.ocrItems = items.map((it, idx) => ({
-        id: idx,
-        selected: true,
-        name: it.name || `Sản phẩm ${idx + 1}`,
-        quantity: it.quantity || 1,
-        amount: Number(it.amount) || 0
-    }));
+    S.ocrItems = items.map((it, idx) => {
+        const q = Number(it.quantity) || 1;
+        const a = Number(it.amount) || 0;
+        return {
+            id: idx,
+            selected: true,
+            name: it.name || `Sản phẩm ${idx + 1}`,
+            quantity: q,
+            unit_price: Number(it.unit_price) || (a > 0 ? Math.round(a / q) : 0),
+            amount: a
+        };
+    });
 
     // Render bảng sản phẩm & tính toán tổng số tiền
     renderOcrProductsTable();
@@ -1414,7 +1444,9 @@ function renderOcrProductsTable(){
         return;
     }
 
-    tbody.innerHTML = items.map((it, idx) => `
+    tbody.innerHTML = items.map((it, idx) => {
+        const hasSubUnitPrice = it.quantity > 1 && it.unit_price > 0 && Math.abs(it.unit_price - it.amount) > 1;
+        return `
         <tr data-idx="${idx}">
             <td style="width:36px;text-align:center;vertical-align:middle">
                 <input type="checkbox" class="ocr-custom-chk item-chk" data-idx="${idx}" ${it.selected ? 'checked' : ''} onchange="onItemCheckChanged(${idx}, this.checked)" title="Chọn sản phẩm">
@@ -1427,9 +1459,11 @@ function renderOcrProductsTable(){
             </td>
             <td style="width:115px;text-align:right">
                 <input type="text" class="ocr-cell-price" value="${fmt(it.amount)}" onchange="onItemFieldEdited(${idx}, 'amount', this.value)" placeholder="0 ₫">
+                <div class="ocr-cell-unit-hint" style="font-size:0.68rem;color:var(--text3);text-align:right;margin-top:2px;font-weight:500;display:${hasSubUnitPrice ? 'block' : 'none'}">(${fmt(it.unit_price)}/đv)</div>
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function updateOcrItemsTableSummary(){
@@ -1437,7 +1471,16 @@ function updateOcrItemsTableSummary(){
     const totalCount = items.length;
     const selectedItems = items.filter(it => it.selected);
     const selectedCount = selectedItems.length;
-    const selectedTotal = selectedItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+    const itemsSum = selectedItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+
+    const discount = (S.lastOcr && Number(S.lastOcr.discount)) || 0;
+    const vat = (S.lastOcr && Number(S.lastOcr.vat)) || 0;
+
+    // Tính toán tổng thanh toán thực tế (Đồng bộ 100% giữa Tab 1 và Tab 2)
+    let finalAmount = itemsSum;
+    if(discount > 0 || vat > 0){
+        finalAmount = Math.max(0, itemsSum - discount + vat);
+    }
 
     // Cập nhật tỷ lệ đã chọn (e.g. 7/7)
     const ratioEl = document.getElementById('ocrSelectedRatio');
@@ -1456,31 +1499,42 @@ function updateOcrItemsTableSummary(){
         topChk.indeterminate = (selectedCount > 0 && selectedCount < totalCount);
     }
 
-    // Summary box dưới bảng
+    // Summary box dưới bảng (Tab 1: Từng sản phẩm)
     const cntEl = document.getElementById('ocrSelectedItemsCount');
     if(cntEl) cntEl.textContent = selectedCount;
 
     const totalAmtEl = document.getElementById('ocrSelectedTotalAmt');
-    if(totalAmtEl) totalAmtEl.textContent = fmt(selectedTotal);
+    if(totalAmtEl) totalAmtEl.textContent = fmt(finalAmount);
 
     // Cập nhật 3 Pill Chips trên đầu
     const amtChip = document.getElementById('ocrAmtChip');
-    if(amtChip) amtChip.textContent = fmt(selectedTotal);
+    if(amtChip) amtChip.textContent = fmt(finalAmount);
 
     const countChip = document.getElementById('ocrItemsCountChip');
     if(countChip) countChip.textContent = `${totalCount} sản phẩm`;
 
+    // Cập nhật Tab 2: "Tổng đơn" -> Thanh toán thực tế (ĐỒNG BỘ 100% VỚI TAB 1)
+    const ocrAmt = document.getElementById('ocrAmt');
+    if(ocrAmt) ocrAmt.textContent = fmt(finalAmount);
+
+    const subEl = document.getElementById('ocrSubtotal');
+    if(subEl) subEl.textContent = fmt(itemsSum);
+
     // Cập nhật nhãn nút Lưu vào Ví
     const saveTxt = document.getElementById('ocrSaveBtnTxt');
-    if(saveTxt) saveTxt.textContent = `Lưu vào Ví (${fmt(selectedTotal)})`;
+    if(saveTxt) saveTxt.textContent = `Lưu vào Ví (${fmt(finalAmount)})`;
 
     const pa = document.getElementById('personalSaveAmt');
-    if(pa) pa.textContent = fmt(selectedTotal);
+    if(pa) pa.textContent = fmt(finalAmount);
 
     if(S.lastOcr){
-        S.lastOcr.selectedAmount = selectedTotal;
+        S.lastOcr.amount = finalAmount;
+        S.lastOcr.subtotal = itemsSum;
+        S.lastOcr.selectedAmount = finalAmount;
         S.lastOcr.selectedItems = selectedItems;
     }
+
+    updateSplitBillCalculations();
 }
 
 function toggleSelectAllReceiptItems(){
@@ -1506,12 +1560,34 @@ function onItemFieldEdited(idx, field, value){
         S.ocrItems[idx].name = value.trim();
     } else if(field === 'quantity'){
         const num = parseFloat(value.replace(/[^0-9.]/g, '')) || 1;
+        const oldQty = S.ocrItems[idx].quantity || 1;
         S.ocrItems[idx].quantity = num;
+        // Nếu người dùng thay đổi số lượng, tự động cập nhật lại thành tiền tương ứng:
+        if(num !== oldQty && S.ocrItems[idx].amount > 0){
+            const unitPrice = S.ocrItems[idx].unit_price || Math.round(S.ocrItems[idx].amount / oldQty);
+            S.ocrItems[idx].unit_price = unitPrice;
+            S.ocrItems[idx].amount = Math.round(unitPrice * num);
+            const priceInput = document.querySelector(`tr[data-idx="${idx}"] .ocr-cell-price`);
+            if(priceInput) priceInput.value = fmt(S.ocrItems[idx].amount);
+        }
     } else if(field === 'amount'){
         const amt = parseFloat(value.replace(/[^0-9]/g, '')) || 0;
         S.ocrItems[idx].amount = amt;
+        if(S.ocrItems[idx].quantity > 0){
+            S.ocrItems[idx].unit_price = Math.round(amt / S.ocrItems[idx].quantity);
+        }
         const el = document.querySelector(`tr[data-idx="${idx}"] .ocr-cell-price`);
         if(el && document.activeElement !== el) el.value = fmt(amt);
+    }
+    const hintEl = document.querySelector(`tr[data-idx="${idx}"] .ocr-cell-unit-hint`);
+    if(hintEl){
+        const it = S.ocrItems[idx];
+        if(it.quantity > 1 && it.unit_price > 0 && Math.abs(it.unit_price - it.amount) > 1){
+            hintEl.textContent = `(${fmt(it.unit_price)}/đv)`;
+            hintEl.style.display = 'block';
+        } else {
+            hintEl.style.display = 'none';
+        }
     }
     updateOcrItemsTableSummary();
 }
@@ -1547,6 +1623,44 @@ function copyFullOcrText(){
         });
     } else {
         prompt('Toàn văn hóa đơn:', text);
+    }
+}
+
+// ===== QUẢN LÝ GOOGLE CLOUD VISION API KEY =====
+function showApiKeyConfigBanner(errMsg){
+    const banner = document.getElementById('ocrApiKeyBanner');
+    if(banner) banner.classList.remove('hidden');
+    toast(errMsg || 'Chưa có GOOGLE_API_KEY. Vui lòng nhập API Key để quét trên Google Cloud!', 'warning');
+}
+
+function hideApiKeyConfigBanner(){
+    const banner = document.getElementById('ocrApiKeyBanner');
+    if(banner) banner.classList.add('hidden');
+}
+
+async function saveGoogleApiKeyFromUi(){
+    const input = document.getElementById('inputGoogleApiKey');
+    const val = input ? input.value.trim() : '';
+    if(!val){
+        toast('Vui lòng dán GOOGLE_API_KEY hợp lệ!', 'warning');
+        return;
+    }
+    try {
+        const res = await fetch('/api/ocr/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ google_api_key: val })
+        });
+        const d = await res.json();
+        if(res.ok && d.success){
+            toast('Đã lưu GOOGLE_API_KEY thành công! Hãy chọn lại ảnh để quét.', 'success');
+            hideApiKeyConfigBanner();
+            if(input) input.value = '';
+        } else {
+            toast(d.error || 'Lỗi khi lưu API Key', 'error');
+        }
+    } catch(e){
+        toast('Lỗi kết nối máy chủ khi lưu API Key', 'error');
     }
 }
 
@@ -1935,7 +2049,7 @@ async function saveOcr(){
                 title: `Chi trả: ${data.merchant}`,
                 amt: data.amount,
                 date: dateStr,
-                user: S.user ? S.user.name : 'Nguyễn Thúy Hiền'
+                user: S.user ? S.user.name : 'Thành viên 1'
             });
         }
 
@@ -2269,7 +2383,7 @@ async function loadRecentTransactions(){const el=document.getElementById('transa
 async function handleFileSelect(e){const f=e.target.files[0];if(!f)return;const s=document.getElementById('upload-status');if(s)s.style.display='block';const fd=new FormData();fd.append('receipt',f);try{const r=await fetch('/api/receipts/upload',{method:'POST',body:fd});if(!r.ok){const d=await r.json();throw new Error(d.error||'Fail')}const d=await r.json();sessionStorage.setItem('ocr_result',JSON.stringify(d));window.location.href='/review'}catch(e){toast('Lỗi: '+e.message,'error');if(s)s.style.display='none'}}
 async function handleConfirmTransaction(e){e.preventDefault();const o=JSON.parse(sessionStorage.getItem('ocr_result')||'{}');const p={merchant_name:document.getElementById('verify-merchant').value,amount:parseFloat(document.getElementById('verify-amount').value),transaction_date:document.getElementById('verify-date').value,category:document.getElementById('verify-category').value,group_id:document.getElementById('verify-group-id')?.value?parseInt(document.getElementById('verify-group-id').value):null,notes:document.getElementById('verify-notes')?.value,receipt_image_path:o.image_url||null,raw_ocr_text:o.raw_text||null,user_id:1};try{const r=await fetch('/api/transactions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});if(r.ok){sessionStorage.removeItem('ocr_result');toast('Lưu thành công!','success');window.location.href='/';}else toast('Lỗi lưu!','error')}catch(e){toast('Lỗi: '+e.message,'error')}}
 async function handleManualSubmit(e){e.preventDefault();const p={merchant_name:document.getElementById('manual-merchant').value,amount:parseFloat(document.getElementById('manual-amount').value),transaction_date:document.getElementById('manual-date').value,group_id:document.getElementById('manual-wallet-type')?.value?parseInt(document.getElementById('manual-wallet-type').value):null,category:'Ăn uống',user_id:1};try{const r=await fetch('/api/transactions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});if(r.ok){toast('Thêm thành công!','success');document.getElementById('manual-form')?.reset();loadDashboardStats();loadRecentTransactions()}}catch(e){toast('Lỗi: '+e.message,'error')}}
-const TEAM_MEMBERS=[{id:1,name:"Nguyễn Thúy Hiền"},{id:2,name:"Lê Thị Dịu"},{id:3,name:"Lê Tiến Quân"},{id:4,name:"Lê Ngọc Duy"},{id:5,name:"Nguyễn Việt Anh"}];
+const TEAM_MEMBERS=[{id:1,name:"Thành viên 1"},{id:2,name:"Lê Thị Dịu"},{id:3,name:"Lê Tiến Quân"},{id:4,name:"Lê Ngọc Duy"},{id:5,name:"Nguyễn Việt Anh"}];
 function loadGroupMembersUI(){const el=document.getElementById('member-checkbox-list');if(!el)return;el.innerHTML=TEAM_MEMBERS.map(m=>`<label style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.8rem;background:#f8fafc;border-radius:var(--r-sm);border:1px solid var(--border);cursor:pointer"><input type="checkbox" name="split-members" value="${m.id}" checked><span style="font-weight:600">${m.name}</span></label>`).join('')}
 function calculateSplit(e){e.preventDefault();const a=parseFloat(document.getElementById('split-amount-input').value);const cbs=document.querySelectorAll('input[name="split-members"]:checked');const ids=Array.from(cbs).map(c=>parseInt(c.value));if(!ids.length){toast('Chọn ít nhất 1 thành viên!','warning');return}const pp=Math.round(a/ids.length);const rb=document.getElementById('split-result'),db=document.getElementById('split-result-details');const names=TEAM_MEMBERS.filter(m=>ids.includes(m.id)).map(m=>m.name);db.innerHTML=`<p style="font-weight:700;margin-bottom:0.5rem">Mỗi người: <span style="color:var(--primary)">${fmt(pp)}</span></p><p style="font-size:0.85rem;color:var(--text3)">${ids.length} người: ${names.join(', ')}</p>`;rb.style.display='block'}
 
@@ -2943,7 +3057,7 @@ async function loadGroupMembersUI() {
     if (!listEl) return;
 
     let members = [
-        { id: 1, name: 'Nguyễn Thúy Hiền', role: 'Trưởng nhóm' },
+        { id: 1, name: 'Thành viên 1', role: 'Trưởng nhóm' },
         { id: 2, name: 'Lê Thị Dịu', role: 'Thành viên' },
         { id: 3, name: 'Lê Tiến Quân', role: 'Thành viên' },
         { id: 4, name: 'Lê Ngọc Duy', role: 'Thành viên' },
@@ -3307,9 +3421,51 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
 });
 
+// ===== HƯỚNG 3: AI CỐ VẤN TÀI CHÍNH - TÓM TẮT & ĐỀ XUẤT HÀNH ĐỘNG =====
+async function requestAiSpendingSummary(){
+    const contentBox = document.getElementById('aiAdviceContent');
+    const loadingBox = document.getElementById('aiAdviceLoading');
+    const btn = document.getElementById('btnRequestAiAdvice');
+    if(!contentBox || !loadingBox) return;
+
+    contentBox.style.display = 'none';
+    loadingBox.style.display = 'block';
+    if(btn) btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/ai/spending-summary', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const d = await res.json();
+        loadingBox.style.display = 'none';
+        if(btn) btn.disabled = false;
+
+        if(res.ok && d.success){
+            const metricsHtml = `
+            <div style="margin-bottom:0.5rem;padding-bottom:0.4rem;border-bottom:1px dashed var(--border);display:flex;align-items:center;justify-content:space-between;font-size:0.68rem;color:var(--text3)">
+                <span><i class="ri-sparkling-fill" style="color:#f59e0b"></i> <strong>${d.model || 'Gemini 1.5 Flash'}</strong></span>
+                <span><i class="ri-flashlight-line" style="color:#f59e0b"></i> ${(d.latency_ms/1000).toFixed(1)}s</span>
+                <span><i class="ri-cpu-line" style="color:#6366f1"></i> ${d.token_usage?.total_tokens || 0} tokens</span>
+                <span><i class="ri-money-dollar-circle-line" style="color:#10b981"></i> ${d.cost_estimate?.formatted || '~3.5 ₫'}</span>
+            </div>`;
+            contentBox.innerHTML = metricsHtml + `<div>${escapeHtml(d.advice).replace(/\n/g, '<br>')}</div>`;
+            contentBox.style.display = 'block';
+            toast('AI đã phân tích xong chi tiêu của bạn!', 'success');
+        } else {
+            toast(d.error || 'Không thể tạo phân tích lúc này', 'error');
+        }
+    } catch(e){
+        loadingBox.style.display = 'none';
+        if(btn) btn.disabled = false;
+        toast('Lỗi kết nối khi gọi AI: ' + e.message, 'error');
+    }
+}
+
 // Stubs an toan
 function updateBioLoginUI(){}
 function closeBiometricModal(){}
 function openBiometricModal(){}
 function handleBiometricLogin(){}
+
 

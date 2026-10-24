@@ -27,13 +27,13 @@ def db():
 def test_seed_users(db):
     users = db.get_users()
     assert len(users) == 5
-    assert users[0]["full_name"] == "Nguyễn Thúy Hiền"
+    assert users[0]["full_name"] == "Thành viên 1"
 
 
 def test_get_user(db):
     user = db.get_user(1)
     assert user is not None
-    assert user["username"] == "thuyhien"
+    assert user["username"] == "user1"
 
 
 def test_update_user(db):
@@ -45,9 +45,9 @@ def test_update_user(db):
 
 def test_get_user_by_contact(db):
     # Tìm bằng email
-    user_email = db.get_user_by_contact("hien@vixinh.vn")
+    user_email = db.get_user_by_contact("user1@vixinh.vn")
     assert user_email is not None
-    assert user_email["full_name"] == "Nguyễn Thúy Hiền"
+    assert user_email["full_name"] == "Thành viên 1"
 
     # Tìm bằng số điện thoại (kể cả có hoặc không có dấu cách)
     user_phone = db.get_user_by_contact("0912345678")

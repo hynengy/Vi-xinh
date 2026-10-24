@@ -315,6 +315,7 @@ def auth_login():
     if not identifier:
         return jsonify({"error": "Vui lòng nhập Email hoặc Số điện thoại"}), 400
 
+    # 1. Thử xác thực nếu tài khoản và mật khẩu khớp
     user = db.authenticate_user(identifier, password)
     if user:
         return jsonify({
@@ -323,22 +324,31 @@ def auth_login():
             "message": "Đăng nhập thành công"
         })
 
+    # 2. Nếu tài khoản đã tồn tại trong DB nhưng sai mật khẩu -> Thông báo rõ ràng, không auto_register
+    existing_user = db.get_user_by_contact(identifier)
+    if existing_user:
+        return jsonify({"error": "Mật khẩu không chính xác. Vui lòng thử lại hoặc chọn 'Quên mật khẩu?'"}), 401
+
+    # 3. Nếu tài khoản chưa từng tồn tại và bật auto_register -> Tự động đăng ký
     auto_register = data.get("auto_register", False)
     if auto_register:
         is_email = "@" in identifier
-        new_user = db.register_user(
-            full_name="Người dùng Ví Xinh",
-            email=identifier if is_email else None,
-            phone=identifier if not is_email else None,
-            password=password or "123456"
-        )
-        return jsonify({
-            "success": True,
-            "user": new_user,
-            "message": "Đã tự động khởi tạo tài khoản mới"
-        })
+        try:
+            new_user = db.register_user(
+                full_name=identifier.split("@")[0] if is_email else "Người dùng Ví Xinh",
+                email=identifier if is_email else None,
+                phone=identifier if not is_email else None,
+                password=password or "123456"
+            )
+            return jsonify({
+                "success": True,
+                "user": new_user,
+                "message": "Đã tự động khởi tạo tài khoản mới"
+            })
+        except Exception as e:
+            return jsonify({"error": f"Lỗi tạo tài khoản: {str(e)}"}), 500
 
-    return jsonify({"error": "Tài khoản hoặc mật khẩu không chính xác. Hãy kiểm tra lại hoặc chuyển sang Đăng ký."}), 401
+    return jsonify({"error": "Tài khoản không tồn tại. Vui lòng chuyển sang tab Đăng ký."}), 401
 
 
 @app.route("/api/auth/register", methods=["POST"])
@@ -356,9 +366,9 @@ def auth_register():
         return jsonify({"error": "Vui lòng cung cấp ít nhất Email hoặc Số điện thoại thực"}), 400
 
     if email and db.get_user_by_contact(email):
-        return jsonify({"error": "Email này đã được đăng ký trong hệ thống"}), 409
+        return jsonify({"error": "Email này đã được đăng ký trong hệ thống. Vui lòng Đăng nhập."}), 409
     if phone and db.get_user_by_contact(phone):
-        return jsonify({"error": "Số điện thoại này đã được đăng ký trong hệ thống"}), 409
+        return jsonify({"error": "Số điện thoại này đã được đăng ký trong hệ thống. Vui lòng Đăng nhập."}), 409
 
     try:
         user = db.register_user(
@@ -376,6 +386,10 @@ def auth_register():
         return jsonify({"error": f"Lỗi tạo tài khoản: {str(e)}"}), 500
 
 
+def _normalize_contact(c: str) -> str:
+    return c.strip().lower().replace(" ", "").replace("-", "").replace(".", "")
+
+
 @app.route("/api/auth/otp/send", methods=["POST"])
 def auth_send_otp():
     """Gửi mã OTP xác thực qua Email hoặc Số điện thoại thực."""
@@ -385,13 +399,14 @@ def auth_send_otp():
     if not contact:
         return jsonify({"error": "Vui lòng nhập Email hoặc Số điện thoại nhận mã OTP"}), 400
 
+    norm_key = _normalize_contact(contact)
     if purpose == "reset":
         user = db.get_user_by_contact(contact)
         if not user:
-            return jsonify({"error": "Không tìm thấy tài khoản nào gắn với Email hoặc SĐT này. Vui lòng kiểm tra lại!"}), 404
+            return jsonify({"error": "Không tìm thấy tài khoản nào gắn với Email hoặc SĐT này."}), 404
 
     otp_code = str(random.randint(100000, 999999))
-    OTP_STORE[contact.lower()] = {
+    OTP_STORE[norm_key] = {
         "code": otp_code,
         "created_at": datetime.now().timestamp()
     }
@@ -419,11 +434,12 @@ def auth_verify_otp():
     if not contact or not otp:
         return jsonify({"error": "Thiếu thông tin xác thực OTP"}), 400
 
-    saved = OTP_STORE.get(contact.lower())
+    norm_key = _normalize_contact(contact)
+    saved = OTP_STORE.get(norm_key)
     if not saved or (saved["code"] != otp and otp != "889966" and otp != "123456"):
         return jsonify({"error": "Mã OTP không chính xác hoặc đã hết hạn"}), 400
 
-    OTP_STORE.pop(contact.lower(), None)
+    OTP_STORE.pop(norm_key, None)
 
     user = db.get_user_by_contact(contact)
     if not user:
@@ -456,11 +472,12 @@ def auth_reset_password():
     if len(new_password) < 6:
         return jsonify({"error": "Mật khẩu mới phải có ít nhất 6 ký tự"}), 400
 
-    saved = OTP_STORE.get(contact.lower())
+    norm_key = _normalize_contact(contact)
+    saved = OTP_STORE.get(norm_key)
     if not saved or (saved["code"] != otp and otp != "889966" and otp != "123456"):
         return jsonify({"error": "Mã OTP không chính xác hoặc đã hết hạn!"}), 400
 
-    OTP_STORE.pop(contact.lower(), None)
+    OTP_STORE.pop(norm_key, None)
 
     user = db.get_user_by_contact(contact)
     if not user:
@@ -792,9 +809,89 @@ def list_categories():
 # ==================================================================
 @app.route("/api/ocr/status", methods=["GET"])
 def ocr_status():
-    """Kiểm tra trạng thái Tesseract OCR Engine."""
-    status = pipeline.ocr_engine.get_status()
-    return jsonify(status)
+    """Kiểm tra trạng thái Google Vision OCR Engine."""
+    return jsonify(pipeline.mlkit_engine.get_engine_info())
+
+
+@app.route("/api/ocr/config", methods=["GET", "POST"])
+def ocr_config():
+    """Lấy hoặc lưu cấu hình GOOGLE_API_KEY."""
+    env_file = Path(__file__).resolve().parent.parent / ".env"
+    if request.method == "POST":
+        data = request.get_json() or {}
+        new_key = data.get("google_api_key", "").strip()
+        if not new_key:
+            return jsonify({"error": "Vui lòng nhập GOOGLE_API_KEY hợp lệ!"}), 400
+
+        # Ghi vào file .env
+        lines = []
+        if env_file.exists():
+            for line in env_file.read_text(encoding="utf-8").splitlines():
+                if not line.strip().startswith("GOOGLE_API_KEY="):
+                    lines.append(line)
+        lines.append(f"GOOGLE_API_KEY={new_key}")
+        env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        # Cập nhật runtime
+        import os
+        os.environ["GOOGLE_API_KEY"] = new_key
+        pipeline.mlkit_engine.api_key = new_key
+        return jsonify({
+            "success": True,
+            "message": "Đã lưu GOOGLE_API_KEY thành công!",
+            "configured": True,
+            "api_key_masked": new_key[:6] + "..." + new_key[-4:] if len(new_key) > 10 else "***"
+        })
+
+    # GET
+    configured = pipeline.mlkit_engine.is_configured()
+    current_key = pipeline.mlkit_engine.api_key or ""
+    masked = current_key[:6] + "..." + current_key[-4:] if len(current_key) > 10 else ("***" if current_key else "")
+    return jsonify({
+        "configured": configured,
+        "api_key_masked": masked,
+        "engine": "google_vision_cloud"
+    })
+
+
+# ==================================================================
+#  API 12: AI SPENDING SUMMARY & FINANCIAL ADVICE (HƯỚNG 3)
+# ==================================================================
+@app.route("/api/ai/spending-summary", methods=["POST", "GET"])
+def ai_spending_summary():
+    """
+    Tóm tắt báo cáo chi tiêu và đề xuất 3 hành động cụ thể bằng Gemini LLM.
+    (Hiện thực hóa mục 2 của Hướng 3: Tóm tắt báo cáo & đề xuất hành động).
+    """
+    user_id = request.args.get("user_id", 1, type=int)
+    txs = db.get_recent_transactions(user_id=user_id, limit=100)
+
+    expense_txs = [t for t in txs if t.get("type") == "expense"]
+    total_expense = sum(t.get("amount", 0) for t in expense_txs)
+    
+    # Gom nhóm theo danh mục
+    cat_map = {}
+    for t in expense_txs:
+        c = t.get("category", "other")
+        cat_map[c] = cat_map.get(c, 0) + t.get("amount", 0)
+
+    top_txs = sorted(expense_txs, key=lambda x: x.get("amount", 0), reverse=True)[:5]
+    top_str = "; ".join(f"{t.get('merchant_name') or t.get('merchant', 'Chi tiêu')}: {int(t.get('amount', 0)):,} ₫" for t in top_txs)
+    cat_str = "; ".join(f"{k}: {int(v):,} ₫ ({(v/total_expense*100):.1f}%)" for k, v in cat_map.items()) if total_expense > 0 else "Chưa có chi tiêu"
+
+    summary_input = (
+        f"Tổng số giao dịch: {len(expense_txs)} giao dịch.\n"
+        f"Tổng chi tiêu ghi nhận: {int(total_expense):,} VNĐ.\n"
+        f"Cơ cấu theo danh mục: {cat_str}.\n"
+        f"Top các khoản chi lớn nhất: {top_str if top_str else 'Chưa có'}.\n"
+    )
+
+    res = pipeline.mlkit_engine.generate_ai_financial_advice(summary_input)
+    res["total_expense"] = total_expense
+    res["transaction_count"] = len(expense_txs)
+    res["categories"] = cat_map
+    return jsonify(res)
+
 
 
 # ==================================================================

@@ -39,7 +39,7 @@ phase-2-mobile-app/
     │   ├── user_model.dart        # Thông tin tài khoản người dùng
     │   └── group_model.dart       # Cấu trúc ví nhóm, quỹ phòng & công nợ thành viên
     ├── services/
-    │   ├── mlkit_ocr_service.dart # [Thành viên 1 - Thúy Hiền] Google ML Kit on-device
+    │   ├── mlkit_ocr_service.dart # Google ML Kit on-device
     │   └── database_helper.dart   # [Thành viên 2 - Thị Dịu] SQLite sqflite local persistence
     ├── extractor/
     │   └── dart_receipt_extractor.dart # [Thành viên 3 - Tiến Quân] Porting thuật toán Regex sang Dart
@@ -65,7 +65,7 @@ phase-2-mobile-app/
 
 | Thành Viên | Phụ Trách Kỹ Thuật | Module Hoàn Thành |
 |:---|:---|:---|
-| **Nguyễn Thúy Hiền** | Model OCR On-Device & Camera Scan | `services/mlkit_ocr_service.dart`, `screens/camera/receipt_scanner_screen.dart` |
+| **Thành viên 1** | Model OCR On-Device & Camera Scan | `services/mlkit_ocr_service.dart`, `screens/camera/receipt_scanner_screen.dart` |
 | **Lê Thị Dịu** | CSDL SQLite Local & Logic Quỹ Nhóm | `services/database_helper.dart`, `models/group_model.dart`, logic tính nợ phòng trọ |
 | **Lê Tiến Quân** | Regex Extractor Porting sang Dart | `extractor/dart_receipt_extractor.dart` (xử lý chuỗi cửa hàng, ngày tháng & mục tiền trọ) |
 | **Lê Ngọc Duy** | Thiết Kế Giao Diện UI/UX Flutter | `screens/home/dashboard_screen.dart`, `screens/review/review_receipt_screen.dart`, `core/constants/app_colors.dart` |

@@ -197,7 +197,7 @@ class DatabaseManager:
         """Tạo dữ liệu mẫu cho nhóm 5 thành viên (dùng cho test suite)."""
         # Users
         seed_users = [
-            ("thuyhien", "Nguyễn Thúy Hiền", "hien@vixinh.vn", "0912 345 678", "123456"),
+            ("user1", "Thành viên 1", "user1@vixinh.vn", "0912 345 678", "123456"),
             ("thidiu", "Lê Thị Dịu", "diu@vixinh.vn", "0987 654 321", "123456"),
             ("tienquan", "Lê Tiến Quân", "quan@vixinh.vn", "0934 567 890", "123456"),
             ("ngocduy", "Lê Ngọc Duy", "duy@vixinh.vn", "0903 112 233", "123456"),

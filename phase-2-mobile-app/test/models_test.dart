@@ -32,21 +32,21 @@ void main() {
     test('UserModel toMap and fromMap', () {
       final user = UserModel(
         id: 10,
-        username: 'hiennt',
-        fullName: 'Nguyễn Thúy Hiền',
+        username: 'user1',
+        fullName: 'Thành viên 1',
         phone: '0987654321',
-        email: 'hien@example.com',
+        email: 'user1@example.com',
         bankBin: '970436',
         bankAccount: '123456789',
       );
 
       final map = user.toMap();
-      expect(map['full_name'], 'Nguyễn Thúy Hiền');
+      expect(map['full_name'], 'Thành viên 1');
       expect(map['bank_bin'], '970436');
       expect(map['bank_account'], '123456789');
 
       final restored = UserModel.fromMap(map);
-      expect(restored.fullName, 'Nguyễn Thúy Hiền');
+      expect(restored.fullName, 'Thành viên 1');
       expect(restored.bankAccount, '123456789');
     });
 

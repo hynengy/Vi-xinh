@@ -2,7 +2,7 @@
 =============================================================================
 ĐỒ ÁN THỰC TẬP CHUYÊN MÔN - ỨNG DỤNG "VÍ XINH"
 MODULE: TIỀN XỬ LÝ ẢNH HÓA ĐƠN (IMAGE PREPROCESSING)
-PHỤ TRÁCH: THÀNH VIÊN 1 - NGUYỄN THÚY HIỀN
+PHỤ TRÁCH: NHÓM DỰ ÁN
 =============================================================================
 Mô tả nhiệm vụ:
 - Cân chỉnh góc nghiêng (Deskew) khi người dùng chụp ảnh bị xéo/lệch.
@@ -160,8 +160,34 @@ class ImagePreprocessor:
         thresh = cv2.adaptiveThreshold(
             gray_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 10
         )
+        return thresh
+
     @staticmethod
-    def remove_table_grid(gray_image: np.ndarray) -> np.ndarray:
+    def optimize_for_llm(image_p: Path, max_dim: int = 1280) -> bytes:
+        """
+        [HƯỚNG 3 - MULTIMODAL LLM API]
+        Tiền xử lý ảnh tối ưu cho Mô hình Ngôn ngữ Lớn Đa phương thức (Gemini / GPT):
+        - Giữ nguyên màu sắc RGB đầy đủ để LLM nhận diện Logo, danh mục và dấu mộc.
+        - Tự động co kích thước ảnh (Downscaling LANCZOS) về max 1280px nếu ảnh chụp camera quá lớn (3000-4000px).
+        - Nén JPEG chất lượng 85% để giảm 75% payload mạng, giảm độ trễ (latency) và tiết kiệm token input.
+        """
+        try:
+            from PIL import Image
+            import io
+            with Image.open(image_p) as img:
+                w, h = img.size
+                if max(w, h) > max_dim:
+                    scale = max_dim / max(w, h)
+                    new_size = (int(w * scale), int(h * scale))
+                    img = img.resize(new_size, Image.Resampling.LANCZOS)
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=85, optimize=True)
+                return buf.getvalue()
+        except Exception:
+            return Path(image_p).read_bytes()
+
         """
         Tự động phát hiện và xóa các đường kẻ bảng (Grid lines) trong hóa đơn/phiếu dạng bảng.
         Giúp OCR đọc tên món, đơn giá, thành tiền mà không bị các ký tự '|' hoặc gạch nối làm sai lệch.
@@ -198,7 +224,7 @@ class ImagePreprocessor:
         cls, image_path: str, save_stages_dir: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Toàn bộ luồng tiền xử lý ảnh hoàn chỉnh của Nguyễn Thúy Hiền:
+        Toàn bộ luồng tiền xử lý ảnh hóa đơn:
         1. Đọc ảnh gốc
         2. Cân chỉnh góc nghiêng (Deskew)
         3. Chuyển sang thang xám & Khử vết ố vàng bằng kênh Red

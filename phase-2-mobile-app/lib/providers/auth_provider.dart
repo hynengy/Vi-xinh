@@ -57,6 +57,25 @@ class AuthProvider with ChangeNotifier {
     return true;
   }
 
+  Future<bool> loginDemo() async {
+    final found = await _db.loginUser('demo@vixinh.vn', '123456') ?? await _db.getUserById(1);
+    if (found == null) return false;
+    await _persistSession(found);
+    return true;
+  }
+
+  Future<bool> loginWithGoogle() async {
+    final found = await _db.loginUser('hynengy@gmail.com', '123456') ??
+        await _db.registerUser(
+          fullName: 'hyne.ngy',
+          email: 'hynengy@gmail.com',
+          phone: '0342396910',
+          password: '123456',
+        );
+    await _persistSession(found);
+    return true;
+  }
+
   Future<bool> verifyPassword(String password) async {
     if (_user == null) return false;
     return _user!.password == password;

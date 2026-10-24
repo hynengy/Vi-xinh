@@ -9,7 +9,7 @@ Nhằm đảm bảo quá trình làm việc nhóm 05 thành viên trên GitHub k
 - **`main` / `master`**: Nhánh ổn định cao nhất, chỉ merge khi tính năng đã hoàn thiện và được kiểm thử kỹ lưỡng.
 - **`develop`**: Nhánh phát triển chung.
 - **Nhánh tính năng (`feature/`)**: Mỗi thành viên khi làm nhiệm vụ của mình sẽ tạo branch riêng từ `develop`:
-  - `feature/hien-ocr-pipeline` (Nguyễn Thúy Hiền)
+  - `feature/llm-prompt-pipeline`
   - `feature/diu-database-splitbill` (Lê Thị Dịu)
   - `feature/quan-regex-extractor` (Lê Tiến Quân)
   - `feature/duy-ui-dashboard` (Lê Ngọc Duy)

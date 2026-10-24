@@ -400,6 +400,10 @@ class ReceiptParser:
         if cleaned in ("2024", "2025", "2026", "2027", "2028"):
             return None
 
+        # Không lấy thông số đóng gói như 50/b-30b/t, 4b/t, 20c, 100ml
+        if re.search(r"/\s*[a-zA-Z]", cleaned) or re.search(r"\b\d+[a-zA-Z]{1,3}/\b", cleaned) or re.search(r"\b\d+(?:g|ml|kg|lon|chai|goi|hop)\b", cleaned, re.IGNORECASE):
+            return None
+
         cleaned = re.sub(r"(?<=\d)\s+(?=\d{3}\b)", "", cleaned)
         cleaned = re.sub(r"[^\d.,]", "", cleaned).strip()
         if not cleaned:
@@ -815,7 +819,9 @@ class ReceiptParser:
                 ("rác", "Vệ sinh & Rác", "🧺"),
                 ("gửi xe", "Gửi xe", "🛵")
             ]:
-                if (line_lower.startswith(skw) or f" {skw} " in f" {line_lower} " or f"{skw}:" in line_lower or f"{skw}|" in line_lower) and not any(it["name"] == sname for it in items):
+                if skw == "nước" and any(k in line_lower for k in ["ngọt", "ngot", "lọc", "loc", "khoáng", "khoang", "suối", "suoi", "ép", "ep", "mía", "mia", "chanh", "uống", "uong", "lon", "chai", "ly", "cốc", "tương", "mắm"]):
+                    continue
+                if (line_lower.startswith(skw) or f" {skw} " in f" {line_lower} " or f"{skw}:" in line_lower) and not any(it["name"] == sname for it in items):
                     matches = list(amt_pattern.finditer(line))
                     if matches:
                         val = cls.parse_amount_str(matches[-1].group(0))
@@ -834,7 +840,83 @@ class ReceiptParser:
                 i += 1
                 continue
 
-            # 3. Thử phân tích Single-Line (Tên món và Thành tiền trên cùng 1 dòng)
+            # 3. Phân tích Dòng Bảng có ký tự phân cách '|' (Table Format)
+            if "|" in line:
+                raw_parts = [p.strip() for p in line.split("|")]
+                while raw_parts and not raw_parts[0]:
+                    raw_parts.pop(0)
+                while raw_parts and not raw_parts[-1]:
+                    raw_parts.pop()
+
+                if len(raw_parts) >= 2:
+                    p_amt = cls.parse_amount_str(raw_parts[-1])
+                    if p_amt and p_amt >= 1000:
+                        p_up = None
+                        p_qty = 1.0
+                        p_unit = ""
+                        p_name = raw_parts[0]
+
+                        if len(raw_parts) >= 3:
+                            cand_up = cls.parse_amount_str(raw_parts[-2])
+                            if cand_up and cand_up >= 100:
+                                p_up = cand_up
+                                if len(raw_parts) >= 4:
+                                    q_s = re.sub(r"[^\d.,]", "", raw_parts[-3]).replace(",", ".")
+                                    if q_s:
+                                        try:
+                                            qv = float(q_s)
+                                            if 0 < qv < 500:
+                                                p_qty = qv
+                                        except ValueError:
+                                            pass
+                                    if len(raw_parts) >= 5:
+                                        p_unit = raw_parts[-4]
+                                        p_name = " ".join(raw_parts[:-4])
+                                    else:
+                                        p_name = " ".join(raw_parts[:-3])
+                                else:
+                                    p_name = raw_parts[0]
+                            else:
+                                q_s = re.sub(r"[^\d.,]", "", raw_parts[-2]).replace(",", ".")
+                                if q_s:
+                                    try:
+                                        qv = float(q_s)
+                                        if 0 < qv < 500:
+                                            p_qty = qv
+                                    except ValueError:
+                                        pass
+                                p_name = raw_parts[0]
+
+                        if not p_up and p_qty > 0:
+                            p_up = round(p_amt / p_qty, 0)
+
+                        # Nếu tên bị ngắn hoặc là phần tiếp nối dòng trước (vd: 'ú)' hoặc '(gói lẻ)')
+                        prev_l = lines[i-1] if i > 0 else ""
+                        if (len(p_name) <= 10 or p_name.startswith("(") or p_name.endswith(")")) and prev_l and "|" not in prev_l and not cls.is_table_header(prev_l) and not is_skip_line(prev_l):
+                            clean_prev = re.sub(r"[{}\[\]()=><|/\\~¬_#*+!¿‘`“”—\.;:°§@]", " ", prev_l).strip()
+                            if len(clean_prev) >= 4:
+                                p_name = f"{prev_l.strip()} {p_name}".strip()
+
+                        p_clean_name = clean_item_name(p_name)
+                        p_clean_name = re.sub(r"\b\d+/\w+[-\w/]*\b", " ", p_clean_name)
+                        p_clean_name = re.sub(r"\b\d+g/\w+\b", " ", p_clean_name)
+                        p_clean_name = re.sub(r"\s+", " ", p_clean_name).strip()
+
+                        if len(p_clean_name) >= 2 and not any(k in p_clean_name.lower() for k in ["tổng", "thanh toán", "tiền mặt", "thu ngân", "phụ trách", "bàn"]):
+                            icon = cls._detect_item_icon(p_clean_name.lower())
+                            q_disp = f"SL: {int(p_qty) if p_qty.is_integer() else p_qty}"
+                            items.append({
+                                "name": p_clean_name,
+                                "quantity": p_qty,
+                                "unit_price": p_up,
+                                "amount": p_amt,
+                                "consumption": q_disp,
+                                "icon": icon
+                            })
+                            i += 1
+                            continue
+
+            # 4. Thử phân tích Single-Line (Tên món và Thành tiền trên cùng 1 dòng)
             clean_line_strip = re.sub(r"[|\]\)—_!]+$", "", line).strip()
             tokens = clean_line_strip.split()
             amt_val = None
@@ -847,7 +929,7 @@ class ReceiptParser:
                 j = len(tokens) - 1
                 while j >= 0:
                     raw_tok = tokens[j]
-                    if cls.is_time_str(raw_tok) or ":" in raw_tok or raw_tok in ("2024", "2025", "2026", "2027", "2028"):
+                    if cls.is_time_str(raw_tok) or ":" in raw_tok or "/" in raw_tok or re.search(r"\b\d+[a-zA-Z]", raw_tok) or raw_tok in ("2024", "2025", "2026", "2027", "2028"):
                         j -= 1
                         continue
 
@@ -963,6 +1045,10 @@ class ReceiptParser:
                         if not any(it["name"].lower() == clean_name.lower() for it in items):
                             qty_final = quantity_val if quantity_val and quantity_val > 0 else 1.0
                             up_final = unit_price_val if unit_price_val and unit_price_val > 0 else round(amt_val / qty_final, 0)
+                            # Nếu số lượng > 1 mà amt_val chỉ mới là đơn giá 1 cái (chưa nhân SL)
+                            if qty_final > 1 and up_final > 0 and abs(amt_val - up_final) < 1.0:
+                                amt_val = round(qty_final * up_final, 0)
+
                             if not quantity_str:
                                 quantity_str = f"SL: {int(qty_final) if qty_final.is_integer() else qty_final}"
                             items.append({
@@ -999,10 +1085,27 @@ class ReceiptParser:
         if vat_amount > 0 and not any("vat" in b.get("label", "").lower() for b in breakdown):
             breakdown.append({"label": f"Thuế VAT (+{int(vat_amount):,} ₫)", "amount": vat_amount})
 
-        # Nếu tổng tiền bằng 0 nhưng có danh sách món chi tiết, tự tính tổng từ các món
-        if total_amount == 0 and line_items:
-            total_amount = sum(it["amount"] for it in line_items)
-            subtotal = total_amount
+        # Đối chiếu và đồng bộ chính xác giữa tổng tiền và tổng các món
+        items_sum = sum(it["amount"] for it in line_items) if line_items else 0.0
+
+        if items_sum > 0:
+            if total_amount == 0:
+                total_amount = items_sum
+                subtotal = items_sum
+            elif discount > 0 or vat_amount > 0:
+                expected_total = max(0.0, items_sum - discount + vat_amount)
+                if abs(total_amount - expected_total) > 1000 and abs(subtotal - items_sum) < 1000:
+                    total_amount = expected_total
+            else:
+                # Không có chiết khấu và thuế:
+                # Nếu total_amount < items_sum thì tổng đơn không thể nhỏ hơn tổng các món đã mua
+                if total_amount < items_sum:
+                    total_amount = items_sum
+                    subtotal = items_sum
+                # Nếu total_amount lệch quá nhiều so với items_sum (nhầm tiền mặt khách đưa)
+                elif len(line_items) >= 2 and total_amount > items_sum * 1.4:
+                    total_amount = items_sum
+                    subtotal = items_sum
 
         notes_parts = []
         if invoice_no:

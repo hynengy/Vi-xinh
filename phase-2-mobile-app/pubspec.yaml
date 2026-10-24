@@ -19,7 +19,7 @@ dependencies:
   # State Management
   provider: ^6.1.2
 
-  # Camera & Google ML Kit On-Device OCR (Thành viên 1: Nguyễn Thúy Hiền)
+  # Camera & Google ML Kit On-Device OCR
   camera: ^0.10.5+9
   google_mlkit_text_recognition: ^0.11.0
   image_picker: ^1.0.7
