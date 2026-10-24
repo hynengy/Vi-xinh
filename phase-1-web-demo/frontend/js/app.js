@@ -515,6 +515,139 @@ function togglePw(inpId = 'loginPw'){
     }
 }
 
+function normalizeCatKey(cat){
+    if(!cat) return 'other';
+    const c = String(cat).trim().toLowerCase();
+    if(CATS[c]) return c;
+    if(c.includes('ăn') || c.includes('uống') || c.includes('cafe') || c.includes('food')) return 'food';
+    if(c.includes('đi') || c.includes('xe') || c.includes('xăng') || c.includes('chuyển') || c.includes('transport')) return 'transport';
+    if(c.includes('sắm') || c.includes('tiêu dùng') || c.includes('mart') || c.includes('shopping')) return 'shopping';
+    if(c.includes('trí') || c.includes('chơi') || c.includes('game') || c.includes('entertainment')) return 'entertainment';
+    if(c.includes('khỏe') || c.includes('thuốc') || c.includes('viện') || c.includes('health')) return 'health';
+    if(c.includes('học') || c.includes('sách') || c.includes('education')) return 'education';
+    if(c.includes('đơn') || c.includes('điện') || c.includes('nước') || c.includes('trọ') || c.includes('bills')) return 'bills';
+    if(c.includes('lương') || c.includes('thu nhập') || c.includes('salary')) return 'salary';
+    return 'other';
+}
+
+function saveStateToStorage(){
+    const uid = S.user?.id || 1;
+    try {
+        localStorage.setItem('vx_transactions_' + uid, JSON.stringify(S.transactions || []));
+        localStorage.setItem('vx_transactions', JSON.stringify(S.transactions || []));
+        localStorage.setItem('vx_budgets_' + uid, JSON.stringify(S.budgets || []));
+        localStorage.setItem('vx_savings_' + uid, JSON.stringify(S.savings || []));
+        localStorage.setItem('vx_recurring_' + uid, JSON.stringify(S.recurring || []));
+    } catch(e){}
+}
+
+async function loadTransactionsFromBackend(){
+    const uid = S.user?.id || 1;
+    try {
+        const res = await fetch(`/api/transactions?user_id=${uid}&limit=100`, {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        });
+        if(res.ok){
+            const txs = await res.json();
+            if(Array.isArray(txs) && txs.length > 0){
+                S.transactions = txs.map(t => ({
+                    id: t.id,
+                    name: t.merchant_name || 'Chi tiêu',
+                    amt: Number(t.amount) || 0,
+                    cat: normalizeCatKey(t.category),
+                    date: t.transaction_date || (t.created_at ? t.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10)),
+                    time: t.transaction_time || (t.created_at ? t.created_at.slice(11, 16) : '00:00'),
+                    type: t.type || 'expense',
+                    note: t.notes || '',
+                    group_id: t.group_id || null,
+                    receipt_image_path: t.receipt_image_path || null
+                }));
+                saveStateToStorage();
+                renderAll();
+                if(document.getElementById('pgHist')?.classList.contains('active')){
+                    filterTransactions();
+                }
+            }
+        }
+    } catch(e){
+        console.warn('Lỗi đồng bộ giao dịch từ backend:', e);
+    }
+}
+
+async function loadBudgetsFromBackend(){
+    const uid = S.user?.id || 1;
+    try {
+        const res = await fetch(`/api/budgets?user_id=${uid}`, {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        });
+        if(res.ok){
+            const list = await res.json();
+            if(Array.isArray(list) && list.length > 0){
+                S.budgets = list.map(b => ({
+                    id: b.id,
+                    cat: normalizeCatKey(b.category),
+                    limit: Number(b.limit_amount) || 0
+                }));
+                saveStateToStorage();
+                if(document.getElementById('pgBgt')?.classList.contains('active')){
+                    renderBgt();
+                }
+            }
+        }
+    } catch(e){}
+}
+
+async function loadSavingsFromBackend(){
+    const uid = S.user?.id || 1;
+    try {
+        const res = await fetch(`/api/savings?user_id=${uid}`, {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        });
+        if(res.ok){
+            const list = await res.json();
+            if(Array.isArray(list) && list.length > 0){
+                S.savings = list.map(s => ({
+                    id: s.id,
+                    name: s.name,
+                    icon: s.icon || 'star',
+                    target: Number(s.target_amount) || 0,
+                    saved: Number(s.saved_amount) || 0
+                }));
+                saveStateToStorage();
+                if(document.getElementById('pgSav')?.classList.contains('active')){
+                    renderSav();
+                }
+            }
+        }
+    } catch(e){}
+}
+
+async function loadRecurringFromBackend(){
+    const uid = S.user?.id || 1;
+    try {
+        const res = await fetch(`/api/recurring?user_id=${uid}`, {
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        });
+        if(res.ok){
+            const list = await res.json();
+            if(Array.isArray(list) && list.length > 0){
+                S.recurring = list.map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    amt: Number(r.amount) || 0,
+                    freq: r.frequency || 'monthly',
+                    cat: normalizeCatKey(r.category),
+                    on: !!r.is_active
+                }));
+                saveStateToStorage();
+                if(document.getElementById('pgRec')?.classList.contains('active')){
+                    renderRec();
+                }
+            }
+        }
+    } catch(e){}
+}
+
 function enterApp(){
     document.getElementById('loginPage').style.display='none';
     document.getElementById('app').classList.add('active');
@@ -532,11 +665,30 @@ function enterApp(){
     }
     const savedTheme=localStorage.getItem('vx_theme')||'pink-gold';
     document.documentElement.setAttribute('data-theme',savedTheme);
-    S.transactions=[...DEMO_TX]; S.budgets=[...DEMO_BGT]; S.savings=DEMO_SAV.map(x=>({...x})); S.recurring=DEMO_REC.map(x=>({...x}));
+    
+    const uid = S.user?.id || 1;
+    const cachedTx = localStorage.getItem('vx_transactions_' + uid) || localStorage.getItem('vx_transactions');
+    if (cachedTx) {
+        try { S.transactions = JSON.parse(cachedTx); } catch(e){ S.transactions = []; }
+    } else {
+        S.transactions = [...DEMO_TX];
+    }
+    const cachedBgt = localStorage.getItem('vx_budgets_' + uid);
+    S.budgets = cachedBgt ? JSON.parse(cachedBgt) : [...DEMO_BGT];
+    const cachedSav = localStorage.getItem('vx_savings_' + uid);
+    S.savings = cachedSav ? JSON.parse(cachedSav) : DEMO_SAV.map(x=>({...x}));
+    const cachedRec = localStorage.getItem('vx_recurring_' + uid);
+    S.recurring = cachedRec ? JSON.parse(cachedRec) : DEMO_REC.map(x=>({...x}));
+
     const savedGroup = localStorage.getItem('vx_group_fund');
     S.groupFund = savedGroup ? JSON.parse(savedGroup) : null;
     renderAll();
     initNotifications();
+
+    loadTransactionsFromBackend();
+    loadBudgetsFromBackend();
+    loadSavingsFromBackend();
+    loadRecurringFromBackend();
 }
 
 // ===== NAV =====
@@ -716,8 +868,13 @@ function deleteTx(id){
     if(!tx) return;
     if(confirm(`Bạn có chắc muốn xóa giao dịch "${tx.name}" (${fmt(tx.amt)})?`)){
         S.transactions = S.transactions.filter(t => t.id !== id);
+        saveStateToStorage();
         renderAll();
         filterTransactions();
+        fetch(`/api/transactions/${id}`, {
+            method: 'DELETE',
+            headers: { 'Bypass-Tunnel-Reminder': 'true' }
+        }).catch(e => console.warn('Lỗi xóa backend:', e));
         const now = new Date();
         const delTimeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} ngày ${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
         addAppNotification({
@@ -895,8 +1052,10 @@ function saveTx(e){
     if(!amt||!mer||!date){toast('Điền đầy đủ thông tin!','error');return}
     const ct=CATS[S.selCat]||CATS.other;
     const isInc = S.txType === 'income';
+    const curUid = S.user?.id || 1;
     S.transactions.unshift({id:Date.now(),name:mer,amt,cat:S.selCat,date,note,time:new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}),type:S.txType});
-    sendBE({merchant_name:mer,amount:amt,transaction_date:date,category:S.selCat,user_id:1});
+    saveStateToStorage();
+    sendBE({merchant_name:mer,amount:amt,transaction_date:date,category:S.selCat,type:S.txType,notes:note,user_id:curUid});
     renderAll();closeModal();
     document.getElementById('txForm').reset();
     document.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('sel'));
@@ -1938,6 +2097,7 @@ async function saveOcr(){
             type: 'expense',
             note: data.notes || 'Chi tiêu cá nhân (100%)'
         });
+        saveStateToStorage();
         sendBE({
             user_id: curUid,
             merchant_name: data.merchant,
@@ -1984,7 +2144,7 @@ async function saveOcr(){
             type: 'expense',
             note: `Mua chung ${fmt(data.amount)} (chia ${count} người, ${fmt(myShare)}/người)`
         });
-
+        saveStateToStorage();
         sendBE({
             user_id: curUid,
             merchant_name: `${data.merchant} (Phần của tôi)`,
@@ -2222,6 +2382,12 @@ function addBgt(){
     if(!a){toast('Nhập hạn mức!','error');return}
     const ex=S.budgets.find(b=>b.cat===c);
     if(ex)ex.limit=a;else S.budgets.push({cat:c,limit:a});
+    saveStateToStorage();
+    fetch('/api/budgets', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'Bypass-Tunnel-Reminder':'true'},
+        body: JSON.stringify({ user_id: S.user?.id || 1, category: c, limit_amount: a })
+    }).catch(()=>{});
     togForm('bgtF');renderBgt();
     const c2 = CATS[c] || CATS.other;
     addAppNotification({
@@ -2244,7 +2410,14 @@ function renderSav(){
 function addSav(){
     const n=document.getElementById('sfN').value.trim(),t=parseFloat(document.getElementById('sfT').value),ic=document.getElementById('sfI').value;
     if(!n||!t){toast('Điền đầy đủ!','error');return}
-    S.savings.push({id:Date.now(),name:n,icon:ic,target:t,saved:0});
+    const newSav = {id:Date.now(),name:n,icon:ic,target:t,saved:0};
+    S.savings.push(newSav);
+    saveStateToStorage();
+    fetch('/api/savings', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'Bypass-Tunnel-Reminder':'true'},
+        body: JSON.stringify({ user_id: S.user?.id || 1, name: n, icon: ic, target_amount: t })
+    }).then(r=>r.json()).then(d=>{if(d.saving_id)newSav.id=d.saving_id;saveStateToStorage();}).catch(()=>{});
     togForm('savF');renderSav();
     addAppNotification({
         title: 'Mục tiêu tiết kiệm mới',
@@ -2292,6 +2465,12 @@ function confirmSavingsDeposit(){
         return;
     }
     g.saved += amt;
+    saveStateToStorage();
+    fetch(`/api/savings/${g.id}`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json', 'Bypass-Tunnel-Reminder':'true'},
+        body: JSON.stringify({ saved_amount: g.saved })
+    }).catch(()=>{});
     const pct = Math.min(100, Math.round((g.saved / g.target) * 100));
     renderSav();
     renderStatsSav();
@@ -2309,7 +2488,9 @@ function confirmSavingsDeposit(){
 function delSav(id){
     const g=S.savings.find(s=>s.id===id);
     S.savings=S.savings.filter(s=>s.id!==id);
+    saveStateToStorage();
     renderSav();
+    fetch(`/api/savings/${id}`, { method: 'DELETE', headers: {'Bypass-Tunnel-Reminder':'true'} }).catch(()=>{});
     if(g){
         addAppNotification({
             title: 'Xóa mục tiêu tiết kiệm',
@@ -2328,8 +2509,7 @@ function executeRecurring(id){
     if(!r) return;
     const nowStr = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
     const todayStr = new Date().toISOString().slice(0, 10);
-
-    S.transactions.unshift({
+    const newTx = {
         id: Date.now(),
         name: r.name,
         amt: r.amt,
@@ -2338,6 +2518,17 @@ function executeRecurring(id){
         time: nowStr,
         type: 'expense',
         note: `Khoản định kỳ (${r.freq === 'monthly' ? 'Hàng tháng' : (r.freq === 'weekly' ? 'Hàng tuần' : 'Hàng ngày')})`
+    };
+    S.transactions.unshift(newTx);
+    saveStateToStorage();
+    sendBE({
+        merchant_name: r.name,
+        amount: r.amt,
+        transaction_date: todayStr,
+        category: r.cat,
+        user_id: S.user?.id || 1,
+        type: 'expense',
+        notes: newTx.note
     });
 
     renderAll();
@@ -2370,18 +2561,105 @@ function renderRec(){
         </div>
     `;}).join('');
 }
-function addRec(){const n=document.getElementById('rfN').value.trim(),a=parseFloat(document.getElementById('rfA').value),f=document.getElementById('rfF').value,c=document.getElementById('rfC').value;if(!n||!a){toast('Điền đầy đủ!','error');return}S.recurring.push({id:Date.now(),name:n,amt:a,freq:f,cat:c,on:true});togForm('recF');renderRec();toast('Đã thêm định kỳ!','success')}
-function togRec(id,on){const r=S.recurring.find(x=>x.id===id);if(r)r.on=on;toast(on?'Đã bật':'Đã tắt','info')}
+function addRec(){
+    const n=document.getElementById('rfN').value.trim(),a=parseFloat(document.getElementById('rfA').value),f=document.getElementById('rfF').value,c=document.getElementById('rfC').value;
+    if(!n||!a){toast('Điền đầy đủ!','error');return}
+    const newRec = {id:Date.now(),name:n,amt:a,freq:f,cat:c,on:true};
+    S.recurring.push(newRec);
+    saveStateToStorage();
+    fetch('/api/recurring', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'Bypass-Tunnel-Reminder':'true'},
+        body: JSON.stringify({ user_id: S.user?.id || 1, name: n, amount: a, frequency: f, category: c, is_active: 1 })
+    }).then(r=>r.json()).then(d=>{if(d.recurring_id)newRec.id=d.recurring_id;saveStateToStorage();}).catch(()=>{});
+    togForm('recF');renderRec();toast('Đã thêm định kỳ!','success');
+}
+function togRec(id,on){
+    const r=S.recurring.find(x=>x.id===id);
+    if(r)r.on=on;
+    saveStateToStorage();
+    fetch(`/api/recurring/${id}/toggle`, { method: 'POST', headers: {'Bypass-Tunnel-Reminder':'true'} }).catch(()=>{});
+    toast(on?'Đã bật':'Đã tắt','info');
+}
 
 // ===== BACKEND =====
-async function sendBE(p){try{await fetch('/api/transactions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)})}catch(e){}}
+async function sendBE(p){
+    try{
+        if(!p.user_id && S.user?.id) p.user_id = S.user.id;
+        const res = await fetch('/api/transactions',{
+            method:'POST',
+            headers:{'Content-Type':'application/json', 'Bypass-Tunnel-Reminder':'true'},
+            body:JSON.stringify(p)
+        });
+        if(res.ok){
+            const d = await res.json();
+            if(d.transaction_id && S.transactions && S.transactions.length > 0){
+                const match = S.transactions.find(t => t.name === p.merchant_name && Math.abs(t.amt - p.amount) < 0.01);
+                if(match && typeof match.id === 'number' && match.id > 1000000000000){
+                    match.id = d.transaction_id;
+                    saveStateToStorage();
+                }
+            }
+        }
+    }catch(e){}
+}
 
 // ===== LEGACY SUPPORT =====
 function formatCurrency(n){return fmt(n)}
 async function loadDashboardStats(){try{const r=await fetch('/api/stats');if(!r.ok)return;const d=await r.json();const e=document.getElementById('stat-total-spent');if(e)e.textContent=fmt(d.total_spent||0)}catch(e){}}
 async function loadRecentTransactions(){const el=document.getElementById('transaction-list');if(!el)return;try{const r=await fetch('/api/transactions');if(!r.ok)throw 0;const txs=await r.json();if(!txs.length){el.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text3)">Chưa có giao dịch</td></tr>';return}el.innerHTML=txs.map(t=>`<tr><td>${t.transaction_date}</td><td><strong>${t.merchant_name}</strong></td><td>${t.category||'Ăn uống'}</td><td><span class="badge">${t.group_id?'Nhóm':'Cá Nhân'}</span></td><td style="font-weight:700;color:var(--danger)">-${fmt(t.amount)}</td></tr>`).join('')}catch(e){}}
 async function handleFileSelect(e){const f=e.target.files[0];if(!f)return;const s=document.getElementById('upload-status');if(s)s.style.display='block';const fd=new FormData();fd.append('receipt',f);try{const r=await fetch('/api/receipts/upload',{method:'POST',body:fd});if(!r.ok){const d=await r.json();throw new Error(d.error||'Fail')}const d=await r.json();sessionStorage.setItem('ocr_result',JSON.stringify(d));window.location.href='/review'}catch(e){toast('Lỗi: '+e.message,'error');if(s)s.style.display='none'}}
-async function handleConfirmTransaction(e){e.preventDefault();const o=JSON.parse(sessionStorage.getItem('ocr_result')||'{}');const p={merchant_name:document.getElementById('verify-merchant').value,amount:parseFloat(document.getElementById('verify-amount').value),transaction_date:document.getElementById('verify-date').value,category:document.getElementById('verify-category').value,group_id:document.getElementById('verify-group-id')?.value?parseInt(document.getElementById('verify-group-id').value):null,notes:document.getElementById('verify-notes')?.value,receipt_image_path:o.image_url||null,raw_ocr_text:o.raw_text||null,user_id:1};try{const r=await fetch('/api/transactions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});if(r.ok){sessionStorage.removeItem('ocr_result');toast('Lưu thành công!','success');window.location.href='/';}else toast('Lỗi lưu!','error')}catch(e){toast('Lỗi: '+e.message,'error')}}
+async function handleConfirmTransaction(e){
+    if(e) e.preventDefault();
+    const o=JSON.parse(sessionStorage.getItem('ocr_result')||'{}');
+    const mer = document.getElementById('verify-merchant')?.value || 'Hóa đơn';
+    const amt = parseFloat(document.getElementById('verify-amount')?.value) || 0;
+    const dt = document.getElementById('verify-date')?.value || new Date().toISOString().slice(0, 10);
+    const cat = document.getElementById('verify-category')?.value || 'Ăn uống';
+    const nts = document.getElementById('verify-notes')?.value || '';
+    const uid = S.user?.id || 1;
+    const p={
+        merchant_name: mer,
+        amount: amt,
+        transaction_date: dt,
+        category: cat,
+        group_id: document.getElementById('verify-group-id')?.value ? parseInt(document.getElementById('verify-group-id').value) : null,
+        notes: nts,
+        receipt_image_path: o.image_url||null,
+        raw_ocr_text: o.raw_text||null,
+        user_id: uid
+    };
+    try{
+        const r=await fetch('/api/transactions',{
+            method:'POST',
+            headers:{'Content-Type':'application/json', 'Bypass-Tunnel-Reminder':'true'},
+            body:JSON.stringify(p)
+        });
+        const d = await r.json();
+        if(r.ok || d.success){
+            sessionStorage.removeItem('ocr_result');
+            const curCached = JSON.parse(localStorage.getItem('vx_transactions_' + uid) || '[]');
+            curCached.unshift({
+                id: d.transaction_id || Date.now(),
+                name: mer,
+                amt: amt,
+                cat: normalizeCatKey(cat),
+                date: dt,
+                time: new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}),
+                type: 'expense',
+                note: nts
+            });
+            localStorage.setItem('vx_transactions_' + uid, JSON.stringify(curCached));
+            localStorage.setItem('vx_transactions', JSON.stringify(curCached));
+            toast('Lưu thành công!','success');
+            setTimeout(() => { window.location.href = '/'; }, 300);
+        } else {
+            toast('Lỗi lưu: ' + (d.error || 'Thất bại'),'error');
+        }
+    }catch(e){
+        toast('Lỗi: '+e.message,'error');
+    }
+}
 async function handleManualSubmit(e){e.preventDefault();const p={merchant_name:document.getElementById('manual-merchant').value,amount:parseFloat(document.getElementById('manual-amount').value),transaction_date:document.getElementById('manual-date').value,group_id:document.getElementById('manual-wallet-type')?.value?parseInt(document.getElementById('manual-wallet-type').value):null,category:'Ăn uống',user_id:1};try{const r=await fetch('/api/transactions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});if(r.ok){toast('Thêm thành công!','success');document.getElementById('manual-form')?.reset();loadDashboardStats();loadRecentTransactions()}}catch(e){toast('Lỗi: '+e.message,'error')}}
 const TEAM_MEMBERS=[{id:1,name:"Thành viên 1"},{id:2,name:"Lê Thị Dịu"},{id:3,name:"Lê Tiến Quân"},{id:4,name:"Lê Ngọc Duy"},{id:5,name:"Nguyễn Việt Anh"}];
 function loadGroupMembersUI(){const el=document.getElementById('member-checkbox-list');if(!el)return;el.innerHTML=TEAM_MEMBERS.map(m=>`<label style="display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.8rem;background:#f8fafc;border-radius:var(--r-sm);border:1px solid var(--border);cursor:pointer"><input type="checkbox" name="split-members" value="${m.id}" checked><span style="font-weight:600">${m.name}</span></label>`).join('')}
@@ -3024,12 +3302,26 @@ async function handleConfirmTransaction(event) {
     try {
         const res = await fetch('/api/transactions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Bypass-Tunnel-Reminder': 'true' },
             body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (data.success || res.ok) {
             sessionStorage.removeItem('ocr_result');
+            const uid = payload.user_id || 1;
+            const curCached = JSON.parse(localStorage.getItem('vx_transactions_' + uid) || '[]');
+            curCached.unshift({
+                id: data.transaction_id || Date.now(),
+                name: merchant,
+                amt: amount,
+                cat: normalizeCatKey(category),
+                date: date,
+                time: new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}),
+                type: 'expense',
+                note: notes
+            });
+            localStorage.setItem('vx_transactions_' + uid, JSON.stringify(curCached));
+            localStorage.setItem('vx_transactions', JSON.stringify(curCached));
             toast('Đã lưu giao dịch!', 'success');
             setTimeout(() => { window.location.href = '/'; }, 300);
         } else {
@@ -3037,16 +3329,20 @@ async function handleConfirmTransaction(event) {
         }
     } catch (err) {
         console.warn('API error, saving to local store:', err);
-        S.transactions.unshift({
+        const uid = payload.user_id || 1;
+        const curCached = JSON.parse(localStorage.getItem('vx_transactions_' + uid) || '[]');
+        curCached.unshift({
             id: Date.now(),
             name: merchant,
             amt: amount,
             type: 'expense',
-            cat: 'other',
+            cat: normalizeCatKey(category),
             date: date,
             note: notes,
             time: new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})
         });
+        localStorage.setItem('vx_transactions_' + uid, JSON.stringify(curCached));
+        localStorage.setItem('vx_transactions', JSON.stringify(curCached));
         toast('Đã lưu giao dịch!', 'success');
         setTimeout(() => { window.location.href = '/'; }, 300);
     }

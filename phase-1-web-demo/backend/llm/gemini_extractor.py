@@ -417,7 +417,7 @@ class GoogleMLKitEngine:
                 "contents": [{"parts": [{"text": full_prompt}]}],
                 "generationConfig": {"temperature": 0.4}
             }
-            models = ("gemini-1.5-flash", "gemini-flash-latest", "gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-3.5-flash-lite")
+            models = ("gemini-3.5-flash-lite", "gemini-flash-latest")
             for model in models:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
                 req = urllib.request.Request(
@@ -427,7 +427,7 @@ class GoogleMLKitEngine:
                     method="POST"
                 )
                 try:
-                    with urllib.request.urlopen(req, timeout=10) as r:
+                    with urllib.request.urlopen(req, timeout=5) as r:
                         res_data = json.loads(r.read().decode("utf-8"))
                         cand = res_data.get("candidates", [])
                         if cand:
