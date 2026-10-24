@@ -925,6 +925,40 @@ function confirmDeleteCurrentTx(){
     deleteTx(id);
 }
 
+function renderSingleTxCard(t, i){
+    const ct = CATS[t.cat] || CATS.other;
+    const isI = t.type === 'income';
+    return `
+        <div class="tx-item" style="animation:fadeUp 0.3s ease ${i*0.03}s both" onclick="openTxDetailModal(${t.id})">
+            <div class="tx-ic" style="background:${ct.bg};color:${ct.color}"><i class="${ct.ic}"></i></div>
+            <div class="tx-info">
+                <div class="tx-name">${t.name}</div>
+                <div class="tx-cat">${ct.label}${t.note ? ' · ' + t.note : ''}</div>
+            </div>
+            <div class="tx-right">
+                <div class="tx-amt ${isI ? 'inc' : 'exp'}">${isI ? '+' : '-'}${fmt(t.amt)}</div>
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.35rem">
+                    <span class="tx-time">${t.time || ''}</span>
+                    <button type="button" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0 2px;font-size:0.78rem;opacity:0.6" onclick="event.stopPropagation();deleteTx(${t.id})" title="Xóa giao dịch"><i class="ri-delete-bin-line"></i></button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function toggleTxGroup(groupId, btn, count){
+    const el = document.getElementById('txGrp_' + groupId);
+    if(!el) return;
+    const isHidden = el.classList.contains('hidden');
+    if(isHidden){
+        el.classList.remove('hidden');
+        btn.innerHTML = `<i class="ri-arrow-up-s-line"></i> Thu gọn ${count} giao dịch`;
+    } else {
+        el.classList.add('hidden');
+        btn.innerHTML = `<i class="ri-arrow-down-s-line"></i> Xem thêm ${count} giao dịch khác`;
+    }
+}
+
 function renderTxL(cid, txs){
     const c = document.getElementById(cid); if(!c) return;
     if(!txs || !txs.length){
@@ -934,37 +968,34 @@ function renderTxL(cid, txs){
     const g = {}; txs.forEach(t => { if(!g[t.date]) g[t.date] = []; g[t.date].push(t); });
     const ds = Object.keys(g).sort((a,b) => b.localeCompare(a));
     c.innerHTML = ds.map(d => {
-        const de = g[d].filter(t => t.type === 'expense').reduce((s,t) => s + t.amt, 0);
-        const di = g[d].filter(t => t.type === 'income').reduce((s,t) => s + t.amt, 0);
+        const dayTxs = g[d];
+        const de = dayTxs.filter(t => t.type === 'expense').reduce((s,t) => s + t.amt, 0);
+        const di = dayTxs.filter(t => t.type === 'income').reduce((s,t) => s + t.amt, 0);
         let ds2 = '';
         if(de) ds2 += `<span style="color:var(--danger)">-${fmt(de)}</span>`;
         if(di) ds2 += ` <span style="color:var(--success)">+${fmt(di)}</span>`;
+
+        // Nếu ngày đó có nhiều hơn 3 giao dịch: bo gọn lại, chỉ hiện 3 giao dịch đầu, phần còn lại ẩn đi kèm nút mở rộng
+        const cleanDateKey = `${cid}_${d.replace(/[^a-zA-Z0-9]/g, '')}`;
+        const hasOverflow = dayTxs.length > 3;
+        const visibleTxs = hasOverflow ? dayTxs.slice(0, 3) : dayTxs;
+        const hiddenTxs = hasOverflow ? dayTxs.slice(3) : [];
+
         return `
             <div class="tx-grp">
                 <div class="tx-date">
                     <span>${dateLabel(d)}</span>
                     <span style="font-size:0.72rem;font-weight:700;text-transform:none;letter-spacing:0">${ds2}</span>
                 </div>
-                ${g[d].map((t, i) => {
-                    const ct = CATS[t.cat] || CATS.other;
-                    const isI = t.type === 'income';
-                    return `
-                        <div class="tx-item" style="animation:fadeUp 0.3s ease ${i*0.03}s both" onclick="openTxDetailModal(${t.id})">
-                            <div class="tx-ic" style="background:${ct.bg};color:${ct.color}"><i class="${ct.ic}"></i></div>
-                            <div class="tx-info">
-                                <div class="tx-name">${t.name}</div>
-                                <div class="tx-cat">${ct.label}${t.note ? ' · ' + t.note : ''}</div>
-                            </div>
-                            <div class="tx-right">
-                                <div class="tx-amt ${isI ? 'inc' : 'exp'}">${isI ? '+' : '-'}${fmt(t.amt)}</div>
-                                <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.35rem">
-                                    <span class="tx-time">${t.time || ''}</span>
-                                    <button type="button" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0 2px;font-size:0.78rem;opacity:0.6" onclick="event.stopPropagation();deleteTx(${t.id})" title="Xóa giao dịch"><i class="ri-delete-bin-line"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
+                ${visibleTxs.map((t, i) => renderSingleTxCard(t, i)).join('')}
+                ${hasOverflow ? `
+                    <div class="tx-collapsed-group hidden" id="txGrp_${cleanDateKey}">
+                        ${hiddenTxs.map((t, i) => renderSingleTxCard(t, 3 + i)).join('')}
+                    </div>
+                    <button type="button" class="btn-tx-toggle" onclick="toggleTxGroup('${cleanDateKey}', this, ${hiddenTxs.length})">
+                        <i class="ri-arrow-down-s-line"></i> Xem thêm ${hiddenTxs.length} giao dịch khác
+                    </button>
+                ` : ''}
             </div>
         `;
     }).join('');

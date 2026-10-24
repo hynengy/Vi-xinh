@@ -751,6 +751,44 @@ input#rememberMeCheck {
 .tx-amt.inc { color: var(--success); }
 .tx-time { font-size: 0.7rem; color: var(--text3); margin-top: 2px; white-space: nowrap; }
 
+/* Expandable & Collapsed Transactions ("Bo gọn khi nhiều giao dịch") */
+.tx-collapsed-group {
+    display: flex;
+    flex-direction: column;
+}
+.tx-collapsed-group.hidden {
+    display: none !important;
+}
+.btn-tx-toggle {
+    width: 100%;
+    padding: 0.52rem 0.9rem;
+    margin: 0.25rem 0 0.55rem;
+    border-radius: var(--r-pill);
+    border: 1px dashed var(--border);
+    background: var(--card);
+    color: var(--primary);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: var(--tr);
+    box-shadow: var(--sh-sm);
+    font-family: inherit;
+}
+.btn-tx-toggle:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: var(--sh-md);
+}
+.btn-tx-toggle i {
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
 /* Budget */
 .bgt-card { background: var(--card); border-radius: var(--r-xl); padding: 1.1rem; box-shadow: var(--sh-card); margin-bottom: 0.6rem; transition: var(--tr); border: 1px solid var(--border); }
 .bgt-card:hover { box-shadow: var(--sh-md); }
