@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ví Xinh - Quản Lý Tài Chính Thông Minh</title>
     <meta name="description" content="Ví Xinh - Ứng dụng quản lý chi tiêu cá nhân & nhóm thông minh.">
-    <link rel="stylesheet" href="css/style.css?v=3.9.9">
+    <link rel="stylesheet" href="css/style.css?v=4.0.0">
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#5286E8">
     <meta name="mobile-web-app-capable" content="yes">
@@ -235,7 +235,25 @@ setTimeout(function(){
             </div>
         </div>
 
-        <div class="sec" style="margin-top:0.9rem">
+        <!-- CỐ VẤN TÀI CHÍNH AI (HOME INSIGHT WIDGET) -->
+        <div class="sec" style="margin-top:0.8rem">
+            <div class="home-ai-card" onclick="go('stats'); setTimeout(requestAiSpendingSummary, 200);">
+                <div class="home-ai-hdr">
+                    <span class="home-ai-badge"><i class="ri-sparkling-fill"></i> Cố vấn Tài chính AI</span>
+                    <span style="font-size:0.72rem;color:var(--primary);font-weight:700">Phân tích chuyên sâu →</span>
+                </div>
+                <div class="home-ai-text" id="homeAiSummaryTxt">
+                    Gemini AI đang theo dõi ngân sách của bạn. Chạm để xem phân tích cơ cấu chi tiêu & đề xuất hành động tối ưu ví tiền.
+                </div>
+                <div class="home-ai-actions" onclick="event.stopPropagation()">
+                    <button type="button" class="home-ai-chip" onclick="executeAiAction('budget')"><i class="ri-funds-line" style="color:#6366f1"></i> Ngân sách</button>
+                    <button type="button" class="home-ai-chip" onclick="executeAiAction('savings')"><i class="ri-safe-2-line" style="color:#10b981"></i> Tiết kiệm</button>
+                    <button type="button" class="home-ai-chip" onclick="executeAiAction('camera')"><i class="ri-camera-lens-line" style="color:#ec4899"></i> Quét bill AI</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="sec" style="margin-top:0.3rem">
             <div class="promo" onclick="openModal('camera')">
                 <div class="promo-ic"><i class="ri-scan-2-line"></i></div>
                 <div><h3>Quét hóa đơn AI</h3><p>Nhận diện nhanh số tiền & nơi bán</p></div>
@@ -332,6 +350,7 @@ setTimeout(function(){
                     </button>
                 </div>
                 <div id="aiAdviceContent" style="display:none;margin-top:0.55rem;font-size:0.74rem;line-height:1.55;color:var(--text);background:var(--card);padding:0.75rem;border-radius:10px;border:1px solid var(--border);white-space:pre-wrap"></div>
+                <div id="aiAdviceActions" style="display:none;margin-top:0.6rem"></div>
                 <div id="aiAdviceLoading" style="display:none;margin-top:0.55rem;text-align:center;padding:0.75rem;color:var(--text3);font-size:0.75rem">
                     <i class="ri-loader-4-line ri-spin" style="font-size:1.2rem;color:var(--primary);display:block;margin-bottom:0.25rem"></i>
                     Gemini 1.5 Flash đang đọc hiểu báo cáo chi tiêu...
@@ -407,7 +426,13 @@ setTimeout(function(){
             <div class="bgt-summary"><div class="bgt-circle" id="bgtC"></div><div class="bgt-pct" id="bgtP">0%</div><div class="bgt-lbl">Đã dùng</div>
                 <div class="bgt-info"><div class="bgt-info-item"><div class="bgt-info-val" style="color:var(--danger)" id="bgtU">0 ₫</div><div class="bgt-info-lbl">Đã chi</div></div><div class="bgt-info-item"><div class="bgt-info-val" style="color:var(--success)" id="bgtR">0 ₫</div><div class="bgt-info-lbl">Còn lại</div></div></div>
             </div>
-            <div class="sec-hdr"><span class="sec-title">Theo danh mục</span><button class="btn btn-sm btn-o" onclick="togForm('bgtF')"><i class="ri-add-line"></i> Thêm</button></div>
+            <div class="sec-hdr">
+                <span class="sec-title">Theo danh mục</span>
+                <div style="display:flex;gap:0.35rem">
+                    <button class="ai-pill-btn" onclick="aiAutoSuggestBudgets()"><i class="ri-sparkling-fill"></i> AI Gợi ý</button>
+                    <button class="btn btn-sm btn-o" onclick="togForm('bgtF')"><i class="ri-add-line"></i> Thêm</button>
+                </div>
+            </div>
             <div class="i-form" id="bgtF">
                 <div class="f-row" style="margin-bottom:0.6rem"><div class="fg"><label class="fl">Danh mục</label><select class="fc" id="bfC"><option value="food">Ăn uống</option><option value="transport">Di chuyển</option><option value="shopping">Mua sắm</option><option value="entertainment">Giải trí</option><option value="health">Sức khỏe</option><option value="education">Học tập</option><option value="bills">Hoá đơn</option></select></div><div class="fg"><label class="fl">Hạn mức (₫)</label><input type="number" class="fc" id="bfA" placeholder="0"></div></div>
                 <button class="btn btn-p btn-sm btn-block" onclick="addBgt()">Lưu</button>
@@ -421,7 +446,13 @@ setTimeout(function(){
         <div class="top-bar"><button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button><span class="top-title">Tiết kiệm</span></div>
         <div class="sec" style="margin-top:0.7rem">
             <div class="sav-hero"><div class="sav-hero-ic"><i class="ri-safe-2-line"></i></div><div class="sav-hero-val" id="savT">0 ₫</div><div class="sav-hero-lbl">Đã tiết kiệm</div></div>
-            <div class="sec-hdr"><span class="sec-title">Mục tiêu</span><button class="btn btn-sm btn-o" onclick="togForm('savF')"><i class="ri-add-line"></i> Thêm</button></div>
+            <div class="sec-hdr">
+                <span class="sec-title">Mục tiêu</span>
+                <div style="display:flex;gap:0.35rem">
+                    <button class="ai-pill-btn" onclick="aiAutoSuggestSavings()"><i class="ri-sparkling-fill"></i> AI Gợi ý</button>
+                    <button class="btn btn-sm btn-o" onclick="togForm('savF')"><i class="ri-add-line"></i> Thêm</button>
+                </div>
+            </div>
             <div class="i-form" id="savF">
                 <div class="fg"><label class="fl">Tên mục tiêu</label><input type="text" class="fc" id="sfN" placeholder="VD: Laptop mới..."></div>
                 <div class="f-row" style="margin-bottom:0.6rem"><div class="fg"><label class="fl">Mục tiêu (₫)</label><input type="number" class="fc" id="sfT" placeholder="0"></div><div class="fg"><label class="fl">Biểu tượng</label><select class="fc" id="sfI"><option value="laptop">Laptop / Công nghệ</option><option value="travel">Du lịch</option><option value="phone">Điện thoại</option><option value="house">Mua nhà</option><option value="study">Học tập</option><option value="car">Mua xe</option><option value="gift">Dự phòng</option></select></div></div>
@@ -435,7 +466,13 @@ setTimeout(function(){
     <div class="pv" id="pgRec">
         <div class="top-bar"><button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button><span class="top-title">Định kỳ</span></div>
         <div class="sec" style="margin-top:0.7rem">
-            <div class="sec-hdr"><span class="sec-title">Danh sách</span><button class="btn btn-sm btn-o" onclick="togForm('recF')"><i class="ri-add-line"></i> Thêm</button></div>
+            <div class="sec-hdr">
+                <span class="sec-title">Danh sách</span>
+                <div style="display:flex;gap:0.35rem">
+                    <button class="ai-pill-btn" onclick="aiAutoSuggestRecurring()"><i class="ri-sparkling-fill"></i> AI Gợi ý</button>
+                    <button class="btn btn-sm btn-o" onclick="togForm('recF')"><i class="ri-add-line"></i> Thêm</button>
+                </div>
+            </div>
             <div class="i-form" id="recF">
                 <div class="fg"><label class="fl">Tên khoản</label><input type="text" class="fc" id="rfN" placeholder="VD: Tiền nhà..."></div>
                 <div class="f-row" style="margin-bottom:0.6rem"><div class="fg"><label class="fl">Số tiền (₫)</label><input type="number" class="fc" id="rfA" placeholder="0"></div><div class="fg"><label class="fl">Chu kỳ</label><select class="fc" id="rfF"><option value="daily">Hàng ngày</option><option value="weekly">Hàng tuần</option><option value="monthly" selected>Hàng tháng</option></select></div></div>
@@ -1216,6 +1253,6 @@ setTimeout(function(){
 </div>
 
 <div class="toast-box" id="toastBox"></div>
-<script src="js/app.js?v=3.9.9"></script>
+<script src="js/app.js?v=4.0.0"></script>
 </body>
 </html>

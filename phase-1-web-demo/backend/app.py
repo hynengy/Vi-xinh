@@ -902,19 +902,41 @@ def ocr_config():
 
 
 # ==================================================================
+# ==================================================================
 #  API 12: AI SPENDING SUMMARY & FINANCIAL ADVICE (HƯỚNG 3)
 # ==================================================================
 @app.route("/api/ai/spending-summary", methods=["POST", "GET"])
 def ai_spending_summary():
     """
-    Tóm tắt báo cáo chi tiêu và đề xuất 3 hành động cụ thể bằng Gemini LLM.
-    (Hiện thực hóa mục 2 của Hướng 3: Tóm tắt báo cáo & đề xuất hành động).
+    Tóm tắt báo cáo chi tiêu và đề xuất hành động cụ thể bằng Gemini LLM,
+    liên kết trực tiếp với các tính năng: Ngân sách, Tiết kiệm, Định kỳ, Quét bill, Chia tiền.
     """
-    user_id = request.args.get("user_id", 1, type=int)
-    txs = db.get_recent_transactions(user_id=user_id, limit=100)
+    data = request.json if request.is_json else {}
+    client_txs = data.get("transactions")
+    client_budgets = data.get("budgets", [])
+    client_savings = data.get("savings", [])
+    client_recurring = data.get("recurring", [])
+    user_name = data.get("user_name") or "Bạn"
+
+    if client_txs and isinstance(client_txs, list) and len(client_txs) > 0:
+        txs = [
+            {
+                "type": t.get("type", "expense"),
+                "amount": float(t.get("amt") or t.get("amount") or 0),
+                "category": t.get("cat") or t.get("category") or "other",
+                "merchant_name": t.get("name") or t.get("merchant_name") or "Chi tiêu",
+                "transaction_date": t.get("date") or t.get("transaction_date") or ""
+            }
+            for t in client_txs
+        ]
+    else:
+        user_id = request.args.get("user_id", 1, type=int)
+        txs = db.get_recent_transactions(user_id=user_id, limit=100)
 
     expense_txs = [t for t in txs if t.get("type") == "expense"]
+    income_txs = [t for t in txs if t.get("type") == "income"]
     total_expense = sum(t.get("amount", 0) for t in expense_txs)
+    total_income = sum(t.get("amount", 0) for t in income_txs)
     
     # Gom nhóm theo danh mục
     cat_map = {}
@@ -922,21 +944,86 @@ def ai_spending_summary():
         c = t.get("category", "other")
         cat_map[c] = cat_map.get(c, 0) + t.get("amount", 0)
 
+    sorted_cats = sorted(cat_map.items(), key=lambda x: x[1], reverse=True)
+    top_cat = sorted_cats[0][0] if sorted_cats else "food"
+    top_cat_amt = sorted_cats[0][1] if sorted_cats else 0
+
     top_txs = sorted(expense_txs, key=lambda x: x.get("amount", 0), reverse=True)[:5]
     top_str = "; ".join(f"{t.get('merchant_name') or t.get('merchant', 'Chi tiêu')}: {int(t.get('amount', 0)):,} ₫" for t in top_txs)
     cat_str = "; ".join(f"{k}: {int(v):,} ₫ ({(v/total_expense*100):.1f}%)" for k, v in cat_map.items()) if total_expense > 0 else "Chưa có chi tiêu"
 
     summary_input = (
-        f"Tổng số giao dịch: {len(expense_txs)} giao dịch.\n"
+        f"Người dùng: {user_name}.\n"
+        f"Tổng thu nhập ghi nhận: {int(total_income):,} VNĐ.\n"
+        f"Tổng số giao dịch chi tiêu: {len(expense_txs)} giao dịch.\n"
         f"Tổng chi tiêu ghi nhận: {int(total_expense):,} VNĐ.\n"
-        f"Cơ cấu theo danh mục: {cat_str}.\n"
+        f"Cơ cấu chi tiêu theo danh mục: {cat_str}.\n"
         f"Top các khoản chi lớn nhất: {top_str if top_str else 'Chưa có'}.\n"
     )
 
     res = pipeline.mlkit_engine.generate_ai_financial_advice(summary_input)
     res["total_expense"] = total_expense
+    res["total_income"] = total_income
     res["transaction_count"] = len(expense_txs)
     res["categories"] = cat_map
+
+    # Sinh danh sách các hành động liên kết trực tiếp với các chức năng app
+    CAT_NAMES = {
+        "food": "Ăn uống", "transport": "Di chuyển", "shopping": "Mua sắm",
+        "entertainment": "Giải trí", "health": "Sức khỏe", "education": "Học tập",
+        "bills": "Hóa đơn", "salary": "Lương", "other": "Khác"
+    }
+    suggested_budget = max(500000, int(round(top_cat_amt * 0.85, -5))) if top_cat_amt > 0 else 2000000
+    suggested_savings = max(1000000, int(round(total_expense * 0.3, -5))) if total_expense > 0 else 3000000
+
+    actions = [
+        {
+            "id": "act_budget",
+            "type": "budget",
+            "title": f"Thiết lập ngân sách {CAT_NAMES.get(top_cat, top_cat)} ({int(suggested_budget):,} ₫)",
+            "desc": f"Giới hạn danh mục tốn nhiều tiền nhất để cắt giảm 15% thâm hụt.",
+            "icon": "ri-funds-line",
+            "color": "#6366f1",
+            "params": {"category": top_cat, "limit": suggested_budget}
+        },
+        {
+            "id": "act_savings",
+            "type": "savings",
+            "title": f"Tạo mục tiêu Tiết kiệm ({int(suggested_savings):,} ₫)",
+            "desc": "Tích lũy quỹ dự phòng 3 tháng với hạn mức mục tiêu khả thi.",
+            "icon": "ri-safe-2-line",
+            "color": "#10b981",
+            "params": {"name": f"Quỹ dự phòng {CAT_NAMES.get(top_cat, '')}", "target": suggested_savings}
+        },
+        {
+            "id": "act_recurring",
+            "type": "recurring",
+            "title": "Cài đặt chi tiêu định kỳ",
+            "desc": "Lên lịch tiền trọ, điện nước, internet cố định đầu tháng.",
+            "icon": "ri-repeat-line",
+            "color": "#f59e0b",
+            "params": {"category": "bills", "amount": 1500000, "frequency": "monthly"}
+        },
+        {
+            "id": "act_scan",
+            "type": "camera",
+            "title": "Quét hóa đơn mới cùng AI",
+            "desc": "Bóc tách từng sản phẩm hóa đơn để không bị sót chi phí.",
+            "icon": "ri-camera-lens-line",
+            "color": "#ec4899",
+            "params": {}
+        },
+        {
+            "id": "act_group",
+            "type": "group",
+            "title": "Tách bill chia tiền & Quỹ nhóm",
+            "desc": "Chia tiền ăn uống/mua chung để giảm gánh nặng ngân sách cá nhân.",
+            "icon": "ri-group-line",
+            "color": "#3b82f6",
+            "params": {}
+        }
+    ]
+    res["actions"] = actions
     return jsonify(res)
 
 

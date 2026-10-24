@@ -920,6 +920,7 @@ function renderAll(){
     renderHomeTx();
     updStats();
     updateHomeGroupCard();
+    updateHomeAiWidget();
 }
 function updStats(){
     const exp=S.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amt,0);
@@ -4051,25 +4052,36 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
 });
 
-// ===== HƯỚNG 3: AI CỐ VẤN TÀI CHÍNH - TÓM TẮT & ĐỀ XUẤT HÀNH ĐỘNG =====
+// ===== HƯỚNG 3: AI CỐ VẤN TÀI CHÍNH - TÓM TẮT & ĐỀ XUẤT HÀNH ĐỘNG LIÊN KẾT TÍNH NĂNG =====
 async function requestAiSpendingSummary(){
     const contentBox = document.getElementById('aiAdviceContent');
+    const actionsBox = document.getElementById('aiAdviceActions');
     const loadingBox = document.getElementById('aiAdviceLoading');
     const btn = document.getElementById('btnRequestAiAdvice');
     if(!contentBox || !loadingBox) return;
 
     contentBox.style.display = 'none';
+    if(actionsBox) actionsBox.style.display = 'none';
     loadingBox.style.display = 'block';
     if(btn) btn.disabled = true;
 
     try {
-        const uid = (S.user && S.user.id) ? S.user.id : ((typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? currentUser.id : 1);
+        const uid = (S.user && S.user.id) ? S.user.id : 1;
+        const payload = {
+            transactions: S.transactions || [],
+            budgets: S.budgets || [],
+            savings: S.savings || [],
+            recurring: S.recurring || [],
+            user_name: S.user?.full_name || S.user?.name || 'Bạn'
+        };
+
         const res = await fetch('/api/ai/spending-summary?user_id=' + uid, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Bypass-Tunnel-Reminder': 'true'
-            }
+            },
+            body: JSON.stringify(payload)
         });
 
         loadingBox.style.display = 'none';
@@ -4092,7 +4104,37 @@ async function requestAiSpendingSummary(){
             </div>`;
             contentBox.innerHTML = metricsHtml + `<div style="line-height:1.65;font-size:0.82rem;color:var(--text);margin-top:0.4rem;text-align:left">${formatAiAdvice(d.advice)}</div>`;
             contentBox.style.display = 'block';
-            toast('AI đã phân tích xong chi tiêu của bạn!', 'success');
+
+            // Hiển thị danh sách hành động đề xuất từ AI liên kết trực tiếp với các tính năng
+            if(actionsBox && Array.isArray(d.actions) && d.actions.length > 0){
+                window._lastAiActions = d.actions;
+                actionsBox.innerHTML = `
+                    <div style="font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:0.45rem;display:flex;align-items:center;gap:0.35rem">
+                        <i class="ri-flashlight-fill" style="color:#f59e0b"></i> Hành động đề xuất (Chạm để áp dụng ngay):
+                    </div>
+                    <div class="ai-action-list">
+                        ${d.actions.map((act, idx) => `
+                            <div class="ai-action-card" onclick="triggerAiActionByIndex(${idx})">
+                                <div class="ai-action-ic" style="background:${act.color}18;color:${act.color}">
+                                    <i class="${act.icon}"></i>
+                                </div>
+                                <div class="ai-action-info">
+                                    <div class="ai-action-title">${escapeHtml(act.title)}</div>
+                                    <div class="ai-action-desc">${escapeHtml(act.desc)}</div>
+                                </div>
+                                <div class="ai-action-btn">
+                                    <span>Áp dụng</span> <i class="ri-arrow-right-s-line"></i>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                actionsBox.style.display = 'block';
+            }
+
+            // Cập nhật tóm tắt AI trên trang chủ
+            updateHomeAiWidget(d);
+            toast('AI đã phân tích xong và đưa ra các hành động cụ thể!', 'success');
         } else {
             toast(d?.error || 'Không thể tạo phân tích lúc này', 'error');
         }
@@ -4103,7 +4145,140 @@ async function requestAiSpendingSummary(){
     }
 }
 
-// Stubs an toan
+function triggerAiActionByIndex(idx){
+    const list = window._lastAiActions || [];
+    const act = list[idx];
+    if(act) executeAiAction(act.type, act.params);
+}
+
+function executeAiAction(type, params = {}){
+    if(type === 'budget'){
+        go('budget');
+        const form = document.getElementById('bgtF');
+        if(form && !form.classList.contains('active')) form.classList.add('active');
+        if(params.category){
+            const catSel = document.getElementById('bfC');
+            if(catSel) catSel.value = params.category;
+        }
+        if(params.limit){
+            const limInp = document.getElementById('bfA');
+            if(limInp){
+                limInp.value = params.limit;
+                limInp.focus();
+            }
+        }
+        toast(`AI đã gợi ý ngân sách danh mục ${CATS[params.category]?.label || 'chi tiêu'}. Bấm Lưu để xác nhận!`, 'success');
+    } else if(type === 'savings'){
+        go('savings');
+        const form = document.getElementById('savF');
+        if(form && !form.classList.contains('active')) form.classList.add('active');
+        if(params.name){
+            const nInp = document.getElementById('sfN');
+            if(nInp) nInp.value = params.name;
+        }
+        if(params.target){
+            const tInp = document.getElementById('sfT');
+            if(tInp){
+                tInp.value = params.target;
+                tInp.focus();
+            }
+        }
+        toast('AI đã điền sẵn kế hoạch tích lũy dự phòng. Bấm Lưu mục tiêu!', 'success');
+    } else if(type === 'recurring'){
+        go('recurring');
+        const form = document.getElementById('recF');
+        if(form && !form.classList.contains('active')) form.classList.add('active');
+        const nInp = document.getElementById('rfN');
+        if(nInp) nInp.value = 'Hoá đơn sinh hoạt tháng';
+        if(params.amount){
+            const aInp = document.getElementById('rfA');
+            if(aInp){
+                aInp.value = params.amount;
+                aInp.focus();
+            }
+        }
+        toast('AI đã gợi ý lịch chi tiêu định kỳ. Bấm Lưu!', 'info');
+    } else if(type === 'camera'){
+        openModal('camera');
+        toast('Đã mở Quét hóa đơn AI', 'info');
+    } else if(type === 'group'){
+        go('group');
+        toast('Chuyển đến Quỹ nhóm & Chia tiền', 'info');
+    } else if(type === 'history'){
+        go('history');
+    }
+}
+
+function aiAutoSuggestBudgets(){
+    const exps = (S.transactions || []).filter(t => t.type === 'expense');
+    if(!exps.length){
+        toast('Chưa có chi tiêu để AI phân bổ ngân sách. Hãy ghi thêm chi tiêu hoặc quét bill!', 'info');
+        go('budget');
+        togForm('bgtF');
+        return;
+    }
+    const catTotals = {};
+    exps.forEach(t => { catTotals[t.cat] = (catTotals[t.cat] || 0) + t.amt; });
+    const topCat = Object.entries(catTotals).sort((a,b) => b[1] - a[1])[0];
+    const catKey = topCat ? topCat[0] : 'food';
+    const catAmt = topCat ? topCat[1] : 2000000;
+    const suggested = Math.max(500000, Math.round(catAmt * 0.85 / 100000) * 100000);
+
+    go('budget');
+    const form = document.getElementById('bgtF');
+    if(form && !form.classList.contains('active')) form.classList.add('active');
+    document.getElementById('bfC').value = catKey;
+    const inp = document.getElementById('bfA');
+    inp.value = suggested;
+    inp.focus();
+    toast(`AI phân tích: Bạn đã chi ${fmt(catAmt)} cho ${CATS[catKey]?.label || catKey}. Đề xuất hạn mức ${fmt(suggested)} (-15%)`, 'success');
+}
+
+function aiAutoSuggestSavings(){
+    const incs = (S.transactions || []).filter(t => t.type === 'income').reduce((a,b)=>a+b.amt, 0);
+    const exps = (S.transactions || []).filter(t => t.type === 'expense').reduce((a,b)=>a+b.amt, 0);
+    const net = Math.max(1000000, incs > exps ? (incs - exps) : (exps * 0.2));
+    const target = Math.round(net * 3 / 1000000) * 1000000 || 5000000;
+
+    go('savings');
+    const form = document.getElementById('savF');
+    if(form && !form.classList.contains('active')) form.classList.add('active');
+    document.getElementById('sfN').value = 'Quỹ dự phòng tài chính 3 tháng';
+    const inp = document.getElementById('sfT');
+    inp.value = target;
+    inp.focus();
+    toast(`AI đề xuất mục tiêu dự phòng ${fmt(target)} (tích lũy 20% thu nhập trong 3 tháng)`, 'success');
+}
+
+function aiAutoSuggestRecurring(){
+    go('recurring');
+    const form = document.getElementById('recF');
+    if(form && !form.classList.contains('active')) form.classList.add('active');
+    document.getElementById('rfN').value = 'Tiền trọ & điện nước sinh hoạt';
+    document.getElementById('rfA').value = 3500000;
+    document.getElementById('rfC').value = 'bills';
+    document.getElementById('rfF').value = 'monthly';
+    toast('AI gợi ý quản lý chi phí cố định đầu tháng. Bấm Lưu để theo dõi!', 'info');
+}
+
+function updateHomeAiWidget(d){
+    const el = document.getElementById('homeAiSummaryTxt');
+    if(!el) return;
+    const exps = (S.transactions || []).filter(t => t.type === 'expense');
+    const totalExp = exps.reduce((a,b)=>a+b.amt, 0);
+    if(totalExp > 0){
+        const catTotals = {};
+        exps.forEach(t => { catTotals[t.cat] = (catTotals[t.cat] || 0) + t.amt; });
+        const top = Object.entries(catTotals).sort((a,b) => b[1] - a[1])[0];
+        const topName = top ? (CATS[top[0]]?.label || top[0]) : 'Ăn uống';
+        const pct = top ? Math.round(top[1] / totalExp * 100) : 0;
+        el.innerHTML = `Tháng này bạn đã chi <strong>${fmt(totalExp)}</strong>. Danh mục <strong>${topName}</strong> đang chiếm <strong>${pct}%</strong>. Chạm để xem chi tiết & 3 đề xuất tối ưu từ AI.`;
+    } else {
+        el.textContent = 'Gemini AI đang theo dõi ví của bạn. Chưa có khoản chi nào trong tháng. Chạm để bắt đầu!';
+    }
+}
+
+// Stubs an toàn
 function updateBioLoginUI(){}
 function closeBiometricModal(){}
 function openBiometricModal(){}
