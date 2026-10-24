@@ -263,6 +263,8 @@ class ReceiptParser:
             line_upper = line.upper()
             for merchant in sorted(KNOWN_MERCHANTS, key=len, reverse=True):
                 if merchant in line_upper:
+                    if merchant == "THAIHOAMART":
+                        return "KiotViet - Thaihoamart"
                     return merchant
 
         # 2. Kiểm tra nếu là hóa đơn tiền trọ
@@ -298,6 +300,8 @@ class ReceiptParser:
         # 5. So khớp với các chuỗi thương hiệu lớn ở bất kỳ đâu trong hóa đơn
         for merchant in sorted(KNOWN_MERCHANTS, key=len, reverse=True):
             if merchant in full_text_upper:
+                if merchant == "THAIHOAMART":
+                    return "KiotViet - Thaihoamart"
                 return merchant
 
         # 6. Fallback cho hóa đơn chuỗi KiotViet / Thaihoamart nếu có từ khóa đặc thù
@@ -890,11 +894,12 @@ class ReceiptParser:
                                         quantity_val = parsed_q
                                         quantity_str = f"SL: {int(parsed_q) if parsed_q.is_integer() else parsed_q}"
                             else:
-                                qty_m = re.search(r"\b([1-9]\d{0,1})\b", next_line[:last_m.start()])
-                                if qty_m and float(qty_m.group(1)) < 50:
-                                    parsed_q = float(qty_m.group(1))
-                                    quantity_val = parsed_q
-                                    quantity_str = f"SL: {int(parsed_q) if parsed_q.is_integer() else parsed_q}"
+                                qty_m = re.search(r"(?:x|\*|\bsl:?|\bso luong:?)\s*(\d+(?:[.,]\d+)?)\b", next_line[:last_m.start()], re.IGNORECASE)
+                                if qty_m:
+                                    parsed_q = float(qty_m.group(1).replace(",", "."))
+                                    if 0 < parsed_q < 500:
+                                        quantity_val = parsed_q
+                                        quantity_str = f"SL: {int(parsed_q) if parsed_q.is_integer() else parsed_q}"
                             i += 1  # Nhảy qua dòng tiếp theo vì đã ghép cặp thành công
 
             if amt_val and amt_val >= 1_000 and raw_name:

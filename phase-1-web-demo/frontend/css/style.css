@@ -1863,4 +1863,160 @@ body {
     border: 1px solid rgba(82, 134, 232, 0.25);
 }
 
+/* ===== RECEIPT SCANNER TABLE (PHONG CÁCH QUÉT HÓA ĐƠN CHUẨN) ===== */
+.ocr-segmented-tabs {
+    display: flex;
+    background: #ede9fe;
+    border-radius: 999px;
+    padding: 4px;
+    margin: 0.8rem 0;
+    gap: 4px;
+}
+.ocr-seg-tab {
+    flex: 1;
+    border: none;
+    border-radius: 999px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.ocr-seg-tab.active {
+    background: #6366f1 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+.ocr-pill-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+}
+.ocr-pill-yellow {
+    background: #FFF8E1;
+    color: #B78103;
+    border-color: #FDE68A;
+}
+.ocr-pill-green {
+    background: #E8F8F0;
+    color: #047857;
+    border-color: #A7F3D0;
+}
+.ocr-pill-purple {
+    background: #F0EEFD;
+    color: #5C4EBA;
+    border-color: #DDD6FE;
+}
+.ocr-items-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.45rem;
+    margin-top: 0.35rem;
+}
+.ocr-items-table th {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text3);
+    padding: 0.3rem 0.4rem;
+    border: none;
+    background: transparent;
+}
+.ocr-items-table td {
+    padding: 0.2rem 0.25rem;
+    border: none;
+    vertical-align: middle;
+}
+.ocr-custom-chk {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    background: #e2e8f0;
+    border: 1.5px solid #cbd5e1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.2s ease;
+    margin: 0 auto;
+}
+.ocr-custom-chk:checked {
+    background: #6366f1;
+    border-color: #6366f1;
+}
+.ocr-custom-chk:checked::after {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 10px;
+    border: solid #ffffff;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
+    position: absolute;
+    top: 3px;
+    left: 6px;
+}
+.ocr-cell-name {
+    width: 100%;
+    padding: 0.42rem 0.6rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #1e293b;
+    background: #ffffff;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+.ocr-cell-name:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+.ocr-cell-qty {
+    width: 52px;
+    padding: 0.42rem 0.2rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #1e293b;
+    background: #f8fafc;
+    text-align: center;
+    outline: none;
+}
+.ocr-cell-qty:focus {
+    border-color: #6366f1;
+    background: #ffffff;
+}
+.ocr-cell-price {
+    width: 105px;
+    padding: 0.42rem 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #6366f1;
+    background: #fdfefe;
+    text-align: right;
+    outline: none;
+}
+.ocr-cell-price:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+
 

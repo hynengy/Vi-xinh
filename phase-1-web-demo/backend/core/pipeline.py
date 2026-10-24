@@ -8,13 +8,11 @@ from typing import Dict, Any
 from pathlib import Path
 
 try:
-    from ..ocr.ocr_engine import OCREngine
     from ..ocr.google_mlkit_engine import GoogleMLKitEngine
     from ..extractor.regex_parser import ReceiptParser
     from ..database.db_manager import DatabaseManager
     from .config import DB_PATH
 except (ImportError, ValueError):
-    from ocr.ocr_engine import OCREngine
     from ocr.google_mlkit_engine import GoogleMLKitEngine
     from extractor.regex_parser import ReceiptParser
     from database.db_manager import DatabaseManager
@@ -27,7 +25,6 @@ class ProcessingPipeline:
     """Điều phối toàn bộ quy trình từ ảnh hóa đơn tới dữ liệu cấu trúc."""
 
     def __init__(self):
-        self.ocr_engine = OCREngine()
         self.mlkit_engine = GoogleMLKitEngine()
         self.parser = ReceiptParser()
         self.db_manager = DatabaseManager(DB_PATH)

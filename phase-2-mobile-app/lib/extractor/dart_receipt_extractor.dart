@@ -534,7 +534,7 @@ class DartReceiptExtractor {
         }
 
         // Single quantity match
-        if (qtyStr.isEmpty) {
+        if (qtyStr == null || qtyStr.isEmpty) {
           final qtyMatch = RegExp(r'(?:x|\*|\bSL:?|\bso luong:?)\s*(\d+(?:[.,]\d+)?)\b', caseSensitive: false)
               .firstMatch(rawName);
           if (qtyMatch != null) {
@@ -548,7 +548,7 @@ class DartReceiptExtractor {
         }
 
         unitPrice ??= (qtyNum > 0 ? (amt / qtyNum) : amt);
-        if (qtyStr.isEmpty) {
+        if (qtyStr == null || qtyStr.isEmpty) {
           qtyStr = 'SL: ${qtyNum.truncate() == qtyNum ? qtyNum.toInt() : qtyNum}';
         }
 

@@ -17,9 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.min.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%236366f1'/><path d='M30 38h40a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H30a4 4 0 0 1-4-4V42a4 4 0 0 1 4-4z' fill='white'/></svg>">
-    <!-- Google ML Kit Web & On-Device OCR Engine -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="js/google_mlkit_web.js?v=1.2.0"></script>
+
 </head>
 <body>
 
@@ -678,186 +676,245 @@ setTimeout(function(){
                     <p id="ocrLoadingSubText" style="font-size:0.75rem;color:var(--text3);margin-top:0.2rem">Mô hình AI Google ML Kit</p>
                 </div>
                 <div id="ocrData" class="hidden" style="background:var(--bg);border-radius:var(--r-md);padding:0.75rem;margin-top:0.5rem">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.55rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border)">
-                        <span class="ocr-badge-tag" id="ocrEngineTag">
-                            <i class="ri-google-fill"></i> Google ML Kit
-                        </span>
-                        <span style="font-size:0.68rem;color:var(--text3);font-weight:600" id="ocrMetaTime">AI On-Device</span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3)">Nơi chi:</span>
-                        <strong style="font-size:0.88rem" id="ocrMer">--</strong>
-                    </div>
-                    <div id="ocrInvoiceRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3)">Số HĐ / Bill:</span>
-                        <strong style="font-size:0.82rem;color:var(--gold);font-family:monospace" id="ocrInvoiceNo">--</strong>
-                    </div>
-                    <div id="ocrDateTimeRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3)">Thời gian:</span>
-                        <span style="font-size:0.82rem;font-weight:600;color:var(--text)" id="ocrDateTime">--</span>
-                    </div>
-                    <div id="ocrHotlineRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3)">Hotline / ĐT:</span>
-                        <strong style="font-size:0.82rem;color:var(--primary)" id="ocrHotline">--</strong>
-                    </div>
-                    <div id="ocrAddressRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3);white-space:nowrap">Địa chỉ:</span>
-                        <span style="font-size:0.75rem;color:var(--text2);text-align:right;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="ocrAddress">--</span>
-                    </div>
-                    <div id="ocrSubtotalRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3)">Tạm tính (tiền hàng):</span>
-                        <span style="font-size:0.85rem;color:var(--text3);text-decoration:line-through" id="ocrSubtotal">0 ₫</span>
-                    </div>
-                    <div id="ocrDiscountRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3)">Giảm giá / Ưu đãi:</span>
-                        <strong style="font-size:0.88rem;color:var(--success)" id="ocrDiscount">0 ₫</strong>
-                    </div>
-                    <div id="ocrVatRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3)">Thuế VAT:</span>
-                        <strong style="font-size:0.82rem;color:var(--text)" id="ocrVat">0 ₫</strong>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3)">Thanh toán thực tế:</span>
-                        <strong style="font-size:1.1rem;color:var(--danger)" id="ocrAmt">0 ₫</strong>
-                    </div>
-                    <div id="ocrPaymentMethodRow" style="display:none;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3)">Hình thức TT:</span>
-                        <span class="badge" style="background:rgba(82,134,232,0.12);color:var(--primary);font-size:0.72rem;font-weight:700" id="ocrPaymentMethod">--</span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                        <span style="font-size:0.78rem;color:var(--text3)">Danh mục:</span>
-                        <span class="badge" id="ocrCatBadge" style="background:#FFF9EB;color:#D49A2B;font-size:0.72rem;font-weight:700"><i class="ri-restaurant-line"></i> Ăn uống</span>
-                    </div>
-
-                    <!-- DANH SÁCH TỪNG MÓN BÓC TÁCH ĐƯỢC -->
-                    <div id="ocrItemsBox" style="margin-top:0.5rem;padding:0.55rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r-md)">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">
-                            <span style="font-size:0.75rem;font-weight:700;color:var(--text)"><i class="ri-cup-line" style="color:var(--primary)"></i> Từng món trên bill:</span>
-                            <span id="ocrItemsCountBadge" style="font-size:0.68rem;color:var(--primary);font-weight:700">0 món</span>
-                        </div>
-                        <div id="ocrItemsList" style="display:flex;flex-direction:column;gap:0.3rem;max-height:140px;overflow-y:auto">
-                            <!-- Render danh sách từng món -->
-                        </div>
-                    </div>
-
-                    <!-- XEM TOÀN VĂN HÓA ĐƠN OCR (KHÔNG THIẾU 1 CHỮ) -->
-                    <details id="ocrRawDetails" style="margin-top:0.45rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.4rem 0.6rem">
-                        <summary style="font-size:0.72rem;font-weight:700;color:var(--primary);cursor:pointer;display:flex;align-items:center;justify-content:space-between">
-                            <span><i class="ri-file-text-line"></i> Toàn văn hóa đơn (OCR gốc)</span>
-                            <span style="font-size:0.65rem;color:var(--text3);font-weight:normal">Chạm để xem</span>
-                        </summary>
-                        <div style="margin-top:0.4rem">
-                            <pre id="ocrRawTextContent" style="padding:0.5rem;background:#0d1117;color:#c9d1d9;border-radius:var(--r-sm);font-size:0.7rem;line-height:1.4;max-height:150px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;font-family:monospace"></pre>
-                            <button type="button" class="btn btn-sm btn-s" style="margin-top:0.35rem;width:100%;font-size:0.7rem;padding:0.3rem" onclick="copyFullOcrText()"><i class="ri-file-copy-line"></i> Sao chép toàn bộ chữ</button>
-                        </div>
-                    </details>
-
-                    <!-- 3 CHẾ ĐỘ PHÂN BỔ: CÁ NHÂN | CHIA TIỀN | QUỸ CHUNG -->
-                    <div style="margin-top:0.6rem;padding-top:0.55rem;border-top:1px solid var(--border)">
-                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.3rem;margin-bottom:0.5rem">
-                            <button type="button" class="scope-chip active" id="btnScopeP" onclick="setBillScope('personal')">
-                                <i class="ri-user-3-line"></i> Cá nhân
-                            </button>
-                            <button type="button" class="scope-chip" id="btnScopeS" onclick="setBillScope('split')">
-                                <i class="ri-scales-3-line"></i> Chia tiền
-                            </button>
-                            <button type="button" class="scope-chip" id="btnScopeF" onclick="setBillScope('fund')">
-                                <i class="ri-funds-box-line"></i> Quỹ chung
-                            </button>
+                    <!-- HEADER CARD: Store Name, 3 Pills, Raw Text Accordion -->
+                    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:0.75rem 0.85rem;margin-bottom:0.6rem">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.45rem">
+                            <div>
+                                <div style="font-size:0.68rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Hóa đơn bóc tách</div>
+                                <h3 style="font-size:1.05rem;font-weight:800;color:var(--text);margin-top:0.1rem;line-height:1.3" id="ocrMer">--</h3>
+                            </div>
+                            <span class="ocr-badge-tag" id="ocrEngineTag" style="font-size:0.65rem">
+                                <i class="ri-google-fill"></i> Google Vision
+                            </span>
                         </div>
                         
-                        <!-- 1. CÁ NHÂN -->
-                        <div id="scopePersonalBox" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.6rem 0.75rem">
-                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem">
-                                <span style="color:var(--text2)">Lưu vào ví:</span>
-                                <strong style="color:var(--danger);font-size:0.95rem" id="personalSaveAmt">145.000 ₫</strong>
+                        <!-- 3 Pill Chips -->
+                        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.55rem">
+                            <div class="ocr-pill-chip ocr-pill-yellow">
+                                <span><i class="ri-money-dollar-circle-line"></i> <span id="ocrAmtChip">0 ₫</span></span>
+                            </div>
+                            <div class="ocr-pill-chip ocr-pill-green">
+                                <span><i class="ri-calendar-line"></i> <span id="ocrDateChip">--</span></span>
+                            </div>
+                            <div class="ocr-pill-chip ocr-pill-purple">
+                                <span><i class="ri-shopping-bag-3-line"></i> <span id="ocrItemsCountChip">0 sản phẩm</span></span>
                             </div>
                         </div>
 
-                        <!-- 2. CHIA TIỀN -->
-                        <div id="scopeSplitBox" class="hidden" style="display:flex;flex-direction:column;gap:0.4rem">
-                            <!-- CHỌN CHẾ ĐỘ: CHIA ĐỀU HOẶC CHIA THEO MÓN -->
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem">
-                                <button type="button" class="btn btn-sm btn-p" id="btnSplitModeEqual" style="font-size:0.72rem;padding:0.4rem 0.3rem" onclick="setSplitMode('equal')">
-                                    <i class="ri-equal-line"></i> Chia đều
-                                </button>
-                                <button type="button" class="btn btn-sm btn-s" id="btnSplitModeItem" style="font-size:0.72rem;padding:0.4rem 0.3rem" onclick="setSplitMode('item')">
-                                    <i class="ri-cup-line"></i> Chia theo món
-                                </button>
+                        <!-- Xem toàn bộ văn bản accordion -->
+                        <details id="ocrRawDetails" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:0.35rem 0.6rem">
+                            <summary style="font-size:0.74rem;font-weight:700;color:#6366f1;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+                                <span><i class="ri-file-text-line"></i> Xem toàn bộ văn bản (OCR gốc)</span>
+                                <span style="font-size:0.65rem;color:var(--text3);font-weight:normal">Chạm để mở</span>
+                            </summary>
+                            <div style="margin-top:0.4rem">
+                                <pre id="ocrRawTextContent" style="padding:0.5rem;background:#0d1117;color:#c9d1d9;border-radius:var(--r-sm);font-size:0.7rem;line-height:1.4;max-height:140px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;font-family:monospace"></pre>
+                                <button type="button" class="btn btn-sm btn-s" style="margin-top:0.35rem;width:100%;font-size:0.7rem;padding:0.3rem" onclick="copyFullOcrText()"><i class="ri-file-copy-line"></i> Sao chép toàn bộ chữ</button>
                             </div>
+                        </details>
+                    </div>
 
-                            <!-- 2.A CHIA ĐỀU -->
-                            <div id="splitEqualContainer" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.55rem 0.75rem">
-                                <div style="display:flex;justify-content:space-between;align-items:center">
-                                    <span style="font-size:0.78rem;font-weight:600;color:var(--text)">Số người:</span>
-                                    <div class="split-stepper">
-                                        <button type="button" class="split-step-btn" onclick="changeSplitCount(-1)"><i class="ri-subtract-line"></i></button>
-                                        <span class="split-step-val" id="splitCountDisp">4</span>
-                                        <button type="button" class="split-step-btn" onclick="changeSplitCount(1)"><i class="ri-add-line"></i></button>
-                                    </div>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.35rem;padding-top:0.35rem;border-top:1px dashed var(--border);font-size:0.78rem">
-                                    <span style="color:var(--text2)">Mỗi người:</span>
-                                    <strong style="font-size:0.92rem;color:var(--primary)" id="splitPerPersonDisp">36.250 ₫</strong>
-                                </div>
+                    <!-- Nút Quét ảnh khác -->
+                    <button type="button" class="btn btn-o btn-block" id="ocrRetake" onclick="retakePhoto()" style="font-size:0.82rem;font-weight:700;margin-bottom:0.65rem">
+                        <i class="ri-refresh-line"></i> Quét ảnh khác
+                    </button>
+
+                    <!-- Segmented tabs: Từng sản phẩm | Tổng đơn -->
+                    <div class="ocr-segmented-tabs" style="margin-bottom:0.6rem">
+                        <button type="button" class="ocr-seg-tab active" id="tabItemsView" onclick="switchOcrViewTab('items')">
+                            <i class="ri-file-list-3-line"></i> Từng sản phẩm
+                        </button>
+                        <button type="button" class="ocr-seg-tab" id="tabOverallView" onclick="switchOcrViewTab('overall')">
+                            <i class="ri-file-text-line"></i> Tổng đơn
+                        </button>
+                    </div>
+
+                    <!-- VIEW 1: TỪNG SẢN PHẨM (MẶC ĐỊNH THEO HÌNH ẢNH) -->
+                    <div id="ocrViewItems">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;padding:0 0.15rem">
+                            <div style="font-size:0.8rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:0.35rem">
+                                <i class="ri-arrow-left-right-line" style="color:#6366f1"></i>
+                                <span>Chọn sản phẩm để lưu (<span id="ocrSelectedRatio">0/0</span>)</span>
                             </div>
+                            <button type="button" id="btnToggleAllItems" onclick="toggleSelectAllReceiptItems()" style="font-size:0.78rem;font-weight:700;color:#6366f1;background:none;border:none;cursor:pointer;padding:0">Bỏ chọn</button>
+                        </div>
 
-                            <!-- 2.B CHIA THEO MÓN / TỪNG CỐC -->
-                            <div id="splitItemContainer" class="hidden" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.55rem 0.65rem">
-                                <div style="font-size:0.72rem;color:var(--text3);margin-bottom:0.4rem">Chọn ai uống cốc nào / ăn món nào:</div>
-                                <div id="splitItemsAssignList" style="display:flex;flex-direction:column;gap:0.35rem;max-height:160px;overflow-y:auto">
-                                    <!-- Render các món kèm dropdown chọn người -->
-                                </div>
-                                <div id="splitItemsMemberSummary" style="margin-top:0.45rem;padding-top:0.4rem;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:0.25rem">
-                                    <!-- Tổng kết tiền từng người -->
-                                </div>
-                                <button type="button" class="btn btn-sm btn-p btn-block" style="margin-top:0.45rem;font-size:0.75rem" onclick="openItemizedSplitQrModal()">
-                                    <i class="ri-qr-code-line"></i> Tạo mã VietQR từng người
-                                </button>
+                        <div style="overflow-x:auto">
+                            <table class="ocr-items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:36px;text-align:center">
+                                            <input type="checkbox" id="chkSelectAllTop" class="ocr-custom-chk" onchange="toggleSelectAllReceiptItems()" checked title="Chọn tất cả">
+                                        </th>
+                                        <th style="text-align:left">Tên sản phẩm</th>
+                                        <th style="width:58px;text-align:center">SL</th>
+                                        <th style="width:115px;text-align:right">Giá tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ocrProductsTableBody">
+                                    <!-- Render các dòng sản phẩm bóc tách được -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Summary box -->
+                        <div id="ocrItemsSummaryBox" style="margin-top:0.6rem;padding:0.65rem 0.85rem;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;display:flex;justify-content:space-between;align-items:center">
+                            <div style="font-size:0.82rem;font-weight:600;color:var(--text2)">
+                                Tổng <strong id="ocrSelectedItemsCount" style="color:var(--text)">0</strong> sản phẩm:
                             </div>
+                            <strong id="ocrSelectedTotalAmt" style="font-size:1.05rem;color:var(--text);font-weight:800">0 ₫</strong>
+                        </div>
+                    </div>
 
-                            <!-- 2 LỰA CHỌN THANH TOÁN (CHO CHIA ĐỀU) -->
-                            <div id="splitRoleCards" style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem">
-                                <div class="split-option-card active" id="optSplitMineOnly" onclick="setSplitPayRole('mine_only')" style="flex-direction:column;padding:0.55rem 0.65rem">
-                                    <div style="display:flex;align-items:center;gap:0.3rem">
-                                        <input type="radio" name="splitPayRole" value="mine_only" checked style="margin:0">
-                                        <strong style="font-size:0.75rem;color:var(--text)">Chỉ phần tôi</strong>
-                                    </div>
-                                    <div style="font-size:0.72rem;color:var(--primary);font-weight:700;margin-top:0.25rem" class="roleMyShareTxt">36.250 ₫</div>
-                                </div>
-
-                                <div class="split-option-card" id="optSplitAdvanceAll" onclick="setSplitPayRole('advance_all')" style="flex-direction:column;padding:0.55rem 0.65rem">
-                                    <div style="display:flex;align-items:center;gap:0.3rem">
-                                        <input type="radio" name="splitPayRole" value="advance_all" style="margin:0">
-                                        <strong style="font-size:0.75rem;color:var(--text)">Bao cả bàn</strong>
-                                    </div>
-                                    <div style="font-size:0.68rem;color:var(--text3);margin-top:0.25rem">Thu lại: <strong id="roleCollectOthersTxt" style="color:var(--danger)">108.750 ₫</strong></div>
-                                </div>
+                    <!-- VIEW 2: TỔNG ĐƠN & PHÂN BỔ CHI TIÊU -->
+                    <div id="ocrViewOverall" class="hidden">
+                        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.65rem;display:flex;flex-direction:column;gap:0.35rem">
+                            <div style="display:flex;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.78rem;color:var(--text3)">Nơi chi:</span>
+                                <strong style="font-size:0.88rem" id="ocrMer2">--</strong>
+                            </div>
+                            <div id="ocrInvoiceRow" style="display:none;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.78rem;color:var(--text3)">Số HĐ / Bill:</span>
+                                <strong style="font-size:0.82rem;color:var(--gold);font-family:monospace" id="ocrInvoiceNo">--</strong>
+                            </div>
+                            <div id="ocrDateTimeRow" style="display:none;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.78rem;color:var(--text3)">Thời gian:</span>
+                                <span style="font-size:0.82rem;font-weight:600;color:var(--text)" id="ocrDateTime">--</span>
+                            </div>
+                            <div id="ocrHotlineRow" style="display:none;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.78rem;color:var(--text3)">Hotline / ĐT:</span>
+                                <strong style="font-size:0.82rem;color:var(--primary)" id="ocrHotline">--</strong>
+                            </div>
+                            <div id="ocrAddressRow" style="display:none;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.78rem;color:var(--text3);white-space:nowrap">Địa chỉ:</span>
+                                <span style="font-size:0.75rem;color:var(--text2);text-align:right;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="ocrAddress">--</span>
+                            </div>
+                            <div id="ocrSubtotalRow" style="display:none;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.78rem;color:var(--text3)">Tạm tính (tiền hàng):</span>
+                                <span style="font-size:0.85rem;color:var(--text3);text-decoration:line-through" id="ocrSubtotal">0 ₫</span>
+                            </div>
+                            <div id="ocrDiscountRow" style="display:none;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.78rem;color:var(--text3)">Giảm giá / Ưu đãi:</span>
+                                <strong style="font-size:0.88rem;color:var(--success)" id="ocrDiscount">0 ₫</strong>
+                            </div>
+                            <div id="ocrVatRow" style="display:none;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.78rem;color:var(--text3)">Thuế VAT:</span>
+                                <strong style="font-size:0.82rem;color:var(--text)" id="ocrVat">0 ₫</strong>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.78rem;color:var(--text3)">Thanh toán thực tế:</span>
+                                <strong style="font-size:1.1rem;color:var(--danger)" id="ocrAmt">0 ₫</strong>
+                            </div>
+                            <div id="ocrPaymentMethodRow" style="display:none;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.78rem;color:var(--text3)">Hình thức TT:</span>
+                                <span class="badge" style="background:rgba(82,134,232,0.12);color:var(--primary);font-size:0.72rem;font-weight:700" id="ocrPaymentMethod">--</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center">
+                                <span style="font-size:0.78rem;color:var(--text3)">Danh mục:</span>
+                                <span class="badge" id="ocrCatBadge" style="background:#FFF9EB;color:#D49A2B;font-size:0.72rem;font-weight:700"><i class="ri-restaurant-line"></i> Ăn uống</span>
                             </div>
                         </div>
 
-                        <!-- 3. TRÍCH QUỸ CHUNG -->
-                        <div id="scopeFundBox" class="hidden" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.6rem 0.75rem">
-                            <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.35rem">
-                                <span style="font-size:0.75rem;color:var(--text3)">Chọn quỹ:</span>
-                                <select class="fc" id="fundSelectBox" onchange="updateFundSelection()" style="padding:0.25rem 0.4rem;font-size:0.75rem;flex:1">
-                                    <option value="couple">Quỹ Cặp Đôi (1.850.000 ₫)</option>
-                                    <option value="travel">Quỹ Du Lịch (3.200.000 ₫)</option>
-                                    <option value="room" selected>Quỹ Chi Tiêu Chung (2.400.000 ₫)</option>
-                                </select>
+                        <!-- 3 CHẾ ĐỘ PHÂN BỔ: CÁ NHÂN | CHIA TIỀN | QUỸ CHUNG -->
+                        <div style="margin-top:0.6rem;padding-top:0.55rem;border-top:1px solid var(--border)">
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.3rem;margin-bottom:0.5rem">
+                                <button type="button" class="scope-chip active" id="btnScopeP" onclick="setBillScope('personal')">
+                                    <i class="ri-user-3-line"></i> Cá nhân
+                                </button>
+                                <button type="button" class="scope-chip" id="btnScopeS" onclick="setBillScope('split')">
+                                    <i class="ri-scales-3-line"></i> Chia tiền
+                                </button>
+                                <button type="button" class="scope-chip" id="btnScopeF" onclick="setBillScope('fund')">
+                                    <i class="ri-funds-box-line"></i> Quỹ chung
+                                </button>
                             </div>
-                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;padding-top:0.3rem;border-top:1px dashed var(--border)">
-                                <span style="color:var(--text2)">Số dư sau chi:</span>
-                                <strong style="color:var(--success)" id="fundAfterBalance">1.950.000 ₫</strong>
+                            
+                            <!-- 1. CÁ NHÂN -->
+                            <div id="scopePersonalBox" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.6rem 0.75rem">
+                                <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem">
+                                    <span style="color:var(--text2)">Lưu vào ví:</span>
+                                    <strong style="color:var(--danger);font-size:0.95rem" id="personalSaveAmt">0 ₫</strong>
+                                </div>
+                            </div>
+
+                            <!-- 2. CHIA TIỀN -->
+                            <div id="scopeSplitBox" class="hidden" style="display:flex;flex-direction:column;gap:0.4rem">
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem">
+                                    <button type="button" class="btn btn-sm btn-p" id="btnSplitModeEqual" style="font-size:0.72rem;padding:0.4rem 0.3rem" onclick="setSplitMode('equal')">
+                                        <i class="ri-equal-line"></i> Chia đều
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-s" id="btnSplitModeItem" style="font-size:0.72rem;padding:0.4rem 0.3rem" onclick="setSplitMode('item')">
+                                        <i class="ri-cup-line"></i> Chia theo món
+                                    </button>
+                                </div>
+
+                                <!-- 2.A CHIA ĐỀU -->
+                                <div id="splitEqualContainer" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.55rem 0.75rem">
+                                    <div style="display:flex;justify-content:space-between;align-items:center">
+                                        <span style="font-size:0.78rem;font-weight:600;color:var(--text)">Số người:</span>
+                                        <div class="split-stepper">
+                                            <button type="button" class="split-step-btn" onclick="changeSplitCount(-1)"><i class="ri-subtract-line"></i></button>
+                                            <span class="split-step-val" id="splitCountDisp">4</span>
+                                            <button type="button" class="split-step-btn" onclick="changeSplitCount(1)"><i class="ri-add-line"></i></button>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.35rem;padding-top:0.35rem;border-top:1px dashed var(--border);font-size:0.78rem">
+                                        <span style="color:var(--text2)">Mỗi người:</span>
+                                        <strong style="font-size:0.92rem;color:var(--primary)" id="splitPerPersonDisp">0 ₫</strong>
+                                    </div>
+                                </div>
+
+                                <!-- 2.B CHIA THEO MÓN -->
+                                <div id="splitItemContainer" class="hidden" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.55rem 0.65rem">
+                                    <div style="font-size:0.72rem;color:var(--text3);margin-bottom:0.4rem">Chọn ai món nào:</div>
+                                    <div id="splitItemsAssignList" style="display:flex;flex-direction:column;gap:0.35rem;max-height:160px;overflow-y:auto"></div>
+                                    <div id="splitItemsMemberSummary" style="margin-top:0.45rem;padding-top:0.4rem;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:0.25rem"></div>
+                                    <button type="button" class="btn btn-sm btn-p btn-block" style="margin-top:0.45rem;font-size:0.75rem" onclick="openItemizedSplitQrModal()">
+                                        <i class="ri-qr-code-line"></i> Tạo mã VietQR từng người
+                                    </button>
+                                </div>
+
+                                <div id="splitRoleCards" style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem">
+                                    <div class="split-option-card active" id="optSplitMineOnly" onclick="setSplitPayRole('mine_only')" style="flex-direction:column;padding:0.55rem 0.65rem">
+                                        <div style="display:flex;align-items:center;gap:0.3rem">
+                                            <input type="radio" name="splitPayRole" value="mine_only" checked style="margin:0">
+                                            <strong style="font-size:0.75rem;color:var(--text)">Chỉ phần tôi</strong>
+                                        </div>
+                                        <div style="font-size:0.72rem;color:var(--primary);font-weight:700;margin-top:0.25rem" class="roleMyShareTxt">0 ₫</div>
+                                    </div>
+
+                                    <div class="split-option-card" id="optSplitAdvanceAll" onclick="setSplitPayRole('advance_all')" style="flex-direction:column;padding:0.55rem 0.65rem">
+                                        <div style="display:flex;align-items:center;gap:0.3rem">
+                                            <input type="radio" name="splitPayRole" value="advance_all" style="margin:0">
+                                            <strong style="font-size:0.75rem;color:var(--text)">Bao cả bàn</strong>
+                                        </div>
+                                        <div style="font-size:0.68rem;color:var(--text3);margin-top:0.25rem">Thu lại: <strong id="roleCollectOthersTxt" style="color:var(--danger)">0 ₫</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. QUỸ CHUNG -->
+                            <div id="scopeFundBox" class="hidden" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.6rem 0.75rem">
+                                <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.35rem">
+                                    <span style="font-size:0.75rem;color:var(--text3)">Chọn quỹ:</span>
+                                    <select class="fc" id="fundSelectBox" onchange="updateFundSelection()" style="padding:0.25rem 0.4rem;font-size:0.75rem;flex:1">
+                                        <option value="couple">Quỹ Cặp Đôi (1.850.000 ₫)</option>
+                                        <option value="travel">Quỹ Du Lịch (3.200.000 ₫)</option>
+                                        <option value="room" selected>Quỹ Chi Tiêu Chung (2.400.000 ₫)</option>
+                                    </select>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;padding-top:0.3rem;border-top:1px dashed var(--border)">
+                                    <span style="color:var(--text2)">Số dư sau chi:</span>
+                                    <strong style="color:var(--success)" id="fundAfterBalance">1.950.000 ₫</strong>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <button id="ocrSave" class="btn btn-p btn-block hidden" style="margin-top:0.55rem" onclick="saveOcr()">
-                    <i class="ri-check-line"></i> <span id="ocrSaveBtnTxt">Lưu vào Ví (145.000 ₫)</span>
-                </button>
-                <button id="ocrRetake" class="btn btn-s btn-block hidden" style="margin-top:0.35rem" onclick="retakePhoto()">
-                    <i class="ri-refresh-line"></i> Quét lại
+
+                <!-- SAVE BUTTON (Bottom of Modal) -->
+                <button id="ocrSave" class="btn btn-p btn-block hidden" style="margin-top:0.65rem" onclick="saveReceiptData()">
+                    <i class="ri-check-line"></i> <span id="ocrSaveBtnTxt">Lưu vào Ví (0 ₫)</span>
                 </button>
             </div>
         </div>

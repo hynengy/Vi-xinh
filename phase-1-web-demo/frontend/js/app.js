@@ -1041,90 +1041,24 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
     const statEl = document.getElementById('ocrLoadingStatusText');
     const subEl = document.getElementById('ocrLoadingSubText');
 
-    if (subEl) subEl.textContent = 'Mô hình AI Google ML Kit';
-    if (fillEl) fillEl.style.width = '20%';
-    if (statEl) statEl.textContent = 'Khởi động mô hình Google ML Kit...';
+    if (subEl) subEl.textContent = 'Mô hình Google Vision OCR Cloud';
+    if (fillEl) fillEl.style.width = '35%';
+    if (statEl) statEl.textContent = 'Đang tải hóa đơn lên Google Vision Cloud...';
 
     try {
-        let data = null;
+        const formData = new FormData();
+        const filename = (fileOrBlob instanceof File && fileOrBlob.name) ? fileOrBlob.name : 'receipt_capture.jpg';
+        formData.append('receipt', fileOrBlob, filename);
 
-        // ƯU TIÊN 1: Chạy trực tiếp Google ML Kit trên thiết bị nếu khả dụng
-        if (window.GoogleMLKitWeb && window.GoogleMLKitWeb.isSupported()) {
-            console.log('[Ví Xinh] Đang chạy Google ML Kit Text Recognizer...');
+        if (fillEl) fillEl.style.width = '65%';
+        if (statEl) statEl.textContent = 'Google Vision đang bóc tách ký tự và bảng giá...';
 
-            // Tải ảnh song song để lấy URL lưu trữ
-            const uploadPromise = (async () => {
-                try {
-                    const fd = new FormData();
-                    const fn = (fileOrBlob instanceof File && fileOrBlob.name) ? fileOrBlob.name : 'receipt_capture.jpg';
-                    fd.append('receipt', fileOrBlob, fn);
-                    const upRes = await fetch('/api/receipts/upload-image', { method: 'POST', body: fd });
-                    if (upRes.ok) {
-                        const upData = await upRes.json();
-                        return upData.image_url;
-                    }
-                } catch (e) {
-                    console.warn('[Upload Image Background]:', e);
-                }
-                return previewSrc || '';
-            })();
-
-            try {
-                const mlResult = await window.GoogleMLKitWeb.processImage(fileOrBlob, (p) => {
-                    if (fillEl && typeof p.progress === 'number') {
-                        fillEl.style.width = `${Math.min(95, Math.max(20, Math.round(p.progress * 100)))}%`;
-                    }
-                    if (statEl && p.status) statEl.textContent = p.status;
-                });
-
-                if (fillEl) fillEl.style.width = '96%';
-                if (statEl) statEl.textContent = 'Google ML Kit đang bóc tách thông tin...';
-
-                const uploadedImageUrl = await uploadPromise;
-
-                const parseRes = await fetch('/api/receipts/parse-text', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        raw_text: mlResult.text,
-                        image_url: uploadedImageUrl,
-                        engine: 'google_mlkit'
-                    })
-                });
-
-                if (!parseRes.ok) throw new Error('Lỗi phản hồi từ máy chủ bóc tách');
-                data = await parseRes.json();
-                data.execution_time_ms = mlResult.executionTimeMs;
-                data.total_lines = mlResult.total_lines;
-                data.total_blocks = mlResult.total_blocks;
-                data.engine = data.engine || 'google_mlkit_web';
-
-            } catch (clientErr) {
-                console.warn('[Google ML Kit Web Client Error]:', clientErr);
-                if (statEl) statEl.textContent = 'Đang nhận dạng hóa đơn...';
-
-                const formData = new FormData();
-                const filename = (fileOrBlob instanceof File && fileOrBlob.name) ? fileOrBlob.name : 'receipt_capture.jpg';
-                formData.append('receipt', fileOrBlob, filename);
-
-                const res = await fetch('/api/receipts/upload', { method: 'POST', body: formData });
-                if (!res.ok) throw new Error(`Lỗi máy chủ HTTP ${res.status}`);
-                data = await res.json();
-            }
-
-        } else {
-            // Trường hợp trình duyệt không hỗ trợ WebAssembly Worker
-            const formData = new FormData();
-            const filename = (fileOrBlob instanceof File && fileOrBlob.name) ? fileOrBlob.name : 'receipt_capture.jpg';
-            formData.append('receipt', fileOrBlob, filename);
-
-            const res = await fetch('/api/receipts/upload', { method: 'POST', body: formData });
-            if (!res.ok) throw new Error(`Lỗi máy chủ HTTP ${res.status}`);
-            data = await res.json();
-        }
+        const res = await fetch('/api/receipts/upload', { method: 'POST', body: formData });
+        if (!res.ok) throw new Error(`Lỗi máy chủ HTTP ${res.status}`);
+        const data = await res.json();
 
         if (fillEl) fillEl.style.width = '100%';
-        console.log('Kết Quả Bóc Tách Hóa Đơn:', data);
+        console.log('Kết Quả Bóc Tách Hóa Đơn (Google Vision):', data);
 
         // Lưu vào sessionStorage để đồng bộ tức thời với trang review.html
         sessionStorage.setItem('ocr_result', JSON.stringify(data));
@@ -1143,49 +1077,59 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
 
         const detected = {
             merchant: data.merchant_name || 'Hóa đơn chưa rõ nguồn',
-            amount: data.amount || 0,
+            amount: Number(data.amount) || 0,
             cat: cat,
             date: data.transaction_date || new Date().toISOString().slice(0, 10),
             raw_text: data.raw_text || '',
             image_url: data.image_url || previewSrc,
-            items: data.items || [],
+            items: Array.isArray(data.items) ? data.items : [],
             notes: data.notes || '',
-            isGroup: (cat === 'bills') || merLower.includes('trọ') || merLower.includes('phòng') || (data.amount >= 2000000)
+            isGroup: (cat === 'bills') || merLower.includes('trọ') || merLower.includes('phòng') || (data.amount >= 2000000),
+            engine: data.engine || 'google_vision_cloud'
         };
 
         S.lastOcr = detected;
 
-        st.classList.add('hidden'); dt.classList.remove('hidden'); sv.classList.remove('hidden'); rt.classList.remove('hidden');
-        document.getElementById('ocrMer').textContent = detected.merchant;
-        document.getElementById('ocrAmt').textContent = fmt(detected.amount);
-        const ct = CATS[detected.cat] || CATS.food;
-        document.getElementById('ocrCatBadge').innerHTML = `<i class="${ct.ic}"></i> ${ct.label}`;
-        document.getElementById('ocrCatBadge').style.background = ct.bg;
-        document.getElementById('ocrCatBadge').style.color = ct.color;
+        st.classList.add('hidden'); 
+        dt.classList.remove('hidden'); 
+        sv.classList.remove('hidden'); 
+        if(rt) rt.classList.remove('hidden');
 
-        // Cập nhật thẻ hiển thị thông tin mô hình OCR trung thực
-        const engineTag = document.getElementById('ocrEngineTag');
-        const metaTime = document.getElementById('ocrMetaTime');
-        if (engineTag) {
-            if (data.engine === 'google_vision_cloud') {
-                engineTag.innerHTML = `<i class="ri-google-fill"></i> Google Vision Cloud`;
-                engineTag.title = data.engine_note || 'Google Cloud Vision OCR';
-            } else if (data.engine === 'tesseract_fallback') {
-                engineTag.innerHTML = `<i class="ri-cpu-line"></i> Tesseract (Dự phòng)`;
-                engineTag.title = data.engine_note || 'Tesseract OCR Fallback';
-            } else if (data.engine === 'tesseract_fallback_no_vie') {
-                engineTag.innerHTML = `<i class="ri-alert-line"></i> Tesseract (Thiếu vie)`;
-                engineTag.title = data.engine_note || 'Tesseract thiếu gói ngôn ngữ tiếng Việt vie';
-            } else if (data.engine === 'google_mlkit_web') {
-                engineTag.innerHTML = `<i class="ri-google-fill"></i> Google ML Kit Web`;
-            } else {
-                engineTag.innerHTML = `<i class="ri-scan-2-line"></i> ${data.engine || 'Google ML Kit'}`;
-            }
+        // Điền tên nơi bán vào tiêu đề
+        const ocrMer = document.getElementById('ocrMer');
+        if(ocrMer) ocrMer.textContent = detected.merchant;
+        const ocrMer2 = document.getElementById('ocrMer2');
+        if(ocrMer2) ocrMer2.textContent = detected.merchant;
+
+        // 3 Badge / Pill Chips
+        const ocrAmtChip = document.getElementById('ocrAmtChip');
+        if(ocrAmtChip) ocrAmtChip.textContent = fmt(detected.amount);
+
+        const ocrDateChip = document.getElementById('ocrDateChip');
+        if(ocrDateChip){
+            const dParts = (detected.date || '').split('-');
+            ocrDateChip.textContent = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}/${dParts[0]}` : (detected.date || 'Hôm nay');
         }
-        if (metaTime) {
-            const msStr = data.execution_time_ms ? `${data.execution_time_ms}ms` : 'AI';
-            const linesStr = data.total_lines ? `${data.total_lines} dòng` : (detected.items ? `${detected.items.length} món` : '');
-            metaTime.textContent = linesStr ? `${msStr} • ${linesStr}` : msStr;
+
+        const ocrItemsCountChip = document.getElementById('ocrItemsCountChip');
+        if(ocrItemsCountChip) ocrItemsCountChip.textContent = `${detected.items.length || 1} sản phẩm`;
+
+        // Tiền thanh toán và badge danh mục
+        const ocrAmt = document.getElementById('ocrAmt');
+        if(ocrAmt) ocrAmt.textContent = fmt(detected.amount);
+        const ct = CATS[detected.cat] || CATS.food;
+        const ocrCatBadge = document.getElementById('ocrCatBadge');
+        if(ocrCatBadge){
+            ocrCatBadge.innerHTML = `<i class="${ct.ic}"></i> ${ct.label}`;
+            ocrCatBadge.style.background = ct.bg;
+            ocrCatBadge.style.color = ct.color;
+        }
+
+        // Cập nhật nhãn mô hình Google Cloud Vision
+        const engineTag = document.getElementById('ocrEngineTag');
+        if (engineTag) {
+            engineTag.innerHTML = `<i class="ri-google-fill"></i> Google Vision`;
+            engineTag.title = 'Google Cloud Vision API';
         }
 
         // Hiển thị Số HĐ / Bill nếu có
@@ -1286,23 +1230,11 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
             }
         }
 
+        // Mặc định chuyển sang xem Tab 1: Từng sản phẩm
+        switchOcrViewTab('items');
+
         // Hiển thị danh sách từng món và toàn văn văn bản OCR
         renderOcrItemsAndRawText(detected);
-
-        // Thêm nút mở màn hình Review chi tiết nếu chưa có
-        let revBtn = document.getElementById('btnGoReviewDetail');
-        if(!revBtn){
-            revBtn = document.createElement('div');
-            revBtn.id = 'btnGoReviewDetail';
-            revBtn.style.marginTop = '0.5rem';
-            revBtn.style.textAlign = 'center';
-            dt.appendChild(revBtn);
-        }
-        revBtn.innerHTML = `
-            <a href="/review" class="btn btn-sm btn-o" style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.75rem;padding:0.3rem 0.75rem">
-                <i class="ri-edit-line"></i> Chỉnh sửa chi tiết
-            </a>
-        `;
 
         const fb = document.getElementById('ocrFundBalance');
         if(fb && S.groupFund) fb.textContent = fmt(S.groupFund.balance);
@@ -1317,7 +1249,7 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
 
     } catch(err) {
         console.error('OCR Pipeline Error:', err);
-        st.classList.add('hidden'); dt.classList.remove('hidden'); sv.classList.remove('hidden'); rt.classList.remove('hidden');
+        st.classList.add('hidden'); dt.classList.remove('hidden'); sv.classList.remove('hidden'); if(rt) rt.classList.remove('hidden');
         toast(`Lỗi xử lý OCR: ${err.message}`, 'error');
         document.getElementById('ocrMer').textContent = 'Hóa đơn đã quét';
         document.getElementById('ocrAmt').textContent = '0 ₫';
@@ -1417,19 +1349,32 @@ function renderOcrItemsAndRawText(detected){
         rawEl.textContent = fullTxt;
     }
 
-    // 2. Danh sách chi tiết từng món / cốc nước
-    const listEl = document.getElementById('ocrItemsList');
-    const badgeEl = document.getElementById('ocrItemsCountBadge');
+    // 2. Danh sách chi tiết từng món / sản phẩm bóc tách được
     let items = (detected.items && detected.items.length) ? detected.items : [];
 
     // Nếu là hóa đơn không bóc tách được từng dòng con, tạo mặc định 1 món chính
     if(!items.length && detected.amount > 0){
         items = [{
             name: detected.merchant || 'Khoản chi hóa đơn',
-            amount: detected.amount
+            amount: detected.amount,
+            quantity: 1
         }];
     }
 
+    // Gán dữ liệu cho bảng Từng Sản Phẩm (4 Cột chuẩn theo thiết kế)
+    S.ocrItems = items.map((it, idx) => ({
+        id: idx,
+        selected: true,
+        name: it.name || `Sản phẩm ${idx + 1}`,
+        quantity: it.quantity || 1,
+        amount: Number(it.amount) || 0
+    }));
+
+    // Render bảng sản phẩm & tính toán tổng số tiền
+    renderOcrProductsTable();
+    updateOcrItemsTableSummary();
+
+    // Hỗ trợ chia tiền theo món nếu người dùng chuyển tab sang Chia theo món
     const defaultNames = ['Tôi', 'Bạn 1', 'Bạn 2', 'Bạn 3'];
     S.currentBillItems = items.map((it, idx) => ({
         id: idx,
@@ -1437,34 +1382,160 @@ function renderOcrItemsAndRawText(detected){
         amount: Number(it.amount) || 0,
         assignedTo: defaultNames[idx % defaultNames.length]
     }));
+    renderItemizedSplit();
+}
 
-    if(badgeEl) badgeEl.textContent = `${items.length} món`;
+function switchOcrViewTab(tab){
+    S.ocrCurrentViewTab = tab;
+    const tabItems = document.getElementById('tabItemsView');
+    const tabOverall = document.getElementById('tabOverallView');
+    const viewItems = document.getElementById('ocrViewItems');
+    const viewOverall = document.getElementById('ocrViewOverall');
 
-    if(listEl){
-        listEl.innerHTML = items.map(it => {
-            const qtyText = it.consumption || (it.quantity && it.quantity > 1 ? `SL: ${it.quantity}` : '');
-            const unitPriceText = (it.unit_price && it.quantity && it.quantity > 1) ? `Đơn giá: ${fmt(it.unit_price)}` : '';
-            return `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0.5rem;background:var(--bg);border-radius:var(--r-sm);font-size:0.78rem">
-                <div style="display:flex;align-items:center;gap:0.4rem;overflow:hidden">
-                    <span style="font-size:0.95rem;line-height:1">${it.icon || '📦'}</span>
-                    <div style="overflow:hidden">
-                        <div style="font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:210px">
-                            ${it.name}
-                        </div>
-                        <div style="font-size:0.68rem;color:var(--text3);display:flex;gap:0.4rem;align-items:center">
-                            ${qtyText ? `<span style="font-weight:700;color:var(--primary)">${qtyText}</span>` : ''}
-                            ${unitPriceText ? `<span>${unitPriceText}</span>` : ''}
-                        </div>
-                    </div>
-                </div>
-                <strong style="color:var(--primary);white-space:nowrap;font-size:0.85rem">${fmt(it.amount)}</strong>
-            </div>
-            `;
-        }).join('');
+    if(tab === 'items'){
+        tabItems?.classList.add('active');
+        tabOverall?.classList.remove('active');
+        viewItems?.classList.remove('hidden');
+        viewOverall?.classList.add('hidden');
+    } else {
+        tabItems?.classList.remove('active');
+        tabOverall?.classList.add('active');
+        viewItems?.classList.add('hidden');
+        viewOverall?.classList.remove('hidden');
+    }
+}
+
+function renderOcrProductsTable(){
+    const tbody = document.getElementById('ocrProductsTableBody');
+    if(!tbody) return;
+    const items = S.ocrItems || [];
+    if(!items.length){
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:1rem;color:var(--text3);font-size:0.8rem">Không có sản phẩm nào</td></tr>`;
+        return;
     }
 
-    renderItemizedSplit();
+    tbody.innerHTML = items.map((it, idx) => `
+        <tr data-idx="${idx}">
+            <td style="width:36px;text-align:center;vertical-align:middle">
+                <input type="checkbox" class="ocr-custom-chk item-chk" data-idx="${idx}" ${it.selected ? 'checked' : ''} onchange="onItemCheckChanged(${idx}, this.checked)" title="Chọn sản phẩm">
+            </td>
+            <td style="padding-right:0.25rem">
+                <input type="text" class="ocr-cell-name" value="${it.name.replace(/"/g, '&quot;')}" oninput="onItemFieldEdited(${idx}, 'name', this.value)" placeholder="Tên sản phẩm">
+            </td>
+            <td style="width:58px;text-align:center;padding:0 0.2rem">
+                <input type="text" class="ocr-cell-qty" value="x${it.quantity}" onchange="onItemFieldEdited(${idx}, 'quantity', this.value)" placeholder="SL">
+            </td>
+            <td style="width:115px;text-align:right">
+                <input type="text" class="ocr-cell-price" value="${fmt(it.amount)}" onchange="onItemFieldEdited(${idx}, 'amount', this.value)" placeholder="0 ₫">
+            </td>
+        </tr>
+    `).join('');
+}
+
+function updateOcrItemsTableSummary(){
+    const items = S.ocrItems || [];
+    const totalCount = items.length;
+    const selectedItems = items.filter(it => it.selected);
+    const selectedCount = selectedItems.length;
+    const selectedTotal = selectedItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+
+    // Cập nhật tỷ lệ đã chọn (e.g. 7/7)
+    const ratioEl = document.getElementById('ocrSelectedRatio');
+    if(ratioEl) ratioEl.textContent = `${selectedCount}/${totalCount}`;
+
+    // Nút Bỏ chọn / Chọn tất cả
+    const toggleBtn = document.getElementById('btnToggleAllItems');
+    if(toggleBtn){
+        toggleBtn.textContent = (selectedCount === totalCount && totalCount > 0) ? 'Bỏ chọn' : 'Chọn tất cả';
+    }
+
+    // Checkbox master trên header
+    const topChk = document.getElementById('chkSelectAllTop');
+    if(topChk){
+        topChk.checked = (selectedCount === totalCount && totalCount > 0);
+        topChk.indeterminate = (selectedCount > 0 && selectedCount < totalCount);
+    }
+
+    // Summary box dưới bảng
+    const cntEl = document.getElementById('ocrSelectedItemsCount');
+    if(cntEl) cntEl.textContent = selectedCount;
+
+    const totalAmtEl = document.getElementById('ocrSelectedTotalAmt');
+    if(totalAmtEl) totalAmtEl.textContent = fmt(selectedTotal);
+
+    // Cập nhật 3 Pill Chips trên đầu
+    const amtChip = document.getElementById('ocrAmtChip');
+    if(amtChip) amtChip.textContent = fmt(selectedTotal);
+
+    const countChip = document.getElementById('ocrItemsCountChip');
+    if(countChip) countChip.textContent = `${totalCount} sản phẩm`;
+
+    // Cập nhật nhãn nút Lưu vào Ví
+    const saveTxt = document.getElementById('ocrSaveBtnTxt');
+    if(saveTxt) saveTxt.textContent = `Lưu vào Ví (${fmt(selectedTotal)})`;
+
+    const pa = document.getElementById('personalSaveAmt');
+    if(pa) pa.textContent = fmt(selectedTotal);
+
+    if(S.lastOcr){
+        S.lastOcr.selectedAmount = selectedTotal;
+        S.lastOcr.selectedItems = selectedItems;
+    }
+}
+
+function toggleSelectAllReceiptItems(){
+    const items = S.ocrItems || [];
+    if(!items.length) return;
+    const allSelected = items.every(it => it.selected);
+    const newStatus = !allSelected;
+    items.forEach(it => { it.selected = newStatus; });
+    document.querySelectorAll('.item-chk').forEach(chk => { chk.checked = newStatus; });
+    updateOcrItemsTableSummary();
+}
+
+function onItemCheckChanged(idx, isChecked){
+    if(S.ocrItems && S.ocrItems[idx]){
+        S.ocrItems[idx].selected = isChecked;
+        updateOcrItemsTableSummary();
+    }
+}
+
+function onItemFieldEdited(idx, field, value){
+    if(!S.ocrItems || !S.ocrItems[idx]) return;
+    if(field === 'name'){
+        S.ocrItems[idx].name = value.trim();
+    } else if(field === 'quantity'){
+        const num = parseFloat(value.replace(/[^0-9.]/g, '')) || 1;
+        S.ocrItems[idx].quantity = num;
+    } else if(field === 'amount'){
+        const amt = parseFloat(value.replace(/[^0-9]/g, '')) || 0;
+        S.ocrItems[idx].amount = amt;
+        const el = document.querySelector(`tr[data-idx="${idx}"] .ocr-cell-price`);
+        if(el && document.activeElement !== el) el.value = fmt(amt);
+    }
+    updateOcrItemsTableSummary();
+}
+
+async function saveReceiptData(){
+    const ocr = S.lastOcr || {};
+    const selectedItems = (S.ocrItems || []).filter(it => it.selected);
+    const saveAmt = (typeof ocr.selectedAmount === 'number') 
+        ? ocr.selectedAmount 
+        : (selectedItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0) || ocr.amount || 0);
+
+    if(saveAmt <= 0 && selectedItems.length > 0){
+        toast('Vui lòng kiểm tra lại giá tiền của các món đã chọn!', 'warning');
+        return;
+    }
+
+    // Cập nhật S.lastOcr trước khi lưu
+    ocr.amount = saveAmt;
+    if(selectedItems.length > 0){
+        ocr.items = selectedItems;
+        ocr.notes = `Gồm ${selectedItems.length} món: ` + selectedItems.map(it => `${it.name} (x${it.quantity})`).join(', ');
+    }
+
+    await saveOcr();
 }
 
 function copyFullOcrText(){

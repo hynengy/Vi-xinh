@@ -8,8 +8,7 @@ opencv-python>=4.8.0
 Pillow>=10.0.0
 numpy>=1.24.0
 
-# OCR Engines (Hỗ trợ Tesseract hoặc EasyOCR)
-pytesseract>=0.3.10
+# OCR: Google Cloud Vision qua REST API (dùng urllib chuẩn, không cần thư viện thêm)
 
 # Testing & Quality Assurance (Toàn nhóm)
 pytest>=8.0.0
