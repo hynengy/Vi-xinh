@@ -482,7 +482,8 @@ class GoogleMLKitEngine:
         )
 
     def _call_vision(self, image_p: Path) -> Dict[str, Any]:
-        content_b64 = base64.b64encode(image_p.read_bytes()).decode("utf-8")
+        optimized_bytes = self._optimize_image_for_llm(image_p, max_dim=1600)
+        content_b64 = base64.b64encode(optimized_bytes).decode("utf-8")
         payload = {
             "requests": [{
                 "image": {"content": content_b64},
