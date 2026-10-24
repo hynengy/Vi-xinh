@@ -54,6 +54,24 @@ const DEMO_GROUP = null;
 // ===== UTILS =====
 const fmt = n => new Intl.NumberFormat('vi-VN').format(n)+' ₫';
 const fmtS = n => fmt(n);
+function escapeHtml(str){
+    if(str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+function formatAiAdvice(text){
+    if(!text) return '';
+    let escaped = escapeHtml(text);
+    // Hỗ trợ hiển thị Markdown: **chữ in đậm** thành <strong>
+    escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Xuống dòng mượt mà
+    escaped = escaped.replace(/\n/g, '<br>');
+    return escaped;
+}
 function dateLabel(d){ const t=new Date().toISOString().slice(0,10), y=new Date(Date.now()-864e5).toISOString().slice(0,10); if(d===t)return'Hôm nay'; if(d===y)return'Hôm qua'; const dt=new Date(d),days=['CN','T2','T3','T4','T5','T6','T7']; return`${days[dt.getDay()]}, ${dt.getDate()}/${dt.getMonth()+1}`; }
 function toast(msg,type='info'){ const b=document.getElementById('toastBox'); if(!b)return; const ics={success:'ri-check-line',error:'ri-close-circle-line',info:'ri-information-line',warning:'ri-alert-line'}; const el=document.createElement('div'); el.className=`toast ${type}`; el.innerHTML=`<i class="${ics[type]||ics.info} toast-ic"></i><span class="toast-msg">${msg}</span>`; b.appendChild(el); setTimeout(()=>{el.classList.add('hiding');setTimeout(()=>el.remove(),300)},3000); }
 function togForm(id){document.getElementById(id).classList.toggle('active')}
@@ -3836,7 +3854,7 @@ async function requestAiSpendingSummary(){
     if(btn) btn.disabled = true;
 
     try {
-        const uid = (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? currentUser.id : 1;
+        const uid = (S.user && S.user.id) ? S.user.id : ((typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? currentUser.id : 1);
         const res = await fetch('/api/ai/spending-summary?user_id=' + uid, {
             method: 'POST',
             headers: {
@@ -3857,13 +3875,13 @@ async function requestAiSpendingSummary(){
 
         if(res.ok && d && d.success){
             const metricsHtml = `
-            <div style="margin-bottom:0.5rem;padding-bottom:0.4rem;border-bottom:1px dashed var(--border);display:flex;align-items:center;justify-content:space-between;font-size:0.68rem;color:var(--text3)">
-                <span><i class="ri-sparkling-fill" style="color:#f59e0b"></i> <strong>${d.model || 'Gemini 1.5 Flash'}</strong></span>
+            <div style="margin-bottom:0.6rem;padding-bottom:0.5rem;border-bottom:1px dashed var(--border);display:flex;align-items:center;justify-content:space-between;font-size:0.68rem;color:var(--text3);flex-wrap:wrap;gap:0.35rem">
+                <span><i class="ri-sparkling-fill" style="color:#f59e0b"></i> <strong>${escapeHtml(d.model || 'Gemini 1.5 Flash')}</strong></span>
                 <span><i class="ri-flashlight-line" style="color:#f59e0b"></i> ${(d.latency_ms/1000).toFixed(1)}s</span>
                 <span><i class="ri-cpu-line" style="color:#6366f1"></i> ${d.token_usage?.total_tokens || 0} tokens</span>
-                <span><i class="ri-money-dollar-circle-line" style="color:#10b981"></i> ${d.cost_estimate?.formatted || '~3.5 ₫'}</span>
+                <span><i class="ri-money-dollar-circle-line" style="color:#10b981"></i> ${escapeHtml(d.cost_estimate?.formatted || '~3.5 ₫')}</span>
             </div>`;
-            contentBox.innerHTML = metricsHtml + `<div>${escapeHtml(d.advice).replace(/\n/g, '<br>')}</div>`;
+            contentBox.innerHTML = metricsHtml + `<div style="line-height:1.65;font-size:0.82rem;color:var(--text);margin-top:0.4rem;text-align:left">${formatAiAdvice(d.advice)}</div>`;
             contentBox.style.display = 'block';
             toast('AI đã phân tích xong chi tiêu của bạn!', 'success');
         } else {
@@ -3872,7 +3890,7 @@ async function requestAiSpendingSummary(){
     } catch(e){
         loadingBox.style.display = 'none';
         if(btn) btn.disabled = false;
-        toast('Lỗi kết nối khi gọi AI: ' + e.message, 'error');
+        toast('Lỗi khi gọi AI: ' + e.message, 'error');
     }
 }
 
