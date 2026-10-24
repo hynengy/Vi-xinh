@@ -1,15 +1,16 @@
-# Core Web Framework
+# Core Web Framework & Production WSGI Server
 Flask==3.0.3
 Flask-Cors==4.0.1
 Werkzeug==3.0.3
+gunicorn==21.2.0
 
-# Image Processing & Computer Vision
-opencv-python>=4.8.0
+# Image Processing & Computer Vision (Headless for Cloud Linux & Docker)
+opencv-python-headless>=4.8.0
 Pillow>=10.0.0
 numpy>=1.24.0
 
-# LLM API (Hướng 3): Google Gemini Multimodal REST API (gọi qua urllib chuẩn, tối ưu độ trễ & chi phí)
-
-# Testing & Quality Assurance (Toàn nhóm)
-pytest>=8.0.0
+# LLM API & Network
 requests>=2.31.0
+
+# Testing & Quality Assurance
+pytest>=8.0.0

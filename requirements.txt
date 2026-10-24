@@ -1,0 +1,16 @@
+# Core Web Framework & Production WSGI Server
+Flask==3.0.3
+Flask-Cors==4.0.1
+Werkzeug==3.0.3
+gunicorn==21.2.0
+
+# Image Processing & Computer Vision (Headless for Cloud Linux & Docker)
+opencv-python-headless>=4.8.0
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# LLM API & Network
+requests>=2.31.0
+
+# Testing & Quality Assurance
+pytest>=8.0.0
