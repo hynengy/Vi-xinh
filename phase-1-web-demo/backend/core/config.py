@@ -9,10 +9,21 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BACKEND_DIR = BASE_DIR / "backend"
 FRONTEND_DIR = BASE_DIR / "frontend"
-if os.environ.get("VERCEL"):
-    DATA_DIR = Path("/tmp/data")
+import tempfile
+
+if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    DATA_DIR = Path(tempfile.gettempdir()) / "data"
 else:
-    DATA_DIR = BASE_DIR.parent / "data"
+    try:
+        DATA_DIR = BASE_DIR.parent / "data"
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        DATA_DIR = Path(tempfile.gettempdir()) / "data"
+
+try:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+except Exception:
+    pass
 
 
 def _load_env_file() -> None:
@@ -37,7 +48,7 @@ def _load_env_file() -> None:
 
 _load_env_file()
 
-# Google Cloud Vision (OCR duy nhất của hệ thống)
+# Google Cloud Vision & Gemini API Key
 GOOGLE_VISION_API_KEY = os.environ.get("GOOGLE_VISION_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
 
 # Upload & Data storage directories
@@ -45,7 +56,11 @@ UPLOAD_FOLDER = DATA_DIR / "uploads"
 try:
     UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 except Exception:
-    pass
+    UPLOAD_FOLDER = Path(tempfile.gettempdir()) / "uploads"
+    try:
+        UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
 
 DB_PATH = DATA_DIR / "vixinh.sqlite3"
 

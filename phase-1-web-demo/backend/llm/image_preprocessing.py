@@ -13,7 +13,10 @@ Mô tả nhiệm vụ:
 =============================================================================
 """
 
-import cv2
+try:
+    import cv2
+except Exception:
+    cv2 = None
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional
@@ -31,6 +34,11 @@ class ImagePreprocessor:
         path_obj = Path(image_path)
         if not path_obj.exists():
             raise FileNotFoundError(f"Không tìm thấy file ảnh tại: {image_path}")
+
+        if cv2 is None:
+            from PIL import Image
+            with Image.open(str(path_obj)) as im:
+                return np.array(im.convert("RGB"))
 
         img_bytes = np.fromfile(str(path_obj), dtype=np.uint8)
         img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)

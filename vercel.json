@@ -2,7 +2,7 @@
   "cleanUrls": true,
   "functions": {
     "api/index.py": {
-      "includeFiles": "phase-1-web-demo/backend/**"
+      "includeFiles": "phase-1-web-demo/**"
     }
   },
   "rewrites": [

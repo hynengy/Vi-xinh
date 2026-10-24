@@ -337,11 +337,11 @@ class GoogleMLKitEngine:
 
         # Các model hỗ trợ generateContent của Google AI Studio (ưu tiên model phản hồi siêu nhanh)
         models = (
-            "gemini-3.5-flash-lite",
             "gemini-3.5-flash",
-            "gemini-3.8-flash",
-            "gemini-3.7-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
             "gemini-flash-latest",
+            "gemini-1.5-flash",
         )
         last_err = None
         for model in models:
@@ -417,7 +417,7 @@ class GoogleMLKitEngine:
                 "contents": [{"parts": [{"text": full_prompt}]}],
                 "generationConfig": {"temperature": 0.4}
             }
-            models = ("gemini-3.5-flash-lite", "gemini-flash-latest")
+            models = ("gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-flash-latest")
             for model in models:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
                 req = urllib.request.Request(

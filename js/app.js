@@ -1417,7 +1417,14 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
         if (statEl) statEl.textContent = 'Google Vision đang bóc tách ký tự và bảng giá...';
 
         const res = await fetch('/api/receipts/upload', { method: 'POST', body: formData });
-        if (!res.ok) throw new Error(`Lỗi máy chủ HTTP ${res.status}`);
+        if (!res.ok) {
+            let errMsg = `Lỗi máy chủ HTTP ${res.status}`;
+            try {
+                const errJson = await res.json();
+                if (errJson && errJson.error) errMsg = errJson.error;
+            } catch (_) {}
+            throw new Error(errMsg);
+        }
         const data = await res.json();
 
         if (fillEl) fillEl.style.width = '100%';

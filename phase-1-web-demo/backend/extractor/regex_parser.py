@@ -1178,10 +1178,9 @@ class ReceiptParser:
                 if abs(total_amount - expected_total) > 1000 and abs(subtotal - items_sum) < 1000:
                     total_amount = expected_total
             else:
-                # Không có chiết khấu và thuế:
-                # Nếu total_amount < items_sum thì tổng đơn không thể nhỏ hơn tổng các món đã mua
-                if total_amount < items_sum:
-                    total_amount = items_sum
+                # Nếu total_amount < items_sum: có chiết khấu/ưu đãi trực tiếp trên tổng bill (VD: Hóa đơn VIP)
+                if total_amount > 0 and total_amount < items_sum:
+                    discount = items_sum - total_amount
                     subtotal = items_sum
                 # Nếu total_amount lệch quá nhiều so với items_sum (nhầm tiền mặt khách đưa)
                 elif len(line_items) >= 2 and total_amount > items_sum * 1.4:

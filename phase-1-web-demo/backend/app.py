@@ -112,26 +112,44 @@ def upload_receipt():
     Tải ảnh hóa đơn lên và trích xuất cấu trúc bằng Gemini Multimodal AI.
     Returns: { image_url, raw_text, merchant_name, amount, transaction_date, items[], notes, engine }
     """
-    if "receipt" not in request.files:
-        return jsonify({"error": "Không tìm thấy file ảnh tải lên!"}), 400
+    try:
+        if "receipt" not in request.files:
+            return jsonify({"error": "Không tìm thấy file ảnh tải lên!"}), 400
 
-    file = request.files["receipt"]
-    if file.filename == "":
-        return jsonify({"error": "Chưa chọn file!"}), 400
+        file = request.files["receipt"]
+        if file.filename == "":
+            return jsonify({"error": "Chưa chọn file!"}), 400
 
-    if not allowed_file(file.filename):
-        return jsonify({"error": "Định dạng file không được hỗ trợ!"}), 400
+        if not allowed_file(file.filename):
+            return jsonify({"error": "Định dạng file không được hỗ trợ!"}), 400
 
-    ext = get_safe_ext(file.filename)
-    saved_filename = f"{uuid.uuid4().hex}.{ext}"
-    saved_path = UPLOAD_FOLDER / saved_filename
-    file.save(str(saved_path))
+        ext = get_safe_ext(file.filename)
+        saved_filename = f"{uuid.uuid4().hex}.{ext}"
 
-    # Chạy quy trình OCR & bóc tách cấu trúc
-    result = pipeline.process_receipt_image(saved_path)
-    result["file_name"] = saved_filename
+        # Đảm bảo thư mục lưu trữ luôn tồn tại kể cả trên môi trường Serverless (Vercel) hoặc Docker
+        try:
+            UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+            saved_path = UPLOAD_FOLDER / saved_filename
+            file.save(str(saved_path))
+        except Exception as save_err:
+            import tempfile
+            tmp_uploads = Path(tempfile.gettempdir()) / "uploads"
+            tmp_uploads.mkdir(parents=True, exist_ok=True)
+            saved_path = tmp_uploads / saved_filename
+            file.save(str(saved_path))
 
-    return jsonify(result)
+        # Chạy quy trình OCR & bóc tách cấu trúc
+        result = pipeline.process_receipt_image(saved_path)
+        result["file_name"] = saved_filename
+
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Lỗi máy chủ khi quét hóa đơn: {str(e)}", exc_info=True)
+        return jsonify({
+            "error": f"Lỗi máy chủ khi xử lý hóa đơn: {str(e)}",
+            "error_code": "server_error",
+            "success": False
+        }), 500
 
 
 @app.route("/api/receipts/upload-image", methods=["POST"])
@@ -139,23 +157,34 @@ def upload_receipt_image_only():
     """
     Chỉ tải ảnh lên máy chủ để lấy URL lưu trữ (dành cho client-side Google ML Kit OCR).
     """
-    if "receipt" not in request.files:
-        return jsonify({"error": "Không tìm thấy file ảnh!"}), 400
+    try:
+        if "receipt" not in request.files:
+            return jsonify({"error": "Không tìm thấy file ảnh!"}), 400
 
-    file = request.files["receipt"]
-    if file.filename == "" or not allowed_file(file.filename):
-        return jsonify({"error": "File ảnh không hợp lệ!"}), 400
+        file = request.files["receipt"]
+        if file.filename == "" or not allowed_file(file.filename):
+            return jsonify({"error": "File ảnh không hợp lệ!"}), 400
 
-    ext = get_safe_ext(file.filename)
-    saved_filename = f"{uuid.uuid4().hex}.{ext}"
-    saved_path = UPLOAD_FOLDER / saved_filename
-    file.save(str(saved_path))
+        ext = get_safe_ext(file.filename)
+        saved_filename = f"{uuid.uuid4().hex}.{ext}"
+        try:
+            UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+            saved_path = UPLOAD_FOLDER / saved_filename
+            file.save(str(saved_path))
+        except Exception:
+            import tempfile
+            tmp_uploads = Path(tempfile.gettempdir()) / "uploads"
+            tmp_uploads.mkdir(parents=True, exist_ok=True)
+            saved_path = tmp_uploads / saved_filename
+            file.save(str(saved_path))
 
-    return jsonify({
-        "success": True,
-        "image_url": f"/uploads/{saved_filename}",
-        "file_name": saved_filename
-    })
+        return jsonify({
+            "success": True,
+            "image_url": f"/uploads/{saved_filename}",
+            "file_name": saved_filename
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "success": False}), 500
 
 
 @app.route("/api/receipts/parse-text", methods=["POST"])
