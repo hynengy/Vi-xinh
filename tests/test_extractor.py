@@ -309,5 +309,57 @@ def test_received_cash_not_included_in_total_or_items():
     assert len(res["items"]) == 2
 
 
+def test_kiotviet_42k_sample_receipt():
+    """Kiểm tra hóa đơn mẫu KiotViet 42k không bị tính số HĐ, ngày giờ, header bảng vào món ăn."""
+    sample_path = Path(__file__).resolve().parent.parent / "data" / "sample_receipts" / "receipt_kiotviet_42k.ocr.txt"
+    raw_text = sample_path.read_text(encoding="utf-8")
+    res = ReceiptParser.parse_all(raw_text)
+
+    assert res["amount"] == 42000.0
+    assert res["invoice_no"] == "HD729652"
+    assert res["transaction_date"] == "2026-10-22"
+    assert res["transaction_time"] == "14:02"
+
+    item_names = [it["name"].lower() for it in res["items"]]
+    for bad_kw in ["hđ", "hd729652", "ngày", "22/10/2026", "14:02", "khách hàng", "khách lẻ", "tên hàng", "kiotviet", "cảm ơn"]:
+        assert not any(bad_kw in n for n in item_names), f"Found metadata '{bad_kw}' in items: {item_names}"
+
+    total_items_amount = sum(it["amount"] for it in res["items"])
+    assert total_items_amount == 40000.0
+
+
+def test_cafe_receipt_ignores_wifi_pass_phone_date_time():
+    """Kiểm tra hóa đơn quán cafe có wifi, mật khẩu, hotline, ngày giờ không bị parse thành món ăn hay tổng tiền."""
+    raw_text = """
+    THE COFFEE HOUSE
+    Wifi: TheCoffeeHouse
+    Pass: 12345678
+    Hotline: 0912.888.999
+    Ngày: 24/10/2026 15:30
+    Bàn số: 05
+    Thu ngân: Linh
+    1. Trà đào cam sả 55.000
+    2. Cà phê sữa đá 45.000
+    Tổng thanh toán: 100.000
+    Tiền đã nhận: 200.000
+    Tiền thối lại: 100.000
+    Cảm ơn và hẹn gặp lại!
+    """
+    res = ReceiptParser.parse_all(raw_text)
+    assert res["amount"] == 100000.0
+    assert res["hotline"] == "0912.888.999"
+    assert res["transaction_date"] == "2026-10-24"
+    assert res["transaction_time"] == "15:30"
+
+    item_names = [it["name"].lower() for it in res["items"]]
+    for bad in ["wifi", "pass", "12345678", "0912", "hotline", "ngày", "24/10/2026", "15:30", "bàn", "thu ngân", "tiền đã nhận", "tiền thối", "cảm ơn"]:
+        assert not any(bad in n for n in item_names), f"Found '{bad}' in item names: {item_names}"
+
+    assert len(res["items"]) == 2
+    assert res["items"][0]["amount"] == 55000.0
+    assert res["items"][1]["amount"] == 45000.0
+
+
+
 
 

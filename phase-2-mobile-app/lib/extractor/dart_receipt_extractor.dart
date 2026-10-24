@@ -61,27 +61,39 @@ class DartReceiptExtractor {
         .toList();
   }
 
+  static bool isTimeStr(String s) {
+    final trimmed = s.trim();
+    if (RegExp(r'^(?:[01]?\d|2[0-3])[:.][0-5]\d(?::[0-5]\d)?$').hasMatch(trimmed)) return true;
+    if (RegExp(r'\b(?:[01]?\d|2[0-3])[:.][0-5]\d\b').hasMatch(trimmed)) return true;
+    return false;
+  }
+
+  static bool isDateStr(String s) {
+    final trimmed = s.trim();
+    if (RegExp(r'\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b').hasMatch(trimmed)) return true;
+    if (RegExp(r'^(?:202[3-9]|2030)$').hasMatch(trimmed)) return true;
+    return false;
+  }
+
   static bool isPhoneNumberStr(String s) {
+    final trimmed = s.trim();
+    if (RegExp(r'\b(?:0[1-9]\d{1,2}[.\s-]?\d{3,4}[.\s-]?\d{3,4}|1[89]00[.\s-]?\d{4})\b').hasMatch(trimmed)) {
+      return true;
+    }
     final digits = s.replaceAll(RegExp(r'[^\d]'), '');
-    if (digits.length == 10 &&
-        (digits.startsWith('03') ||
-            digits.startsWith('05') ||
-            digits.startsWith('07') ||
-            digits.startsWith('08') ||
-            digits.startsWith('09'))) {
-      return true;
-    }
-    if (digits.length == 11 && digits.startsWith('02')) return true;
-    if ((digits.length == 8 || digits.length == 10) &&
-        (digits.startsWith('1800') || digits.startsWith('1900'))) {
-      return true;
-    }
+    if ((digits.length == 10 || digits.length == 11) && digits.startsWith('0')) return true;
+    if ((digits.length == 8 || digits.length == 10) && (digits.startsWith('1800') || digits.startsWith('1900'))) return true;
+    if (digits.length >= 9 && digits.startsWith('84')) return true;
     return false;
   }
 
   static double parseAmountStr(String s) {
     if (s.isEmpty) return 0.0;
-    if (isPhoneNumberStr(s)) return 0.0;
+    final trimmed = s.trim();
+    if (isPhoneNumberStr(trimmed) || isTimeStr(trimmed) || isDateStr(trimmed)) return 0.0;
+    if (trimmed == '2023' || trimmed == '2024' || trimmed == '2025' || trimmed == '2026' || trimmed == '2027' || trimmed == '2028' || trimmed == '2029' || trimmed == '2030') {
+      return 0.0;
+    }
 
     var cleaned = s.replaceAll(RegExp(r'[^\d.,]'), '').trim();
     if (cleaned.isEmpty) return 0.0;
@@ -106,6 +118,7 @@ class DartReceiptExtractor {
     }
 
     final val = double.tryParse(cleaned) ?? 0.0;
+    if (val < 1000 || val > 2000000000) return 0.0;
     return val;
   }
 
@@ -515,9 +528,187 @@ class DartReceiptExtractor {
 
     bool isSkipLine(String l) {
       final low = l.toLowerCase().trim();
-      if (ignoredWords.any((w) => low.contains(w))) return true;
-      if (RegExp(r'\b(s[đd]t|hotline|tel|phone|ng[àa]y|date|gi[ờo])\s*[:\s]').hasMatch(low)) return true;
+      if (low.isEmpty) return true;
+
+      // 1. Số điện thoại & Hotline
+      if (low.contains('hotline') ||
+          low.contains('hotine') ||
+          low.contains('điện thoại') ||
+          low.contains('dien thoai') ||
+          low.contains('tel') ||
+          low.contains('phone') ||
+          low.contains('sđt') ||
+          low.contains('sdt') ||
+          low.contains('cskh') ||
+          low.contains('liên hệ') ||
+          low.contains('lien he') ||
+          low.contains('zalo')) {
+        return true;
+      }
+      if (RegExp(r'\b(?:0[1-9]\d{1,2}[.\s-]?\d{3,4}[.\s-]?\d{3,4}|1[89]00[.\s-]?\d{4})\b').hasMatch(low)) {
+        return true;
+      }
       if (isPhoneNumberStr(l)) return true;
+
+      // 2. Wifi, Mật khẩu, Password
+      if (low.contains('wifi') ||
+          low.contains('wi-fi') ||
+          low.contains('pass') ||
+          low.contains('password') ||
+          low.contains('mật khẩu') ||
+          low.contains('mat khau') ||
+          low.contains('mk:') ||
+          low.contains('mk ') ||
+          low.contains('pw:') ||
+          low.contains('pw ')) {
+        return true;
+      }
+
+      // 3. Ngày tháng, Giờ giấc
+      if (low.contains('ngày') ||
+          low.contains('ngay') ||
+          low.contains('date') ||
+          low.contains('giờ vào') ||
+          low.contains('gio vao') ||
+          low.contains('giờ ra') ||
+          low.contains('gio ra') ||
+          low.contains('in lúc') ||
+          low.contains('lập lúc') ||
+          low.contains('thời gian') ||
+          low.contains('thoi gian')) {
+        return true;
+      }
+      if (RegExp(r'\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b').hasMatch(low)) {
+        return true;
+      }
+      if (RegExp(r'\b(?:gi[ờo]|time)\s*[:\s]').hasMatch(low)) {
+        return true;
+      }
+
+      // 4. Số hóa đơn, Mã phiếu, Hóa đơn
+      if (low.contains('số hđ') ||
+          low.contains('so hd') ||
+          low.contains('sđ hd') ||
+          low.contains('sd hd') ||
+          low.contains('mã hđ') ||
+          low.contains('ma hd') ||
+          low.contains('mã bill') ||
+          low.contains('số bill') ||
+          low.contains('số phiếu') ||
+          low.contains('so phieu') ||
+          low.contains('hóa đơn') ||
+          low.contains('hoá đơn') ||
+          low.contains('receipt') ||
+          low.contains('invoice') ||
+          low.contains('order no') ||
+          RegExp(r'\b(?:hd\d+|bill\d+|inv[a-z0-9]+)\b', caseSensitive: false).hasMatch(low)) {
+        return true;
+      }
+
+      // 5. Khách hàng, Thu ngân, Nhân viên, Bàn
+      if (low.contains('khách hàng') ||
+          low.contains('khach hang') ||
+          low.contains('khách lẻ') ||
+          low.contains('khach le') ||
+          low.contains('thu ngân') ||
+          low.contains('thu ngan') ||
+          low.contains('cashier') ||
+          low.contains('nhân viên') ||
+          low.contains('nhan vien') ||
+          low.contains('nv bán hàng') ||
+          low.contains('nv:') ||
+          low.contains('nv ') ||
+          low.contains('bàn số') ||
+          low.contains('ban so') ||
+          low.contains('bàn:') ||
+          low.contains('ban:') ||
+          low.contains('phòng vip') ||
+          low.contains('khu vực') ||
+          low.contains('trong nhà') ||
+          low.contains('mang về')) {
+        return true;
+      }
+
+      // 6. Địa chỉ, MST, STK
+      if (low.contains('địa chỉ') ||
+          low.contains('dia chi') ||
+          low.contains('đ/c') ||
+          low.contains('đc:') ||
+          low.contains('dc:') ||
+          low.contains('address') ||
+          low.contains('mst') ||
+          low.contains('mã số thuế') ||
+          low.contains('stk:') ||
+          low.contains('stk ') ||
+          low.contains('tài khoản')) {
+        return true;
+      }
+
+      // 7. Header bảng
+      if (low.contains('tên hàng') ||
+          low.contains('hàng hóa') ||
+          low.contains('hang hoa') ||
+          low.contains('thực đơn') ||
+          low.contains('thuc don') ||
+          low.contains('mặt hàng') ||
+          low.contains('t.tiền') ||
+          low.contains('t.tien') ||
+          (low.contains('đơn giá') && low.contains('thành tiền')) ||
+          (low.contains('đơn giá') && low.contains('sl')) ||
+          (low.contains('don gia') && low.contains('thanh tien'))) {
+        return true;
+      }
+
+      // 8. Dòng thanh toán, tiền đã nhận, tiền thừa, tổng
+      if (low.contains('tổng cộng') ||
+          low.contains('tong cong') ||
+          low.contains('tổng tiền') ||
+          low.contains('tong tien') ||
+          low.contains('tổng thanh toán') ||
+          low.contains('tong thanh toan') ||
+          low.contains('tạm tính') ||
+          low.contains('tam tinh') ||
+          low.contains('thành tiền') ||
+          low.contains('thanh tien') ||
+          low.contains('khách phải trả') ||
+          low.contains('khach phai tra') ||
+          low.contains('cần thanh toán') ||
+          low.contains('chiết khấu') ||
+          low.contains('chiet khau') ||
+          low.contains('giảm giá') ||
+          low.contains('khuyến mãi') ||
+          low.contains('thuế') ||
+          low.contains('vat') ||
+          low.contains('tiền đã nhận') ||
+          low.contains('đã nhận') ||
+          low.contains('tiền nhận') ||
+          low.contains('khách đưa') ||
+          low.contains('tiền khách đưa') ||
+          low.contains('tiền mặt') ||
+          low.contains('chuyển khoản') ||
+          low.contains('quẹt thẻ') ||
+          low.contains('tiền thừa') ||
+          low.contains('tiền thối') ||
+          low.contains('trả lại') ||
+          low.contains('thối lại')) {
+        return true;
+      }
+
+      // 9. Lời chào, footer
+      if (low.contains('cảm ơn') ||
+          low.contains('cam on') ||
+          low.contains('hẹn gặp lại') ||
+          low.contains('chúc quý khách') ||
+          low.contains('thank you') ||
+          low.contains('see you again') ||
+          low.contains('kiotviet') ||
+          low.contains('thaihoamart') ||
+          low.contains('phần mềm') ||
+          low.contains('powered by')) {
+        return true;
+      }
+
+      if (ignoredWords.any((w) => low.contains(w))) return true;
       return false;
     }
 
@@ -593,6 +784,19 @@ class DartReceiptExtractor {
           }
         }
 
+        // End price and quantity match: e.g. "3.000 1"
+        final endPriceQtyMatch = RegExp(r'(\d{1,3}(?:[.,]\d{3})+|\d{4,9})\s+(\d+(?:[.,]\d+)?)$').firstMatch(rawName);
+        if (endPriceQtyMatch != null) {
+          final upCand = parseAmountStr(endPriceQtyMatch.group(1)!);
+          final qCand = double.tryParse(endPriceQtyMatch.group(2)!.replaceAll(',', '.'));
+          if (upCand >= 100 && qCand != null && qCand > 0 && qCand < 500) {
+            unitPrice = upCand;
+            qtyNum = qCand;
+            qtyStr = 'SL: ${qCand.truncate() == qCand ? qCand.toInt() : qCand}';
+            rawName = rawName.substring(0, endPriceQtyMatch.start).trim();
+          }
+        }
+
         unitPrice ??= (qtyNum > 0 ? (amt / qtyNum) : amt);
         if (qtyStr == null || qtyStr.isEmpty) {
           qtyStr = 'SL: ${qtyNum.truncate() == qtyNum ? qtyNum.toInt() : qtyNum}';
@@ -605,14 +809,25 @@ class DartReceiptExtractor {
             .trim();
 
         final lowerClean = cleanName.toLowerCase();
-        final isPaymentWord = [
-          'tiền đã nhận', 'tien da nhan', 'đã nhận', 'da nhan', 'tiền nhận', 'tien nhan',
-          'số tiền nhận', 'nhận của khách', 'tiền khách đưa', 'tien khach dua', 'khách đưa', 'khach dua',
-          'tiền đưa', 'tien dua', 'tiền khách trả', 'khách trả', 'tiền trả lại', 'trả lại',
-          'tiền thừa', 'tien thua', 'tiền thối', 'tien thoi', 'thối lại', 'thoi lai',
-          'tổng cộng', 'tổng tiền', 'thanh toán', 'tiền mặt', 'cần thanh toán', 'khách phải trả'
+        final isMetadataOrPayment = [
+          'hotline', 'điện thoại', 'dien thoai', 'tel', 'phone', 'sđt', 'sdt', 'cskh', 'zalo',
+          'wifi', 'wi-fi', 'pass', 'password', 'mật khẩu', 'mat khau', 'mk', 'pw',
+          'ngày', 'ngay', 'date', 'giờ', 'gio', 'time', 'tháng', 'năm', 'thời gian',
+          'số hđ', 'so hd', 'mã hđ', 'ma hd', 'mã bill', 'số bill', 'số phiếu', 'so phieu', 'hóa đơn', 'hoá đơn',
+          'khách hàng', 'khách lẻ', 'thu ngân', 'cashier', 'nhân viên', 'bàn', 'trong nhà', 'mang về',
+          'địa chỉ', 'mst', 'stk', 'tài khoản', 'ngân hàng',
+          'tên hàng', 'hàng hóa', 'thực đơn', 'đơn giá', 'thành tiền', 't.tiền',
+          'tổng cộng', 'tổng tiền', 'tổng thanh toán', 'thanh toán', 'tiền mặt', 'chuyển khoản',
+          'tiền đã nhận', 'đã nhận', 'tiền nhận', 'khách đưa', 'tiền khách đưa', 'khách trả', 'tiền khách trả',
+          'tiền thừa', 'tiền thối', 'thối lại', 'trả lại', 'tiền trả lại',
+          'cảm ơn', 'hẹn gặp lại', 'chúc quý khách', 'thank you', 'kiotviet', 'thaihoamart', 'phần mềm'
         ].any((pw) => lowerClean.contains(pw));
-        if (isPaymentWord) {
+        if (isMetadataOrPayment) {
+          i++;
+          continue;
+        }
+
+        if (amt >= 2023 && amt <= 2030) {
           i++;
           continue;
         }
@@ -620,7 +835,20 @@ class DartReceiptExtractor {
         if (cleanName.length >= 4 &&
             RegExp(r'[aeiouyáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]', caseSensitive: false).hasMatch(cleanName)) {
           final icon = _detectIcon(cleanName.toLowerCase());
-          if (!items.any((it) => it.name.toLowerCase() == cleanName.toLowerCase())) {
+          final existingIdx = items.indexWhere((it) => it.name.toLowerCase() == cleanName.toLowerCase());
+          if (existingIdx != -1) {
+            final existing = items[existingIdx];
+            final newQty = existing.quantity + qtyNum;
+            final newAmt = existing.amount + amt;
+            items[existingIdx] = LineItem(
+              name: existing.name,
+              amount: newAmt,
+              quantity: newQty,
+              unitPrice: existing.unitPrice,
+              icon: existing.icon,
+              consumption: 'SL: ${newQty.truncate() == newQty ? newQty.toInt() : newQty}',
+            );
+          } else {
             items.add(LineItem(
               name: cleanName,
               amount: amt,

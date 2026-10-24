@@ -183,5 +183,61 @@ void main() {
       expect(tx.amount, 85000.0);
       expect(tx.lineItems.length, 2);
     });
+
+    test('parseAll ignores wifi, pass, phone, date and time metadata from line items', () {
+      const rawText = '''
+        THE COFFEE HOUSE
+        Wifi: TheCoffeeHouse
+        Pass: 12345678
+        Hotline: 0912.888.999
+        Ngày: 24/10/2026 15:30
+        Bàn số: 05
+        Thu ngân: Linh
+        1. Trà đào cam sả 55.000
+        2. Cà phê sữa đá 45.000
+        Tổng thanh toán: 100.000
+        Tiền đã nhận: 200.000
+        Tiền thối lại: 100.000
+        Cảm ơn và hẹn gặp lại!
+      ''';
+      final tx = DartReceiptExtractor.parseAll(rawText);
+      expect(tx.amount, 100000.0);
+      expect(tx.lineItems.length, 2);
+      final names = tx.lineItems.map((it) => it.name.toLowerCase()).toList();
+      for (final bad in ['wifi', 'pass', '12345678', '0912', 'hotline', 'ngày', '24/10', '15:30', 'bàn', 'thu ngân', 'tiền đã nhận', 'tiền thối', 'cảm ơn']) {
+        expect(names.any((n) => n.contains(bad)), isFalse);
+      }
+      expect(tx.lineItems[0].amount, 55000.0);
+      expect(tx.lineItems[1].amount, 45000.0);
+    });
+
+    test('parseAll handles kiotviet 42k receipt format without metadata in line items', () {
+      const rawText = '''
+HÓA ĐƠN BÁN HÀNG
+Số HĐ: HD729652  Ngày: 22/10/2026 14:02
+Khách hàng: Khách lẻ
+Tên hàng hóa  Đơn giá  SL  T.Tiền
+Hổ Vằn Tăm Cay Đen  3.000  1  3.000
+Các Loại Ăn Vặt 3k  3.000  1  3.000
+Các Loại Ăn Vặt 3k  3.000  1  3.000
+Các Loại Ăn Vặt 3k  3.000  1  3.000
+Các Loại Ăn Vặt 3k  3.000  1  3.000
+Tăng Lực 247 chai  10.000  1  10.000
+SNOW BABY Kem ốc quế  15.000  1  15.000
+Tổng tiền hàng: 42.000
+Chiết khấu: 0
+Tổng thanh toán: 42.000
+(Bốn mươi hai nghìn đồng chẵn)
+KiotViet - Thaihoamart
+Cảm ơn và hẹn gặp lại!
+      ''';
+      final tx = DartReceiptExtractor.parseAll(rawText);
+      expect(tx.amount, 42000.0);
+      final names = tx.lineItems.map((it) => it.name.toLowerCase()).toList();
+      for (final bad in ['hđ', 'hd729652', 'ngày', '22/10', '14:02', 'khách hàng', 'khách lẻ', 'tên hàng', 'kiotviet', 'cảm ơn']) {
+        expect(names.any((n) => n.contains(bad)), isFalse);
+      }
+      expect(tx.lineItems.isNotEmpty, isTrue);
+    });
   });
 }
