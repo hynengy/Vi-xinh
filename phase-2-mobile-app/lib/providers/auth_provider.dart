@@ -58,7 +58,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> loginDemo() async {
-    final found = await _db.loginUser('demo@vixinh.vn', '123456') ?? await _db.getUserById(1);
+    final found = await _db.getUserById(1);
     if (found == null) return false;
     await _persistSession(found);
     return true;

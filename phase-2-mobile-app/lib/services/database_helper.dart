@@ -123,14 +123,6 @@ class DatabaseHelper {
           'phone': '0342396910',
           'password': '123456',
         });
-        await db.insert('users', {
-          'id': 2,
-          'username': 'demo',
-          'full_name': 'Người Dùng Mẫu',
-          'email': 'demo@vixinh.vn',
-          'phone': '0912345678',
-          'password': '123456',
-        });
       }
     } catch (_) {}
   }

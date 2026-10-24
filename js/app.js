@@ -20,27 +20,27 @@ const S = {
     }
 };
 
-const SEED_USERS = [
-    { id: 1, name: 'Nguyễn Thúy Hiền', full_name: 'Nguyễn Thúy Hiền', email: 'user1@vixinh.vn', phone: '0912345678', password: 'password123', pw: 'password123', avatar: 'assets/logo.jpg' },
-    { id: 2, name: 'Lê Thị Dịu', full_name: 'Lê Thị Dịu', email: 'diu@vixinh.vn', phone: '0987654321', password: 'password123', pw: 'password123', avatar: 'assets/logo.jpg' },
-    { id: 3, name: 'Lê Tiến Quân', full_name: 'Lê Tiến Quân', email: 'quan@vixinh.vn', phone: '0934567890', password: 'password123', pw: 'password123', avatar: 'assets/logo.jpg' },
-    { id: 4, name: 'Lê Ngọc Duy', full_name: 'Lê Ngọc Duy', email: 'duy@vixinh.vn', phone: '0903112233', password: 'password123', pw: 'password123', avatar: 'assets/logo.jpg' },
-    { id: 5, name: 'Nguyễn Việt Anh', full_name: 'Nguyễn Việt Anh', email: 'vietanh@vixinh.vn', phone: '0978123456', password: 'password123', pw: 'password123', avatar: 'assets/logo.jpg' }
-];
+const SEED_USERS = [];
 
 function getRegisteredUsers(){
     try {
         const raw = localStorage.getItem('vx_registered_users');
-        const list = raw ? JSON.parse(raw) : [];
-        const merged = [...SEED_USERS];
-        for(let u of list){
-            const idx = merged.findIndex(x => (u.email && x.email === u.email) || (u.phone && x.phone === u.phone));
-            if(idx >= 0) merged[idx] = u;
-            else merged.push(u);
+        if(raw){
+            const list = JSON.parse(raw);
+            if(Array.isArray(list)){
+                // Dọn sạch các tài khoản mẫu cũ (@vixinh.vn, testreal...) nếu còn sót trong localStorage
+                const cleaned = list.filter(u => {
+                    const em = (u.email || '').toLowerCase();
+                    return !em.endsWith('@vixinh.vn') && em !== 'hien@vixinh' && !em.startsWith('user1@') && em !== 'testreal@gmail.com';
+                });
+                if(cleaned.length !== list.length){
+                    localStorage.setItem('vx_registered_users', JSON.stringify(cleaned));
+                }
+                return cleaned;
+            }
         }
-        return merged;
     } catch(e){}
-    return SEED_USERS;
+    return [];
 }
 
 function saveRegisteredUser(u, password){
@@ -443,17 +443,22 @@ async function sendForgotOtpCode(){
 
         if(res.ok){
             const data = await res.json();
-            forgotOtpCode = data.otp;
-            document.getElementById('forgotOtpDisplayVal').textContent = data.otp;
-            document.getElementById('forgotOtpDisplayBox').style.display = 'block';
-            toast(`Mã OTP: ${data.otp}`, 'success');
+            if(data.real_email_sent){
+                forgotOtpCode = null;
+                document.getElementById('forgotOtpDisplayBox').style.display = 'none';
+                toast(`Mã OTP đã được gửi đến email ${contact}! Vui lòng kiểm tra hộp thư.`, 'success');
+            } else {
+                forgotOtpCode = data.otp;
+                document.getElementById('forgotOtpDisplayVal').textContent = data.otp;
+                document.getElementById('forgotOtpDisplayBox').style.display = 'block';
+                toast(`Mã OTP (Demo): ${data.otp}`, 'success');
+            }
         } else {
             const data = await res.json();
-            const fakeOtp = Math.floor(100000 + Math.random() * 900000).toString();
-            forgotOtpCode = fakeOtp;
-            document.getElementById('forgotOtpDisplayVal').textContent = fakeOtp;
-            document.getElementById('forgotOtpDisplayBox').style.display = 'block';
-            toast(data.error || `Mã OTP: ${fakeOtp}`, 'info');
+            toast(data.error || 'Không tìm thấy tài khoản gắn với thông tin này.', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Gửi mã';
+            return;
         }
 
         // Đếm ngược 60s
@@ -471,13 +476,32 @@ async function sendForgotOtpCode(){
         }, 1000);
 
     } catch(e) {
-        const fakeOtp = '889966';
-        forgotOtpCode = fakeOtp;
-        document.getElementById('forgotOtpDisplayVal').textContent = fakeOtp;
-        document.getElementById('forgotOtpDisplayBox').style.display = 'block';
-        toast(`Mã OTP: ${fakeOtp}`, 'success');
-        btn.disabled = false;
-        btn.textContent = 'Gửi lại mã';
+        const cleanContact = contact.replace(/\s+/g, '');
+        const regUsers = getRegisteredUsers();
+        const found = regUsers.some(x => x.email === contact || (x.phone && x.phone.replace(/\s+/g, '') === cleanContact));
+        if(found){
+            const fakeOtp = Math.floor(100000 + Math.random() * 900000).toString();
+            forgotOtpCode = fakeOtp;
+            document.getElementById('forgotOtpDisplayVal').textContent = fakeOtp;
+            document.getElementById('forgotOtpDisplayBox').style.display = 'block';
+            toast(`Mã OTP (Ngoại tuyến): ${fakeOtp}`, 'info');
+            let sec = 60;
+            clearInterval(forgotOtpTimer);
+            forgotOtpTimer = setInterval(()=>{
+                sec--;
+                if(sec <= 0){
+                    clearInterval(forgotOtpTimer);
+                    btn.disabled = false;
+                    btn.textContent = 'Gửi lại mã';
+                } else {
+                    btn.textContent = `${sec}s`;
+                }
+            }, 1000);
+        } else {
+            toast('Không tìm thấy tài khoản gắn với Email/SĐT này.', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Gửi mã';
+        }
     }
 }
 
@@ -526,22 +550,22 @@ async function handleResetPassword(e){
             toast(data.error || 'Mã xác thực không chính xác hoặc đã hết hạn.', 'error');
         }
     } catch(err) {
-        const isEmail = contact.includes('@');
-        const simulatedName = isEmail ? contact.split('@')[0] : `User_${contact.slice(-4)}`;
-        const u = {
-            id: Date.now(),
-            name: simulatedName,
-            full_name: simulatedName,
-            email: isEmail ? contact : `${contact}@vixinh.vn`,
-            phone: isEmail ? '0912 345 678' : contact,
-            avatar: 'assets/logo.jpg'
-        };
-        S.loggedIn = true;
-        S.user = u;
-        localStorage.setItem('vx_u', JSON.stringify(u));
-        closeForgotPwModal();
-        enterApp();
-        toast('Đặt lại mật khẩu thành công.', 'success');
+        const cleanContact = contact.replace(/\s+/g, '');
+        const regUsers = getRegisteredUsers();
+        const found = regUsers.find(x => x.email === contact || (x.phone && x.phone.replace(/\s+/g, '') === cleanContact));
+        if(found){
+            found.password = newPw;
+            found.pw = newPw;
+            localStorage.setItem('vx_registered_users', JSON.stringify(regUsers));
+            S.loggedIn = true;
+            S.user = found;
+            localStorage.setItem('vx_u', JSON.stringify(found));
+            closeForgotPwModal();
+            enterApp();
+            toast('Đặt lại mật khẩu thành công.', 'success');
+        } else {
+            toast('Không tìm thấy tài khoản để đặt lại mật khẩu.', 'error');
+        }
     } finally {
         btn.classList.remove('loading');
         document.getElementById('btnResetPwTxt').textContent = 'Đặt lại mật khẩu';
@@ -2855,19 +2879,19 @@ const THEME_NAMES = {
 };
 
 function renderSettings(){
-    if(!S.user) S.user=USERS[0];
+    if(!S.user) S.user = { name: 'Người dùng', full_name: 'Người dùng', phone: '', email: '', avatar: 'assets/logo.jpg' };
     const name = S.user.name||S.user.full_name||'Người dùng';
-    const phone = S.user.phone||'0912 345 678';
-    const email = S.user.email||'hien@vixinh.vn';
+    const phone = S.user.phone||'';
+    const email = S.user.email||'';
     
     const pn = document.getElementById('profileName');
     if(pn) pn.textContent = name;
     const pm = document.getElementById('profileMeta');
-    if(pm) pm.textContent = `${phone} · ${email}`;
+    if(pm) pm.textContent = [phone, email].filter(Boolean).join(' · ') || 'Chưa cập nhật thông tin';
     const pph = document.getElementById('profilePhone');
-    if(pph) pph.innerHTML = `<i class="ri-phone-line"></i> ${phone}`;
+    if(pph) pph.innerHTML = `<i class="ri-phone-line"></i> ${phone || 'Chưa có SĐT'}`;
     const pem = document.getElementById('profileEmail');
-    if(pem) pem.innerHTML = `<i class="ri-mail-line"></i> ${email}`;
+    if(pem) pem.innerHTML = `<i class="ri-mail-line"></i> ${email || 'Chưa có Email'}`;
     
     const pa=document.getElementById('profileAvatarImg');
     if(pa && S.user.avatar) pa.src=S.user.avatar;
@@ -2895,7 +2919,7 @@ function renderSettings(){
 }
 
 function openEditProfileModal(){
-    if(!S.user) S.user=USERS[0];
+    if(!S.user) S.user = { name: '', full_name: '', phone: '', email: '', avatar: 'assets/logo.jpg' };
     const name = S.user.name||S.user.full_name||'';
     const phone = S.user.phone||'';
     const email = S.user.email||'';
@@ -2995,7 +3019,7 @@ function makeEmojiAvatar(preset){
 
 function pickAvatarPreset(preset){
     const av = makeEmojiAvatar(preset);
-    if(!S.user) S.user=USERS[0];
+    if(!S.user) S.user = { name: 'Người dùng', full_name: 'Người dùng', phone: '', email: '', avatar: 'assets/logo.jpg' };
     S.user.avatar=av; S.user.preset=preset;
     localStorage.setItem('vx_u',JSON.stringify(S.user));
     const pa = document.getElementById('profileAvatarImg'); if(pa) pa.src=av;
@@ -3010,7 +3034,7 @@ function uploadAvatar(e){
     const f=e.target.files[0];if(!f)return;
     const r=new FileReader();
     r.onload=ev=>{
-        if(!S.user) S.user=USERS[0];
+        if(!S.user) S.user = { name: 'Người dùng', full_name: 'Người dùng', phone: '', email: '', avatar: 'assets/logo.jpg' };
         S.user.avatar=ev.target.result;
         localStorage.setItem('vx_u',JSON.stringify(S.user));
         document.getElementById('profileAvatarImg').src=ev.target.result;
@@ -3021,14 +3045,16 @@ function uploadAvatar(e){
 }
 
 function switchUser(email){
-    const u=USERS.find(x=>x.email===email);
-    if(!u)return;
-    S.user=JSON.parse(JSON.stringify(u));
-    localStorage.setItem('vx_u',JSON.stringify(S.user));
-    document.getElementById('uName').textContent=S.user.name;
-    const ha=document.getElementById('hdrAvatarImg');if(ha)ha.src=S.user.avatar;
+    const regUsers = getRegisteredUsers();
+    const u = regUsers.find(x => x.email === email);
+    if(!u) return;
+    S.user = JSON.parse(JSON.stringify(u));
+    localStorage.setItem('vx_u', JSON.stringify(S.user));
+    document.getElementById('uName').textContent = S.user.name;
+    const ha = document.getElementById('hdrAvatarImg');
+    if(ha) ha.src = S.user.avatar || 'assets/logo.jpg';
     renderSettings();
-    toast(`Đã chuyển sang tài khoản ${u.name}!`,'success');
+    toast(`Đã chuyển sang tài khoản ${u.name || u.full_name}!`, 'success');
 }
 
 // ===== DYNAMIC GROUP STATE MANAGEMENT =====
@@ -3844,7 +3870,21 @@ document.addEventListener('DOMContentLoaded',()=>{
     const savedTheme=localStorage.getItem('vx_theme')||'pink-gold';
     document.documentElement.setAttribute('data-theme',savedTheme);
     const s=localStorage.getItem('vx_u');
-    if(s){try{S.user=JSON.parse(s);S.loggedIn=true;enterApp()}catch(e){localStorage.removeItem('vx_u')}}
+    if(s){
+        try{
+            const parsed = JSON.parse(s);
+            const em = (parsed.email || '').toLowerCase();
+            if(em.endsWith('@vixinh.vn') || em === 'hien@vixinh' || em === 'testreal@gmail.com'){
+                localStorage.removeItem('vx_u');
+                localStorage.removeItem('vx_last_user');
+                localStorage.removeItem('vx_remembered_account');
+            } else {
+                S.user=parsed;
+                S.loggedIn=true;
+                enterApp();
+            }
+        }catch(e){localStorage.removeItem('vx_u')}
+    }
     // Hiệu ứng Splash Screen: tự động ẩn sau 1 giây, bảo đảm không bao giờ bị kẹt
     const splash = document.getElementById('appSplashScreen');
     if (splash) {

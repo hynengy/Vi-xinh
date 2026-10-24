@@ -14,6 +14,7 @@ from flask_cors import CORS
 try:
     from .core.config import UPLOAD_FOLDER, FRONTEND_DIR, ALLOWED_EXTENSIONS, DB_PATH
     from .core.pipeline import ProcessingPipeline
+    from .core.email_service import send_otp_email, is_smtp_configured
     from .database.db_manager import DatabaseManager
     from .database.group_wallet import GroupWalletManager
 except (ImportError, ValueError):
@@ -21,6 +22,7 @@ except (ImportError, ValueError):
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from core.config import UPLOAD_FOLDER, FRONTEND_DIR, ALLOWED_EXTENSIONS, DB_PATH
     from core.pipeline import ProcessingPipeline
+    from core.email_service import send_otp_email, is_smtp_configured
     from database.db_manager import DatabaseManager
     from database.group_wallet import GroupWalletManager
 
@@ -390,10 +392,12 @@ def auth_send_otp():
         return jsonify({"error": "Vui lòng nhập Email hoặc Số điện thoại nhận mã OTP"}), 400
 
     norm_key = _normalize_contact(contact)
+    user_name = "Bạn"
     if purpose == "reset":
         user = db.get_user_by_contact(contact)
         if not user:
             return jsonify({"error": "Không tìm thấy tài khoản nào gắn với Email hoặc SĐT này."}), 404
+        user_name = user.get("full_name") or user.get("username") or "Bạn"
 
     otp_code = str(random.randint(100000, 999999))
     OTP_STORE[norm_key] = {
@@ -404,8 +408,25 @@ def auth_send_otp():
     is_phone = not ("@" in contact)
     channel = "Số điện thoại" if is_phone else "Email"
 
+    if not is_phone:
+        email_res = send_otp_email(
+            to_email=contact,
+            otp_code=otp_code,
+            user_name=user_name,
+            purpose=purpose
+        )
+        if email_res.get("sent"):
+            return jsonify({
+                "success": True,
+                "real_email_sent": True,
+                "channel": channel,
+                "contact": contact,
+                "message": f"Mã xác thực OTP đã được gửi đến hộp thư {contact}. Vui lòng kiểm tra email của bạn!"
+            })
+
     return jsonify({
         "success": True,
+        "real_email_sent": False,
         "otp": otp_code,
         "channel": channel,
         "contact": contact,
