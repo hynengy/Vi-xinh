@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Quỹ Chung & Chia Tiền - Ví Xinh</title>
+    <link rel="stylesheet" href="css/style.css?v=3.1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <span class="logo-badge"><i class="ri-wallet-3-line"></i></span>
+                <span>Ví Xinh</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/"><i class="ri-home-4-line"></i> Trang Chủ</a></li>
+                <li><a href="/groups" class="active"><i class="ri-funds-box-line"></i> Quỹ Chung & Chia Tiền</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header" style="margin-bottom: 1.2rem;">
+            <h1 class="page-title"><i class="ri-funds-box-line"></i> Quỹ Chung & Chia Tiền</h1>
+            <p class="page-subtitle">Quản lý chi tiêu nhóm & phân bổ hóa đơn</p>
+        </div>
+
+        <div class="grid-2">
+            <!-- Left: Group Info & Members -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                    <h2 style="font-size: 1.15rem; font-weight: 700; display:flex; align-items:center; gap:0.4rem">
+                        <i class="ri-community-line" style="color:var(--primary)"></i> Quỹ Chi Tiêu Chung
+                    </h2>
+                    <span class="badge" style="background:#E6FCF5;color:#0CA678"><i class="ri-checkbox-circle-line"></i> Hoạt động</span>
+                </div>
+                <p style="color: var(--text3); font-size: 0.8rem; margin-bottom: 1rem;">
+                    Quỹ sinh hoạt chung định kỳ hàng tháng.
+                </p>
+
+                <h3 style="font-size: 0.88rem; font-weight: 700; margin-bottom: 0.6rem; color:var(--text)">Thành viên:</h3>
+                <div id="member-checkbox-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <!-- Render tự động qua JS -->
+                </div>
+            </div>
+
+            <!-- Right: Split Bill Calculator -->
+            <div class="card">
+                <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.8rem; display:flex; align-items:center; gap:0.4rem">
+                    <i class="ri-scales-3-line" style="color:var(--primary)"></i> Chia Tiền Nhanh
+                </h2>
+                <form id="split-form" onsubmit="calculateSplit(event)">
+                    <div class="form-group" style="margin-bottom:0.75rem">
+                        <label class="form-label" style="font-weight:700;font-size:0.82rem">Tổng tiền (₫)</label>
+                        <input type="number" id="split-amount-input" class="form-control" placeholder="0" required style="font-size:1.1rem;font-weight:800;color:var(--danger)">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:0.75rem">
+                        <label class="form-label" style="font-weight:700;font-size:0.82rem">Người thanh toán</label>
+                        <select id="split-payer-select" class="form-control">
+                            <option value="1">Tôi (Chủ tài khoản)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="ri-calculator-line"></i> Chia đều</button>
+                </form>
+
+                <!-- Calculation Result Display -->
+                <div id="split-result" style="display: none; margin-top: 1rem; padding: 0.9rem; background: var(--bg); border:1px solid var(--border); border-radius: var(--radius-md);">
+                    <h4 style="font-weight: 700; color: var(--primary); margin-bottom: 0.35rem; display:flex; align-items:center; gap:0.3rem; font-size:0.88rem">
+                        <i class="ri-check-double-line"></i> Bảng phân bổ:
+                    </h4>
+                    <div id="split-result-details"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer style="text-align:center;padding:1.2rem;color:var(--text3);font-size:0.78rem;border-top:1px solid var(--border);margin-top:1.5rem">
+        <p>Ví Xinh · Quản lý tài chính thông minh</p>
+    </footer>
+
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGroupMembersUI();
+        });
+    </script>
+</body>
+</html>

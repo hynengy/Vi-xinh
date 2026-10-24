@@ -14,6 +14,10 @@ class DatabaseManager:
 
     def __init__(self, db_path: Path, seed_demo: bool = False):
         self.db_path = str(db_path)
+        try:
+            Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
         self.seed_demo = seed_demo
         self.init_database()
 

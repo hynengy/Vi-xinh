@@ -9,7 +9,10 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BACKEND_DIR = BASE_DIR / "backend"
 FRONTEND_DIR = BASE_DIR / "frontend"
-DATA_DIR = BASE_DIR.parent / "data"
+if os.environ.get("VERCEL"):
+    DATA_DIR = Path("/tmp/data")
+else:
+    DATA_DIR = BASE_DIR.parent / "data"
 
 
 def _load_env_file() -> None:
@@ -18,15 +21,18 @@ def _load_env_file() -> None:
     for env_path in (BASE_DIR / ".env", BASE_DIR.parent / ".env"):
         if not env_path.exists():
             continue
-        for raw in env_path.read_text(encoding="utf-8").splitlines():
-            line = raw.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, val = line.split("=", 1)
-            key = key.strip()
-            val = val.strip().strip('"').strip("'")
-            if key and key not in os.environ:
-                os.environ[key] = val
+        try:
+            for raw in env_path.read_text(encoding="utf-8").splitlines():
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = val
+        except Exception:
+            pass
 
 
 _load_env_file()
@@ -36,7 +42,10 @@ GOOGLE_VISION_API_KEY = os.environ.get("GOOGLE_VISION_API_KEY") or os.environ.ge
 
 # Upload & Data storage directories
 UPLOAD_FOLDER = DATA_DIR / "uploads"
-UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+try:
+    UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+except Exception:
+    pass
 
 DB_PATH = DATA_DIR / "vixinh.sqlite3"
 
