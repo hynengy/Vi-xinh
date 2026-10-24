@@ -25,24 +25,37 @@ DUE_AMOUNT_KEYWORDS = [
     r"t[ổôoóòõọ]ng\s*c[ảa]",
 ]
 
-# Từ khóa tiền khách đưa (Cash / Card given)
+# Từ khóa tiền khách đưa / tiền đã nhận (Cash / Card given / Tiền đã nhận)
 PAID_AMOUNT_KEYWORDS = [
-    r"ti[ềe]n\s*m[ặa]t",
+    r"ti[ềe]n\s*đ[ãa]\s*nh[ậa]n",
+    r"đ[ãa]\s*nh[ậa]n",
+    r"ti[ềe]n\s*nh[ậa]n",
+    r"s[ốo]\s*ti[ềe]n\s*nh[ậa]n",
+    r"nh[ậa]n\s*c[ủu]a\s*kh[áa]ch",
+    r"ti[ềe]n\s*kh[áa]ch\s*đ[ưt][aơ]",
+    r"kh[áa]ch\s*đ[ưt][aơ]",
+    r"ti[ềe]n\s*đ[ưt][aơ]",
+    r"ti[ềe]n\s*kh[áa]ch\s*tr[ảa]",
     r"kh[áa]ch\s*tr[ảa]",
+    r"ti[ềe]n\s*m[ặa]t",
     r"chuy[ểe]n\s*kho[ảa]n",
     r"qu[ẹe]t\s*th[ẻe]",
-    r"kh[áa]ch\s*đ[ưt][aơ]",
+    r"đ[ãa]\s*thanh\s*to[áa]n",
 ]
 
 # Từ khóa tiền thối / tiền thừa (Change)
 CHANGE_KEYWORDS = [
     r"ti[ềe]n\s*th[ừu]a",
     r"ti[ềe]n\s*th[ốo]i",
+    r"th[ốo]i\s*l[ạa]i",
+    r"ti[ềe]n\s*th[ốo]i\s*l[ạa]i",
     r"tr[ảa]\s*l[ạa]i",
+    r"ti[ềe]n\s*tr[ảa]\s*l[ạa]i",
+    r"tr[ảa]\s*l[ạa]i\s*kh[áa]ch",
     r"\bchange\b",
 ]
 
-FINAL_PAYMENT_KEYWORDS = DUE_AMOUNT_KEYWORDS + PAID_AMOUNT_KEYWORDS
+FINAL_PAYMENT_KEYWORDS = DUE_AMOUNT_KEYWORDS
 
 # Từ khóa nhận diện dòng Tạm tính / Tổng tiền hàng (trước khi trừ giảm giá)
 SUBTOTAL_KEYWORDS = [

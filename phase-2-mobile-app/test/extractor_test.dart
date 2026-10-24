@@ -153,5 +153,35 @@ void main() {
       expect(items[2].amount, 30000.0);
       expect(items[2].icon, '🍟');
     });
+
+    test('does not extract received cash or change as line items', () {
+      final lines = [
+        'TRÀ SỮA PHÚC LONG',
+        '1. Trà đào cam sả    55.000',
+        '2. Bánh croissant     30.000',
+        'Tổng cộng: 85.000 đ',
+        'Tiền đã nhận: 100.000 đ',
+        'Tiền trả lại: 15.000 đ',
+      ];
+      final items = DartReceiptExtractor.extractLineItems(lines);
+      expect(items.length, 2);
+      final names = items.map((it) => it.name.toLowerCase()).toList();
+      expect(names.any((n) => n.contains('nhận')), isFalse);
+      expect(names.any((n) => n.contains('trả lại')), isFalse);
+    });
+
+    test('parseAll ignores Tiền đã nhận in total and line items', () {
+      const rawText = '''
+        TRÀ SỮA PHÚC LONG
+        1. Trà đào cam sả    55.000
+        2. Bánh croissant     30.000
+        Tổng cộng: 85.000 đ
+        Tiền đã nhận: 100.000 đ
+        Tiền trả lại: 15.000 đ
+      ''';
+      final tx = DartReceiptExtractor.parseAll(rawText);
+      expect(tx.amount, 85000.0);
+      expect(tx.lineItems.length, 2);
+    });
   });
 }

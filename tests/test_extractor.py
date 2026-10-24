@@ -290,5 +290,24 @@ def test_llm_gemini_extractor():
     assert pipe.mlkit_engine is not None
 
 
+def test_received_cash_not_included_in_total_or_items():
+    """Kiểm tra hóa đơn có 'Tiền đã nhận' không bị cộng vào tổng tiền và không bị coi là món ăn."""
+    raw_text = """
+    PHÚC LONG COFFEE & TEA
+    1. Trà đào cam sả    55.000
+    2. Bánh croissant     30.000
+    ---------------------------------
+    Tổng cộng: 85.000 đ
+    Tiền đã nhận: 100.000 đ
+    Tiền trả lại: 15.000 đ
+    """
+    res = ReceiptParser.parse_all(raw_text)
+    assert res["amount"] == 85000.0
+    item_names = [it["name"].lower() for it in res["items"]]
+    assert not any("tiền đã nhận" in n or "đã nhận" in n for n in item_names)
+    assert not any("tiền trả lại" in n or "trả lại" in n for n in item_names)
+    assert len(res["items"]) == 2
+
+
 
 

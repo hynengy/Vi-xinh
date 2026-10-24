@@ -503,13 +503,19 @@ class ReceiptParser:
             if INVOICE_NUMBER_PATTERN.search(line) or any(k in line_lower for k in ["số hđ", "so hd", "sđ hd", "sd hd", "mã hđ", "ma hd", "mã bill", "số bill", "số:", "so:"]):
                 continue
 
-            # Ưu tiên 1 tuyệt đối: Dòng Khách phải trả / Cần thanh toán / Tổng thanh toán
-            if due_payment is None and any(re.search(kw, line_lower) for kw in DUE_AMOUNT_KEYWORDS):
+            # Phân loại rõ dòng tiền khách đưa / tiền đã nhận / tiền thối
+            is_paid_line = any(re.search(kw, line_lower) for kw in PAID_AMOUNT_KEYWORDS)
+            is_change_line = any(re.search(kw, line_lower) for kw in CHANGE_KEYWORDS)
+
+            # Ưu tiên 1 tuyệt đối: Dòng Khách phải trả / Cần thanh toán / Tổng thanh toán / Tổng cộng
+            if due_payment is None and not is_paid_line and not is_change_line and any(re.search(kw, line_lower) for kw in DUE_AMOUNT_KEYWORDS):
                 numbers = AMOUNT_PATTERN.findall(line)
                 if not numbers and i + 1 < len(lines):
                     next_l = lines[i+1]
-                    if not (INVOICE_NUMBER_PATTERN.search(next_l) or any(k in next_l.lower() for k in ["số hđ", "so hd", "sđ hd", "giờ in", "nv "])):
-                        numbers = AMOUNT_PATTERN.findall(next_l)
+                    next_low = next_l.lower()
+                    if not any(re.search(kw, next_low) for kw in PAID_AMOUNT_KEYWORDS) and not any(re.search(kw, next_low) for kw in CHANGE_KEYWORDS):
+                        if not (INVOICE_NUMBER_PATTERN.search(next_l) or any(k in next_low for k in ["số hđ", "so hd", "sđ hd", "giờ in", "nv "])):
+                            numbers = AMOUNT_PATTERN.findall(next_l)
                 for n in numbers:
                     val = cls.parse_amount_str(n)
                     if val and val >= 1_000:
@@ -517,7 +523,7 @@ class ReceiptParser:
                         break
 
             # Tiền thối / Tiền thừa
-            if change_amount is None and any(re.search(kw, line_lower) for kw in CHANGE_KEYWORDS):
+            if change_amount is None and is_change_line:
                 numbers = AMOUNT_PATTERN.findall(line)
                 if not numbers and i + 1 < len(lines):
                     numbers = AMOUNT_PATTERN.findall(lines[i+1])
@@ -527,8 +533,8 @@ class ReceiptParser:
                         change_amount = val
                         break
 
-            # Tiền mặt / Khách đưa
-            if paid_cash is None and any(re.search(kw, line_lower) for kw in PAID_AMOUNT_KEYWORDS):
+            # Tiền mặt / Khách đưa / Tiền đã nhận
+            if paid_cash is None and is_paid_line and not is_change_line:
                 numbers = AMOUNT_PATTERN.findall(line)
                 if not numbers and i + 1 < len(lines):
                     numbers = AMOUNT_PATTERN.findall(lines[i+1])
@@ -539,7 +545,7 @@ class ReceiptParser:
                         break
 
             # Dòng Tạm tính / Tổng tiền hàng
-            if subtotal is None and any(re.search(kw, line_lower) for kw in SUBTOTAL_KEYWORDS):
+            if subtotal is None and not is_paid_line and not is_change_line and any(re.search(kw, line_lower) for kw in SUBTOTAL_KEYWORDS):
                 numbers = AMOUNT_PATTERN.findall(line)
                 if not numbers and i + 1 < len(lines):
                     numbers = AMOUNT_PATTERN.findall(lines[i+1])
@@ -557,16 +563,16 @@ class ReceiptParser:
         elif paid_cash is not None and change_amount is not None and paid_cash > change_amount:
             # Ví dụ: Khách đưa 500k, thối 50k -> thực chi = 450k
             final_payment = paid_cash - change_amount
-            breakdown.append({"label": "Thanh toán (Tiền mặt - Tiền thối)", "amount": final_payment})
+            breakdown.append({"label": "Thanh toán (Tiền đã nhận - Tiền thối)", "amount": final_payment})
         elif subtotal is not None and discount_amount > 0:
             final_payment = max(0.0, subtotal - discount_amount)
             breakdown.append({"label": "Thanh toán (Tạm tính - Giảm giá)", "amount": final_payment})
-        elif paid_cash is not None:
-            final_payment = paid_cash
-            breakdown.append({"label": "Tiền khách trả", "amount": paid_cash})
         elif subtotal is not None:
             final_payment = subtotal
             breakdown.append({"label": "Tổng tiền", "amount": subtotal})
+        elif paid_cash is not None:
+            final_payment = paid_cash
+            breakdown.append({"label": "Tiền khách trả", "amount": paid_cash})
 
         if subtotal is not None and not any(b["label"].startswith("Tạm tính") for b in breakdown):
             breakdown.append({"label": "Tạm tính (tiền hàng)", "amount": subtotal})
@@ -725,9 +731,11 @@ class ReceiptParser:
             "cảm ơn", "hẹn gặp lại", "tong tien dv", "tổng tiền dv",
             "chuyển vào stk", "chuyển stk", "hkd simple", "thành tiền",
             "thanh tien", "tong cong", "tổng cộng", "tong tien", "total", "thanh toan",
-            "tiền thanh toán", "phụ trách bàn", "chiết khấu", "hotline", "điện thoại",
-            "tel", "phone", "sđt", "sdt", "mst", "thuế", "cashier", "nhân viên", "pass wifi", "wifi pass", "bàn số",
-            "ngày", "ngay", "date", "giờ", "gio", "đ/c", "đc:", "dc:", "khách hàng"
+            "ngày", "ngay", "date", "giờ", "gio", "đ/c", "đc:", "dc:", "khách hàng",
+            "tiền đã nhận", "tien da nhan", "đã nhận", "da nhan", "tiền nhận", "tien nhan",
+            "số tiền nhận", "nhận của khách", "tiền khách đưa", "tien khach dua", "khách đưa", "khach dua",
+            "tiền đưa", "tien dua", "tiền khách trả", "tien khach tra", "khách trả", "khach tra",
+            "tiền trả lại", "tiền thừa", "tiền thối", "thối lại", "trả lại", "tiền mặt", "chuyển khoản", "quẹt thẻ"
         ]
 
         amt_pattern = re.compile(
@@ -1016,6 +1024,9 @@ class ReceiptParser:
                     "tạm tính", "tam tinh", "chiết khấu", "chiet khau", "giảm giá", "giam gia",
                     "khuyến mãi", "khuyen mai", "ưu đãi", "uu dai", "thanh toán", "thanh toan",
                     "tiền mặt", "tien mat", "khách trả", "khach tra", "tiền thừa", "tien thua",
+                    "tiền đã nhận", "tien da nhan", "đã nhận", "da nhan", "tiền nhận", "tien nhan",
+                    "số tiền nhận", "nhận của khách", "tiền khách đưa", "tien khach dua", "khách đưa", "khach dua",
+                    "tiền đưa", "tien dua", "tiền khách trả", "tien khach tra", "tiền trả lại", "tiền thối", "thối lại", "trả lại",
                     "cảm ơn", "cam on", "hẹn gặp lại", "wifi", "pass", "lắp đặt",
                     "wir", "pose", "taphoa"
                 ]):

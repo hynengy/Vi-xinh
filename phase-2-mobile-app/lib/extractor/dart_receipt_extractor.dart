@@ -278,18 +278,46 @@ class DartReceiptExtractor {
 
   static Map<String, dynamic> extractTotal(List<String> lines) {
     final duePaymentKeywords = [
-      'khách phải trả', 'khach phai tra', 'cần thanh toán', 'can thanh toan',
-      'phải thanh toán', 'phai thanh toan', 'tiền thanh toán', 'thanh toan', 'thanh toán',
-      'tổng thanh toán', 'tong thanh toan', 'tổng cộng', 'tong cong', 'amount due', 'net amount'
+      'khách phải trả', 'khach phai tra',
+      'cần thanh toán', 'can thanh toan',
+      'phải thanh toán', 'phai thanh toan',
+      'tổng thanh toán', 'tong thanh toan',
+      'tổng cộng', 'tong cong',
+      'tổng tiền', 'tong tien',
+      'tiền thanh toán', 'tien thanh toan',
+      'amount due', 'net amount', 'grand total', 'total'
     ];
     final paidKeywords = [
-      'tiền mặt', 'tien mat', 'khách trả', 'khach tra', 'chuyển khoản', 'chuyen khoan', 'quẹt thẻ'
+      'tiền đã nhận', 'tien da nhan',
+      'đã nhận', 'da nhan',
+      'tiền nhận', 'tien nhan',
+      'số tiền nhận', 'so tien nhan',
+      'nhận của khách', 'nhan cua khach',
+      'tiền khách đưa', 'tien khach dua',
+      'khách đưa', 'khach dua',
+      'tiền đưa', 'tien dua',
+      'tiền khách trả', 'tien khach tra',
+      'khách trả', 'khach tra',
+      'tiền mặt', 'tien mat',
+      'chuyển khoản', 'chuyen khoan',
+      'quẹt thẻ', 'quet the',
+      'đã thanh toán', 'da thanh toan'
     ];
     final changeKeywords = [
-      'tiền thừa', 'tien thua', 'tiền thối', 'tien thoi', 'trả lại', 'tra lai', 'change'
+      'tiền thừa', 'tien thua',
+      'tiền thối', 'tien thoi',
+      'thối lại', 'thoi lai',
+      'trả lại', 'tra lai',
+      'tiền trả lại', 'tien tra lai',
+      'tiền thối lại', 'tien thoi lai',
+      'change'
     ];
     final subtotalKeywords = [
-      'tổng tiền hàng', 'tong tien hang', 'cộng tiền hàng', 'cong tien hang', 'tạm tính', 'tam tinh', 'tiền hàng'
+      'tổng tiền hàng', 'tong tien hang',
+      'cộng tiền hàng', 'cong tien hang',
+      'tạm tính', 'tam tinh',
+      'tiền hàng', 'tien hang',
+      'subtotal'
     ];
 
     double dueAmount = 0.0;
@@ -306,34 +334,17 @@ class DartReceiptExtractor {
           lower.contains('tel:') ||
           lower.contains('phone:') ||
           lower.contains('sđt:') ||
-          lower.contains('mst:')) {
+          lower.contains('mst:') ||
+          lower.contains('stk:') ||
+          lower.contains('stk')) {
         continue;
       }
 
-      // 1. Ưu tiên cao nhất: Khách phải trả / Tổng thanh toán
-      if (dueAmount == 0.0 && duePaymentKeywords.any((kw) => lower.contains(kw))) {
-        final matches = RegExp(r'[\d.,]{4,}').allMatches(line);
-        for (var m in matches) {
-          final amt = parseAmountStr(m.group(0)!);
-          if (amt >= 1000 && !isPhoneNumberStr(m.group(0)!)) {
-            dueAmount = amt;
-            break;
-          }
-        }
-        if (dueAmount == 0.0 && i + 1 < lines.length) {
-          final nextMatches = RegExp(r'[\d.,]{4,}').allMatches(lines[i + 1]);
-          for (var m in nextMatches) {
-            final amt = parseAmountStr(m.group(0)!);
-            if (amt >= 1000 && !isPhoneNumberStr(m.group(0)!)) {
-              dueAmount = amt;
-              break;
-            }
-          }
-        }
-      }
+      final isPaid = paidKeywords.any((kw) => lower.contains(kw));
+      final isChange = changeKeywords.any((kw) => lower.contains(kw));
 
-      // 2. Tiền thừa / tiền thối
-      if (changeAmount == 0.0 && changeKeywords.any((kw) => lower.contains(kw))) {
+      // 1. Tiền thừa / tiền thối
+      if (changeAmount == 0.0 && isChange) {
         final matches = RegExp(r'[\d.,]{4,}').allMatches(line);
         for (var m in matches) {
           final amt = parseAmountStr(m.group(0)!);
@@ -344,8 +355,8 @@ class DartReceiptExtractor {
         }
       }
 
-      // 3. Tiền mặt khách đưa
-      if (paidCash == 0.0 && paidKeywords.any((kw) => lower.contains(kw))) {
+      // 2. Tiền mặt khách đưa / Tiền đã nhận (TUYỆT ĐỐI KHÔNG GHI NHẬN LÀ TỔNG PHẢI TRẢ)
+      if (paidCash == 0.0 && isPaid && !isChange) {
         final matches = RegExp(r'[\d.,]{4,}').allMatches(line);
         for (var m in matches) {
           final amt = parseAmountStr(m.group(0)!);
@@ -356,8 +367,33 @@ class DartReceiptExtractor {
         }
       }
 
+      // 3. Khách phải trả / Tổng cộng / Tổng tiền (BỎ QUA NẾU LÀ DÒNG TIỀN ĐÃ NHẬN HOẶC TIỀN THỪA)
+      if (dueAmount == 0.0 && !isPaid && !isChange && duePaymentKeywords.any((kw) => lower.contains(kw))) {
+        final matches = RegExp(r'[\d.,]{4,}').allMatches(line);
+        for (var m in matches) {
+          final amt = parseAmountStr(m.group(0)!);
+          if (amt >= 1000 && !isPhoneNumberStr(m.group(0)!)) {
+            dueAmount = amt;
+            break;
+          }
+        }
+        if (dueAmount == 0.0 && i + 1 < lines.length) {
+          final nextLow = lines[i + 1].toLowerCase();
+          if (!paidKeywords.any((kw) => nextLow.contains(kw)) && !changeKeywords.any((kw) => nextLow.contains(kw))) {
+            final nextMatches = RegExp(r'[\d.,]{4,}').allMatches(lines[i + 1]);
+            for (var m in nextMatches) {
+              final amt = parseAmountStr(m.group(0)!);
+              if (amt >= 1000 && !isPhoneNumberStr(m.group(0)!)) {
+                dueAmount = amt;
+                break;
+              }
+            }
+          }
+        }
+      }
+
       // 4. Dòng tiền hàng / tạm tính
-      if (subtotal == 0.0 && subtotalKeywords.any((kw) => lower.contains(kw))) {
+      if (subtotal == 0.0 && !isPaid && !isChange && subtotalKeywords.any((kw) => lower.contains(kw))) {
         final matches = RegExp(r'[\d.,]{4,}').allMatches(line);
         for (var m in matches) {
           final amt = parseAmountStr(m.group(0)!);
@@ -373,17 +409,17 @@ class DartReceiptExtractor {
     if (dueAmount > 0.0) {
       finalAmount = dueAmount;
     } else if (paidCash > 0.0 && changeAmount > 0.0 && paidCash > changeAmount) {
+      // Ví dụ: Khách đưa 200k, thối 50k -> thực chi = 150k
       finalAmount = paidCash - changeAmount;
     } else if (subtotal > 0.0 && discount > 0.0) {
       finalAmount = subtotal - discount;
-    } else if (paidCash > 0.0) {
-      finalAmount = paidCash;
     } else if (subtotal > 0.0) {
       finalAmount = subtotal;
+    } else if (paidCash > 0.0 && changeAmount == 0.0) {
+      finalAmount = paidCash;
     }
 
-
-    // Fallback: look for largest amount (ignoring phone numbers & time)
+    // Fallback: look for largest amount (ignoring phone numbers, time, and received/change lines)
     if (finalAmount == 0.0) {
       for (var line in lines) {
         final lower = line.toLowerCase();
@@ -391,7 +427,9 @@ class DartReceiptExtractor {
             lower.contains('tel') ||
             lower.contains('sđt') ||
             lower.contains('phone') ||
-            lower.contains('mst')) {
+            lower.contains('mst') ||
+            paidKeywords.any((kw) => lower.contains(kw)) ||
+            changeKeywords.any((kw) => lower.contains(kw))) {
           continue;
         }
         final matches = RegExp(r'[\d.,]{5,}').allMatches(line);
@@ -464,7 +502,15 @@ class DartReceiptExtractor {
       'tổng tiền', 'total', 'thanh toán', 'hotline', 'điện thoại', 'tel', 'phone',
       'sđt', 'sdt', 'mst', 'thuế', 'wifi', 'ngày', 'date', 'giờ', 'time',
       'tiền mặt', 'tiền thừa', 'tiền thối', 'trong nhà', 'mang về', 'bàn',
-      'administrator', 'đơn giá', 'don gia', 'sl'
+      'administrator', 'đơn giá', 'don gia', 'sl',
+      // Tuyệt đối không coi các dòng thanh toán / tiền đã nhận / tiền thối là món hàng:
+      'tiền đã nhận', 'tien da nhan', 'đã nhận', 'da nhan', 'tiền nhận', 'tien nhan',
+      'số tiền nhận', 'so tien nhan', 'nhận của khách', 'nhan cua khach',
+      'tiền khách đưa', 'tien khach dua', 'khách đưa', 'khach dua', 'tiền đưa', 'tien dua',
+      'tiền khách trả', 'tien khach tra', 'khách trả', 'khach tra',
+      'tiền trả lại', 'tien tra lai', 'tiền thối lại', 'trả lại', 'tra lai', 'thối lại', 'thoi lai',
+      'khách phải trả', 'khach phai tra', 'cần thanh toán', 'can thanh toan',
+      'tổng thanh toán', 'tong thanh toan', 'tạm tính', 'tam tinh', 'chiết khấu', 'giảm giá'
     ];
 
     bool isSkipLine(String l) {
@@ -557,6 +603,19 @@ class DartReceiptExtractor {
             .replaceAll(RegExp(r"[{}[\]()=><|/\\~¬_#*+!¿‘`“”—\.;:]"), ' ')
             .replaceAll(RegExp(r'\s+'), ' ')
             .trim();
+
+        final lowerClean = cleanName.toLowerCase();
+        final isPaymentWord = [
+          'tiền đã nhận', 'tien da nhan', 'đã nhận', 'da nhan', 'tiền nhận', 'tien nhan',
+          'số tiền nhận', 'nhận của khách', 'tiền khách đưa', 'tien khach dua', 'khách đưa', 'khach dua',
+          'tiền đưa', 'tien dua', 'tiền khách trả', 'khách trả', 'tiền trả lại', 'trả lại',
+          'tiền thừa', 'tien thua', 'tiền thối', 'tien thoi', 'thối lại', 'thoi lai',
+          'tổng cộng', 'tổng tiền', 'thanh toán', 'tiền mặt', 'cần thanh toán', 'khách phải trả'
+        ].any((pw) => lowerClean.contains(pw));
+        if (isPaymentWord) {
+          i++;
+          continue;
+        }
 
         if (cleanName.length >= 4 &&
             RegExp(r'[aeiouyáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]', caseSensitive: false).hasMatch(cleanName)) {
