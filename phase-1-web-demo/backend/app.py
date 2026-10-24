@@ -321,41 +321,24 @@ def auth_login():
 
     if not identifier:
         return jsonify({"error": "Vui lòng nhập Email hoặc Số điện thoại"}), 400
+    if not password:
+        return jsonify({"error": "Vui lòng nhập mật khẩu"}), 400
 
-    # 1. Thử xác thực nếu tài khoản và mật khẩu khớp
-    user = db.authenticate_user(identifier, password)
-    if user:
-        return jsonify({
-            "success": True,
-            "user": user,
-            "message": "Đăng nhập thành công"
-        })
-
-    # 2. Nếu tài khoản đã tồn tại trong DB nhưng sai mật khẩu -> Thông báo rõ ràng, không auto_register
+    # 1. Kiểm tra tài khoản có tồn tại trong hệ thống không
     existing_user = db.get_user_by_contact(identifier)
-    if existing_user:
-        return jsonify({"error": "Mật khẩu không chính xác. Vui lòng thử lại hoặc chọn 'Quên mật khẩu?'"}), 401
+    if not existing_user:
+        return jsonify({"error": "Tài khoản chưa được đăng ký trong hệ thống. Vui lòng chuyển sang tab 'Đăng ký' để tạo tài khoản mới!"}), 404
 
-    # 3. Nếu tài khoản chưa từng tồn tại và bật auto_register -> Tự động đăng ký
-    auto_register = data.get("auto_register", False)
-    if auto_register:
-        is_email = "@" in identifier
-        try:
-            new_user = db.register_user(
-                full_name=identifier.split("@")[0] if is_email else "Người dùng Ví Xinh",
-                email=identifier if is_email else None,
-                phone=identifier if not is_email else None,
-                password=password or "123456"
-            )
-            return jsonify({
-                "success": True,
-                "user": new_user,
-                "message": "Đã tự động khởi tạo tài khoản mới"
-            })
-        except Exception as e:
-            return jsonify({"error": f"Lỗi tạo tài khoản: {str(e)}"}), 500
+    # 2. Xác thực mật khẩu
+    user = db.authenticate_user(identifier, password)
+    if not user:
+        return jsonify({"error": "Mật khẩu không chính xác. Vui lòng kiểm tra lại hoặc chọn 'Quên mật khẩu?'"}), 401
 
-    return jsonify({"error": "Tài khoản không tồn tại. Vui lòng chuyển sang tab Đăng ký."}), 401
+    return jsonify({
+        "success": True,
+        "user": user,
+        "message": f"Đăng nhập thành công: {user.get('full_name', identifier)}"
+    })
 
 
 @app.route("/api/auth/register", methods=["POST"])

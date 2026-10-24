@@ -20,7 +20,42 @@ const S = {
     }
 };
 
-const USERS = [];
+const SEED_USERS = [
+    { id: 1, name: 'Nguyễn Thúy Hiền', full_name: 'Nguyễn Thúy Hiền', email: 'user1@vixinh.vn', phone: '0912345678', password: 'password123', pw: 'password123', avatar: 'assets/logo.jpg' },
+    { id: 2, name: 'Lê Thị Dịu', full_name: 'Lê Thị Dịu', email: 'diu@vixinh.vn', phone: '0987654321', password: 'password123', pw: 'password123', avatar: 'assets/logo.jpg' },
+    { id: 3, name: 'Lê Tiến Quân', full_name: 'Lê Tiến Quân', email: 'quan@vixinh.vn', phone: '0934567890', password: 'password123', pw: 'password123', avatar: 'assets/logo.jpg' },
+    { id: 4, name: 'Lê Ngọc Duy', full_name: 'Lê Ngọc Duy', email: 'duy@vixinh.vn', phone: '0903112233', password: 'password123', pw: 'password123', avatar: 'assets/logo.jpg' },
+    { id: 5, name: 'Nguyễn Việt Anh', full_name: 'Nguyễn Việt Anh', email: 'vietanh@vixinh.vn', phone: '0978123456', password: 'password123', pw: 'password123', avatar: 'assets/logo.jpg' }
+];
+
+function getRegisteredUsers(){
+    try {
+        const raw = localStorage.getItem('vx_registered_users');
+        const list = raw ? JSON.parse(raw) : [];
+        const merged = [...SEED_USERS];
+        for(let u of list){
+            const idx = merged.findIndex(x => (u.email && x.email === u.email) || (u.phone && x.phone === u.phone));
+            if(idx >= 0) merged[idx] = u;
+            else merged.push(u);
+        }
+        return merged;
+    } catch(e){}
+    return SEED_USERS;
+}
+
+function saveRegisteredUser(u, password){
+    try {
+        const raw = localStorage.getItem('vx_registered_users');
+        const list = raw ? JSON.parse(raw) : [];
+        const saved = { ...u, password: password || u.password || 'password123', pw: password || u.password || 'password123' };
+        const idx = list.findIndex(x => (saved.email && x.email === saved.email) || (saved.phone && x.phone === saved.phone));
+        if(idx >= 0) list[idx] = saved;
+        else list.push(saved);
+        localStorage.setItem('vx_registered_users', JSON.stringify(list));
+    } catch(e){}
+}
+
+const USERS = getRegisteredUsers();
 
 const CATS = {
     food:          {label:'Ăn uống',   ic:'ri-restaurant-line',         color:'#0071E3', bg:'#F5F5F7'},
@@ -202,25 +237,29 @@ async function handleLogin(e){
     }
     if(pw.length < 6){
         document.getElementById('pwGrp').classList.add('error');
+        toast('Mật khẩu tối thiểu 6 ký tự', 'warning');
         return;
     }
 
     const btn = document.getElementById('loginBtn');
     btn.classList.add('loading');
-    document.getElementById('loginBtnTxt').innerHTML = '<span class="spinner"></span> Đang đăng nhập...';
+    document.getElementById('loginBtnTxt').innerHTML = '<span class="spinner"></span> Đang kiểm tra...';
+
+    const cleanContact = em.replace(/\s+/g, '');
 
     try {
         const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ identifier: em, password: pw, auto_register: true })
+            body: JSON.stringify({ identifier: em, password: pw })
         });
 
-        if(res.ok){
-            const data = await res.json();
+        const data = await res.json();
+        if(res.ok && data.success){
             const u = data.user;
             u.name = u.full_name || u.name || em.split('@')[0];
             u.avatar = u.avatar_url || 'assets/logo.jpg';
+            saveRegisteredUser(u, pw);
             S.loggedIn = true;
             S.user = u;
             localStorage.setItem('vx_u', JSON.stringify(u));
@@ -235,50 +274,50 @@ async function handleLogin(e){
             enterApp();
             toast(`Đăng nhập thành công: ${u.name}`, 'success');
         } else {
-            const errData = await res.json();
-            const localU = USERS.find(x => (x.email === em || (x.phone && x.phone.replace(/\s+/g,'') === em.replace(/\s+/g,''))) && x.pw === pw);
+            // Kiểm tra xem có trong registered users local không nếu offline
+            const localUsers = getRegisteredUsers();
+            const localU = localUsers.find(x => (x.email === em || (x.phone && x.phone.replace(/\s+/g,'') === cleanContact)));
             if(localU){
-                S.loggedIn = true;
-                S.user = localU;
-                localStorage.setItem('vx_u', JSON.stringify(localU));
-                localStorage.setItem('vx_last_user', JSON.stringify(localU));
-                const remChk = document.getElementById('rememberMeCheck');
-                if (remChk && remChk.checked) {
-                    localStorage.setItem('vx_remembered_account', em);
+                if(localU.password === pw || localU.pw === pw){
+                    S.loggedIn = true;
+                    S.user = localU;
+                    localStorage.setItem('vx_u', JSON.stringify(localU));
+                    localStorage.setItem('vx_last_user', JSON.stringify(localU));
+                    updateBioLoginUI();
+                    enterApp();
+                    toast(`Đăng nhập thành công: ${localU.name || localU.full_name}`, 'success');
+                    return;
                 } else {
-                    localStorage.removeItem('vx_remembered_account');
+                    document.getElementById('pwGrp').classList.add('error');
+                    toast('Mật khẩu không chính xác. Vui lòng kiểm tra lại!', 'error');
+                    return;
                 }
-                updateBioLoginUI();
-                enterApp();
-                toast(`Đăng nhập thành công: ${localU.name}`, 'success');
-            } else {
-                toast(errData.error || 'Tài khoản hoặc mật khẩu không chính xác.', 'error');
             }
+            // Tuyệt đối không cho phép đăng nhập nếu chưa đăng ký!
+            document.getElementById('emailGrp').classList.add('error');
+            toast(data.error || 'Tài khoản chưa được đăng ký trong hệ thống. Vui lòng chọn tab Đăng ký!', 'error');
+            setTimeout(() => swAuthTab('register'), 1400);
         }
     } catch(err) {
-        const isEmail = em.includes('@');
-        const simulatedName = isEmail ? em.split('@')[0].toUpperCase() : `SĐT: ${em}`;
-        const u = USERS.find(x => x.email === em || (x.phone && x.phone.replace(/\s+/g,'') === em.replace(/\s+/g,''))) || {
-            id: 99,
-            name: simulatedName,
-            full_name: simulatedName,
-            email: isEmail ? em : `${em}@vixinh.vn`,
-            phone: isEmail ? '0912 345 678' : em,
-            avatar: 'assets/logo.jpg'
-        };
-        S.loggedIn = true;
-        S.user = u;
-        localStorage.setItem('vx_u', JSON.stringify(u));
-        localStorage.setItem('vx_last_user', JSON.stringify(u));
-        const remChk = document.getElementById('rememberMeCheck');
-        if (remChk && remChk.checked) {
-            localStorage.setItem('vx_remembered_account', em);
+        // Trường hợp offline / mạng lỗi: Kiểm tra chặt chẽ danh sách tài khoản đã đăng ký
+        const localUsers = getRegisteredUsers();
+        const localU = localUsers.find(x => (x.email === em || (x.phone && x.phone.replace(/\s+/g,'') === cleanContact)));
+        if(!localU){
+            document.getElementById('emailGrp').classList.add('error');
+            toast('Tài khoản chưa được đăng ký. Vui lòng bấm sang tab Đăng ký để tạo tài khoản mới!', 'error');
+            setTimeout(() => swAuthTab('register'), 1400);
+        } else if(localU.password !== pw && localU.pw !== pw){
+            document.getElementById('pwGrp').classList.add('error');
+            toast('Mật khẩu không chính xác. Vui lòng kiểm tra lại!', 'error');
         } else {
-            localStorage.removeItem('vx_remembered_account');
+            S.loggedIn = true;
+            S.user = localU;
+            localStorage.setItem('vx_u', JSON.stringify(localU));
+            localStorage.setItem('vx_last_user', JSON.stringify(localU));
+            updateBioLoginUI();
+            enterApp();
+            toast(`Đăng nhập thành công: ${localU.name || localU.full_name}`, 'success');
         }
-        updateBioLoginUI();
-        enterApp();
-        toast(`Đăng nhập thành công: ${em}`, 'success');
     } finally {
         btn.classList.remove('loading');
         document.getElementById('loginBtnTxt').textContent = 'Đăng nhập';
@@ -306,13 +345,33 @@ async function handleRegister(e){
 
     // 2. Kiểm tra các trường dữ liệu
     if(!fullName || !email || !phone || pw.length < 6){
-        toast('Điền đủ thông tin (MK ≥ 6 ký tự).', 'error');
+        toast('Vui lòng điền đủ họ tên, email, SĐT và mật khẩu ≥ 6 ký tự.', 'error');
+        return;
+    }
+
+    // 3. Kiểm tra xem tài khoản đã tồn tại trong local users chưa
+    const cleanPhone = phone.replace(/\s+/g, '');
+    const localUsers = getRegisteredUsers();
+    const exists = localUsers.some(x => x.email === email || (x.phone && x.phone.replace(/\s+/g,'') === cleanPhone));
+    if(exists){
+        toast('Email hoặc Số điện thoại này đã được đăng ký. Vui lòng Đăng nhập!', 'warning');
+        setTimeout(() => swAuthTab('login'), 1200);
         return;
     }
 
     const btn = document.getElementById('regBtn');
     btn.classList.add('loading');
-    document.getElementById('regBtnTxt').innerHTML = '<span class="spinner"></span> Đang xử lý...';
+    document.getElementById('regBtnTxt').innerHTML = '<span class="spinner"></span> Đang tạo tài khoản...';
+
+    const newUserObj = {
+        id: Date.now(),
+        name: fullName,
+        full_name: fullName,
+        email: email,
+        phone: phone,
+        password: pw,
+        avatar: 'assets/logo.jpg'
+    };
 
     try {
         const res = await fetch('/api/auth/register', {
@@ -322,33 +381,30 @@ async function handleRegister(e){
         });
 
         const data = await res.json();
-        if(res.ok){
+        if(res.ok && data.success){
             const u = data.user;
             u.name = u.full_name || fullName;
             u.avatar = u.avatar_url || 'assets/logo.jpg';
+            saveRegisteredUser(u, pw);
             S.loggedIn = true;
             S.user = u;
             localStorage.setItem('vx_u', JSON.stringify(u));
+            localStorage.setItem('vx_last_user', JSON.stringify(u));
             enterApp();
-            toast(`Đã tạo tài khoản: ${fullName}`, 'success');
+            toast(`Đăng ký tài khoản thành công: ${fullName}`, 'success');
         } else {
-            toast(data.error || 'Đăng ký không thành công.', 'error');
+            toast(data.error || 'Email hoặc Số điện thoại đã được đăng ký trước đó.', 'error');
             refreshCaptcha();
         }
     } catch(err) {
-        const u = {
-            id: Date.now(),
-            name: fullName,
-            full_name: fullName,
-            email: email,
-            phone: phone,
-            avatar: 'assets/logo.jpg'
-        };
+        // Lưu tài khoản cục bộ khi không kết nối được máy chủ
+        saveRegisteredUser(newUserObj, pw);
         S.loggedIn = true;
-        S.user = u;
-        localStorage.setItem('vx_u', JSON.stringify(u));
+        S.user = newUserObj;
+        localStorage.setItem('vx_u', JSON.stringify(newUserObj));
+        localStorage.setItem('vx_last_user', JSON.stringify(newUserObj));
         enterApp();
-        toast(`Đăng ký tài khoản thành công: ${fullName}`, 'success');
+        toast(`Đã tạo tài khoản thành công: ${fullName}`, 'success');
     } finally {
         btn.classList.remove('loading');
         document.getElementById('regBtnTxt').textContent = 'Đăng ký tài khoản';

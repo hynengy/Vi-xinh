@@ -372,8 +372,8 @@ class DatabaseManager:
         if not user:
             return None
         stored_pw = user.get("password_hash")
-        # Khớp mật khẩu (nếu trong DB chưa có pass thì cho phép pass mặc định 123456)
-        if not stored_pw or stored_pw == password or stored_pw == "123456":
+        # Khớp mật khẩu chính xác
+        if stored_pw and stored_pw == password:
             return user
         return None
 
