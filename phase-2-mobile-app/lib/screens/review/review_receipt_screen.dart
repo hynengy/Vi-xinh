@@ -212,7 +212,7 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
                   Expanded(
                     child: Text(
                       _weakOcr
-                          ? 'OCR chưa chắc. Hãy kiểm tra tên quán và số tiền trước khi lưu.'
+                          ? 'Hệ thống AI đề xuất kiểm tra lại tên quán và số tiền trước khi lưu.'
                           : 'Đã nhận diện${widget.ocrMs != null ? ' trong ${widget.ocrMs}ms' : ''}${widget.ocrLines != null ? ' · ${widget.ocrLines} dòng' : ''}',
                       style: TextStyle(
                         color: _weakOcr ? const Color(0xFF9A3412) : Colors.green,
@@ -479,7 +479,7 @@ class _ReviewReceiptScreenState extends State<ReviewReceiptScreen> {
             Card(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               child: ExpansionTile(
-                title: const Text('Xem text OCR', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                title: const Text('Xem văn bản trích xuất', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 children: [
                   Container(
                     width: double.infinity,

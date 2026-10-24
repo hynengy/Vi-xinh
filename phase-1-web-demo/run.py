@@ -41,7 +41,7 @@ if __name__ == "__main__":
         print("🔒 Chế độ HTTPS bảo mật đã bật: Cho phép Safari (iOS/iPhone) và Chrome bật Camera và Face ID thật 100%!")
         print("💡 Lưu ý với Safari trên iPhone: Chọn 'Nâng cao' (Show Details) -> 'Tiếp tục truy cập' (visit this website) khi mở lần đầu.")
     else:
-        print("👉 Hãy mở trình duyệt và trải nghiệm quy trình OCR hóa đơn!")
+        print("👉 Hãy mở trình duyệt và trải nghiệm trích xuất hóa đơn AI & quản lý chi tiêu!")
         print("💡 Gợi ý cho Safari iPhone: Chạy 'python run.py --ssl' để mở camera và Face ID trực tiếp trên Safari.")
         print("💡 Gợi ý chạy chế độ Production: Chạy 'python run.py --prod' để dùng máy chủ WSGI Waitress.")
     app.run(host=HOST, port=PORT, debug=DEBUG, ssl_context=ssl_context)

@@ -178,28 +178,53 @@ class DatabaseHelper {
     required String password,
   }) async {
     final db = await instance.database;
-    final username = email.trim().toLowerCase();
-    final existing = await db.query(
-      'users',
-      where: 'username = ? OR email = ? OR phone = ?',
-      whereArgs: [username, email.trim(), phone.trim()],
-    );
-    if (existing.isNotEmpty) {
-      throw Exception('Email hoặc số điện thoại đã được dùng.');
+    final cleanEmail = email.trim();
+    final cleanPhone = phone.trim();
+    final cleanName = fullName.trim();
+    final username = cleanEmail.isNotEmpty
+        ? cleanEmail.toLowerCase()
+        : (cleanPhone.isNotEmpty ? cleanPhone : 'user_${DateTime.now().millisecondsSinceEpoch}');
+
+    // Check duplicate email or phone
+    List<Map<String, dynamic>> existing = [];
+    if (cleanEmail.isNotEmpty && cleanPhone.isNotEmpty) {
+      existing = await db.query(
+        'users',
+        where: 'LOWER(email) = ? OR phone = ? OR LOWER(username) = ?',
+        whereArgs: [cleanEmail.toLowerCase(), cleanPhone, username],
+      );
+    } else if (cleanEmail.isNotEmpty) {
+      existing = await db.query(
+        'users',
+        where: 'LOWER(email) = ? OR LOWER(username) = ?',
+        whereArgs: [cleanEmail.toLowerCase(), username],
+      );
+    } else if (cleanPhone.isNotEmpty) {
+      existing = await db.query(
+        'users',
+        where: 'phone = ? OR LOWER(username) = ?',
+        whereArgs: [cleanPhone, username],
+      );
     }
+
+    if (existing.isNotEmpty) {
+      throw Exception('Email hoặc số điện thoại này đã được sử dụng.');
+    }
+
     final id = await db.insert('users', {
       'username': username,
-      'full_name': fullName.trim(),
-      'email': email.trim(),
-      'phone': phone.trim(),
+      'full_name': cleanName,
+      'email': cleanEmail,
+      'phone': cleanPhone,
       'password': password,
     });
+
     return UserModel(
       id: id,
       username: username,
-      fullName: fullName.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
+      fullName: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone,
       password: password,
     );
   }
@@ -207,21 +232,33 @@ class DatabaseHelper {
   Future<UserModel?> loginUser(String identity, String password) async {
     final db = await instance.database;
     final key = identity.trim().toLowerCase();
+    final rawKey = identity.trim();
+
     var maps = await db.query(
       'users',
-      where: '(LOWER(email) = ? OR phone = ? OR LOWER(username) = ?) AND (password = ? OR password = "" OR password IS NULL OR ? = "123456")',
-      whereArgs: [key, identity.trim(), key, password, password],
+      where: 'LOWER(email) = ? OR phone = ? OR LOWER(username) = ?',
+      whereArgs: [key, rawKey, key],
     );
+
     if (maps.isEmpty) {
       await _seedDefaultUsers(db);
       maps = await db.query(
         'users',
-        where: '(LOWER(email) = ? OR phone = ? OR LOWER(username) = ?) AND (password = ? OR password = "" OR password IS NULL OR ? = "123456")',
-        whereArgs: [key, identity.trim(), key, password, password],
+        where: 'LOWER(email) = ? OR phone = ? OR LOWER(username) = ?',
+        whereArgs: [key, rawKey, key],
       );
     }
+
     if (maps.isEmpty) return null;
-    return UserModel.fromMap(maps.first);
+
+    final user = UserModel.fromMap(maps.first);
+    final storedPw = user.password;
+    final isPasswordValid = (storedPw == null || storedPw.isEmpty)
+        ? (password == '123456' || password.isEmpty)
+        : (storedPw == password);
+
+    if (!isPasswordValid) return null;
+    return user;
   }
 
   Future<UserModel?> getUserById(int id) async {

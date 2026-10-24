@@ -37,18 +37,30 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _busy = true);
     try {
       if (_isRegister) {
-        if (_nameCtrl.text.trim().length < 2 ||
-            !_emailCtrl.text.contains('@') ||
-            _phoneCtrl.text.trim().length < 9 ||
-            _passwordCtrl.text.length < 6) {
-          _toast('Vui lòng nhập đầy đủ họ tên, email, SĐT và mật khẩu từ 6 ký tự.');
+        final name = _nameCtrl.text.trim();
+        final email = _emailCtrl.text.trim();
+        final phone = _phoneCtrl.text.trim();
+        final pw = _passwordCtrl.text;
+        final hasEmail = email.contains('@');
+        final hasPhone = phone.length >= 9;
+
+        if (name.length < 2) {
+          _toast('Vui lòng nhập họ và tên của bạn.');
+          return;
+        }
+        if (!hasEmail && !hasPhone) {
+          _toast('Vui lòng nhập ít nhất Email hoặc Số điện thoại hợp lệ.');
+          return;
+        }
+        if (pw.length < 6) {
+          _toast('Mật khẩu bảo mật phải có ít nhất 6 ký tự.');
           return;
         }
         await auth.register(
-          fullName: _nameCtrl.text,
-          email: _emailCtrl.text,
-          phone: _phoneCtrl.text,
-          password: _passwordCtrl.text,
+          fullName: name,
+          email: email,
+          phone: phone,
+          password: pw,
         );
       } else {
         final id = _identityCtrl.text.trim();

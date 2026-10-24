@@ -182,7 +182,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Phiên bản 1.0.0 · On-Device OCR',
+                      'Phiên bản 1.0.0 · Trích Xuất AI Thông Minh',
                       style: TextStyle(
                         fontSize: 11,
                         color: AppColors.textSecondary.withValues(alpha: 0.7),

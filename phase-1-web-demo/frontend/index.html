@@ -576,7 +576,7 @@ setTimeout(function(){
                 <div class="sg-item">
                     <div class="sg-left">
                         <div class="sg-icon sgi-scan"><i class="ri-scan-2-line"></i></div>
-                        <div class="sg-label">Quét hóa đơn OCR</div>
+                        <div class="sg-label">Trích xuất hóa đơn AI</div>
                     </div>
                     <span class="sg-badge-green">On-Device Offline</span>
                 </div>
@@ -684,7 +684,7 @@ setTimeout(function(){
                     <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="handleFile(event)">
                 </div>
             </div>
-            <!-- KẾT QUẢ QUÉT ẢNH & OCR -->
+            <!-- KẾT QUẢ TRÍCH XUẤT HÓA ĐƠN AI -->
             <div id="photoResult" class="hidden">
                 <div class="upload-preview" id="previewA"><img id="previewI" src="" alt="Hóa đơn"></div>
                 <div id="ocrSt" class="hidden" style="text-align:center;padding:1.2rem 1rem;color:var(--text)">
@@ -695,8 +695,8 @@ setTimeout(function(){
                     <div class="ocr-progress-wrap" style="max-width:240px;margin:0.75rem auto 0.4rem">
                         <div class="ocr-progress-fill" id="ocrProgressFill" style="width:25%"></div>
                     </div>
-                    <p id="ocrLoadingStatusText" style="margin-top:0.2rem;font-weight:700;font-size:0.85rem">Đang nhận diện ký tự & khối chữ...</p>
-                    <p id="ocrLoadingSubText" style="font-size:0.75rem;color:var(--text3);margin-top:0.2rem">Mô hình AI Google ML Kit</p>
+                    <p id="ocrLoadingStatusText" style="margin-top:0.2rem;font-weight:700;font-size:0.85rem">Đang trích xuất cấu trúc hóa đơn bằng AI...</p>
+                    <p id="ocrLoadingSubText" style="font-size:0.75rem;color:var(--text3);margin-top:0.2rem">Mô hình Multimodal Gemini LLM</p>
                 </div>
                 <div id="ocrData" class="hidden" style="background:var(--bg);border-radius:var(--r-md);padding:0.75rem;margin-top:0.5rem">
                     <!-- BANNER CẢNH BÁO THIẾU GOOGLE_API_KEY -->
@@ -755,7 +755,7 @@ setTimeout(function(){
                         <!-- Xem toàn bộ văn bản accordion -->
                         <details id="ocrRawDetails" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:0.35rem 0.6rem">
                             <summary style="font-size:0.74rem;font-weight:700;color:#6366f1;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
-                                <span>Xem toàn bộ văn bản (OCR gốc)</span>
+                                <span>Xem toàn bộ văn bản trích xuất gốc</span>
                                 <span style="font-size:0.65rem;color:var(--text3);font-weight:normal">Chạm để mở</span>
                             </summary>
                             <div style="margin-top:0.4rem">

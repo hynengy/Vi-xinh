@@ -57,7 +57,7 @@ def test_extract_total_amount_with_dots_and_commas():
 
 
 def test_parse_all_full_flow():
-    sample_ocr = """
+    sample_text = """
     WINMART+
     Dia chi: 123 Nguyen Trai, Ha Noi
     Ngay: 14/10/2026
@@ -66,7 +66,7 @@ def test_parse_all_full_flow():
     THANH TIEN: 35.000 VND
     Xin cam on quy khach!
     """
-    result = ReceiptParser.parse_all(sample_ocr)
+    result = ReceiptParser.parse_all(sample_text)
     assert result["merchant_name"] == "WINMART+"
     assert result["transaction_date"] == "2026-10-14"
     assert result["amount"] == 35000.0
@@ -114,8 +114,8 @@ def test_extract_line_items_room_services():
     assert any("điện" in n.lower() or "Số điện" in n for n in item_names)
 
 
-def test_pipeline_real_receipt_ocr():
-    """Test kết nối toàn diện Pipeline: OpenCV Preprocessing -> Tesseract OCR -> Regex Extractor."""
+def test_pipeline_real_receipt_extraction():
+    """Test kết nối toàn diện Pipeline: Image Preprocessing -> Multimodal LLM Extraction -> Structure Parser."""
     from backend.core.pipeline import ProcessingPipeline
     sample_img = Path(__file__).resolve().parent.parent / "data" / "sample_receipts" / "sample_test_receipt.jpg"
     if sample_img.exists():

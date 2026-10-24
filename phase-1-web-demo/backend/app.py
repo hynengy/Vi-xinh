@@ -102,12 +102,12 @@ def serve_static(filename):
 
 
 # ==================================================================
-#  API 1: RECEIPT UPLOAD & GOOGLE ML KIT OCR
+#  API 1: RECEIPT UPLOAD & GEMINI MULTIMODAL AI EXTRACTOR
 # ==================================================================
 @app.route("/api/receipts/upload", methods=["POST"])
 def upload_receipt():
     """
-    Tải ảnh hóa đơn lên và chạy nhận dạng bằng Google ML Kit.
+    Tải ảnh hóa đơn lên và trích xuất cấu trúc bằng Gemini Multimodal AI.
     Returns: { image_url, raw_text, merchant_name, amount, transaction_date, items[], notes, engine }
     """
     if "receipt" not in request.files:
@@ -805,14 +805,16 @@ def list_categories():
 
 
 # ==================================================================
-#  API 11: OCR ENGINE STATUS
+#  API 11: LLM & AI EXTRACTOR STATUS
 # ==================================================================
+@app.route("/api/llm/status", methods=["GET"])
 @app.route("/api/ocr/status", methods=["GET"])
 def ocr_status():
-    """Kiểm tra trạng thái Google Vision OCR Engine."""
+    """Kiểm tra trạng thái Gemini Multimodal AI / LLM Engine."""
     return jsonify(pipeline.mlkit_engine.get_engine_info())
 
 
+@app.route("/api/llm/config", methods=["GET", "POST"])
 @app.route("/api/ocr/config", methods=["GET", "POST"])
 def ocr_config():
     """Lấy hoặc lưu cấu hình GOOGLE_API_KEY."""
@@ -918,7 +920,7 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print(">> Vi Xinh Backend Server dang khoi chay...")
     print(f">> Trang chu:      http://127.0.0.1:{port}")
-    print(f">> Xac thuc OCR:   http://127.0.0.1:{port}/review")
+    print(f">> Xac thuc AI:    http://127.0.0.1:{port}/review")
     print(f">> Vi nhom:        http://127.0.0.1:{port}/groups")
     print(f">> API Docs & Doc: http://127.0.0.1:{port}/api/stats")
     print("=" * 60 + "\n")
