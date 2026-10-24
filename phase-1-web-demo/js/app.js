@@ -22,6 +22,29 @@ const S = {
 
 const SEED_USERS = [];
 
+function normalizeContact(c){
+    if(!c) return '';
+    let s = String(c).trim().toLowerCase();
+    s = s.replace(/[\s\-\.\(\)]/g, '');
+    if(s.startsWith('+84')) s = '0' + s.slice(3);
+    else if(s.startsWith('84') && s.length >= 10 && !s.includes('@')) s = '0' + s.slice(2);
+    return s;
+}
+
+function matchUserContact(u, contact){
+    if(!u || !contact) return false;
+    const nc = normalizeContact(contact);
+    const uEmail = normalizeContact(u.email);
+    const uPhone = normalizeContact(u.phone);
+    const uName = normalizeContact(u.username);
+    return nc === uEmail || (uPhone && nc === uPhone) || (uName && nc === uName);
+}
+
+function matchUserPassword(u, pw){
+    if(!u || !pw) return false;
+    return String(u.password || u.pw || '').trim() === String(pw).trim();
+}
+
 function getRegisteredUsers(){
     try {
         const raw = localStorage.getItem('vx_registered_users');
@@ -47,10 +70,20 @@ function saveRegisteredUser(u, password){
     try {
         const raw = localStorage.getItem('vx_registered_users');
         const list = raw ? JSON.parse(raw) : [];
-        const saved = { ...u, password: password || u.password || 'password123', pw: password || u.password || 'password123' };
-        const idx = list.findIndex(x => (saved.email && x.email === saved.email) || (saved.phone && x.phone === saved.phone));
-        if(idx >= 0) list[idx] = saved;
-        else list.push(saved);
+        const pwVal = password || u.password || u.pw || '123456';
+        const saved = {
+            ...u,
+            email: (u.email || '').trim().toLowerCase(),
+            phone: normalizeContact(u.phone),
+            password: pwVal,
+            pw: pwVal
+        };
+        const idx = list.findIndex(x => matchUserContact(x, saved.email) || (saved.phone && matchUserContact(x, saved.phone)));
+        if(idx >= 0) {
+            list[idx] = { ...list[idx], ...saved };
+        } else {
+            list.push(saved);
+        }
         localStorage.setItem('vx_registered_users', JSON.stringify(list));
     } catch(e){}
 }
@@ -229,8 +262,10 @@ function quickFillAccount(email, pw){
 
 async function handleLogin(e){
     e.preventDefault();
-    const em = document.getElementById('loginEmail').value.trim();
-    const pw = document.getElementById('loginPw').value;
+    const emInp = document.getElementById('loginEmail');
+    const pwInp = document.getElementById('loginPw');
+    const em = emInp ? emInp.value.trim() : '';
+    const pw = pwInp ? pwInp.value : '';
     document.getElementById('emailGrp').classList.remove('error');
     document.getElementById('pwGrp').classList.remove('error');
 
@@ -249,7 +284,8 @@ async function handleLogin(e){
     btn.classList.add('loading');
     document.getElementById('loginBtnTxt').innerHTML = '<span class="spinner"></span> Đang kiểm tra...';
 
-    const cleanContact = em.replace(/\s+/g, '');
+    const localUsers = getRegisteredUsers();
+    const localU = localUsers.find(x => matchUserContact(x, em));
 
     try {
         const res = await fetch('/api/auth/login', {
@@ -281,50 +317,70 @@ async function handleLogin(e){
             updateBioLoginUI();
             enterApp();
             toast(`Đăng nhập thành công: ${u.name}`, 'success');
-        } else {
-            // Kiểm tra xem có trong registered users local không nếu offline
-            const localUsers = getRegisteredUsers();
-            const localU = localUsers.find(x => (x.email === em || (x.phone && x.phone.replace(/\s+/g,'') === cleanContact)));
-            if(localU){
-                if(localU.password === pw || localU.pw === pw){
-                    S.loggedIn = true;
-                    S.user = localU;
-                    localStorage.setItem('vx_u', JSON.stringify(localU));
-                    localStorage.setItem('vx_last_user', JSON.stringify(localU));
-                    updateBioLoginUI();
-                    enterApp();
-                    toast(`Đăng nhập thành công: ${localU.name || localU.full_name}`, 'success');
-                    return;
-                } else {
-                    document.getElementById('pwGrp').classList.add('error');
-                    toast('Mật khẩu không chính xác. Vui lòng kiểm tra lại!', 'error');
-                    return;
-                }
-            }
-            // Tuyệt đối không cho phép đăng nhập nếu chưa đăng ký!
-            document.getElementById('emailGrp').classList.add('error');
-            toast(data.error || 'Tài khoản chưa được đăng ký trong hệ thống. Vui lòng chọn tab Đăng ký!', 'error');
-            setTimeout(() => swAuthTab('register'), 1400);
+            return;
         }
+
+        // Nếu máy chủ báo sai mật khẩu (HTTP 401)
+        if(res.status === 401 || (data.error && data.error.includes('Mật khẩu'))){
+            document.getElementById('pwGrp').classList.add('error');
+            toast(data.error || 'Mật khẩu không chính xác. Bạn có thể nhấn "Quên mật khẩu?" để lấy lại.', 'error');
+            return;
+        }
+
+        // Nếu backend lỗi hoặc tài khoản tồn tại trong local users
+        if(localU){
+            if(matchUserPassword(localU, pw)){
+                S.loggedIn = true;
+                S.user = localU;
+                localStorage.setItem('vx_u', JSON.stringify(localU));
+                localStorage.setItem('vx_last_user', JSON.stringify(localU));
+                updateBioLoginUI();
+                enterApp();
+                toast(`Đăng nhập thành công: ${localU.name || localU.full_name}`, 'success');
+
+                // Đồng bộ nền lên serverless nếu máy chủ vừa reset DB
+                fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        full_name: localU.full_name || localU.name || 'Người dùng Ví Xinh',
+                        email: localU.email || null,
+                        phone: localU.phone || null,
+                        password: pw
+                    })
+                }).catch(() => {});
+                return;
+            } else {
+                document.getElementById('pwGrp').classList.add('error');
+                toast('Mật khẩu không chính xác. Vui lòng bấm "Quên mật khẩu?" để tạo mật khẩu mới!', 'error');
+                return;
+            }
+        }
+
+        // Tài khoản thực sự chưa từng đăng ký ở đâu
+        document.getElementById('emailGrp').classList.add('error');
+        toast(data.error || 'Tài khoản chưa được đăng ký trong hệ thống. Vui lòng chọn tab Đăng ký!', 'error');
+        setTimeout(() => switchAuthTab('register'), 1400);
+
     } catch(err) {
-        // Trường hợp offline / mạng lỗi: Kiểm tra chặt chẽ danh sách tài khoản đã đăng ký
-        const localUsers = getRegisteredUsers();
-        const localU = localUsers.find(x => (x.email === em || (x.phone && x.phone.replace(/\s+/g,'') === cleanContact)));
-        if(!localU){
+        // Trường hợp offline / mạng lỗi / máy chủ không phản hồi
+        if(localU){
+            if(matchUserPassword(localU, pw)){
+                S.loggedIn = true;
+                S.user = localU;
+                localStorage.setItem('vx_u', JSON.stringify(localU));
+                localStorage.setItem('vx_last_user', JSON.stringify(localU));
+                updateBioLoginUI();
+                enterApp();
+                toast(`Đăng nhập thành công (Cục bộ): ${localU.name || localU.full_name}`, 'success');
+            } else {
+                document.getElementById('pwGrp').classList.add('error');
+                toast('Mật khẩu không chính xác. Vui lòng kiểm tra lại!', 'error');
+            }
+        } else {
             document.getElementById('emailGrp').classList.add('error');
             toast('Tài khoản chưa được đăng ký. Vui lòng bấm sang tab Đăng ký để tạo tài khoản mới!', 'error');
-            setTimeout(() => swAuthTab('register'), 1400);
-        } else if(localU.password !== pw && localU.pw !== pw){
-            document.getElementById('pwGrp').classList.add('error');
-            toast('Mật khẩu không chính xác. Vui lòng kiểm tra lại!', 'error');
-        } else {
-            S.loggedIn = true;
-            S.user = localU;
-            localStorage.setItem('vx_u', JSON.stringify(localU));
-            localStorage.setItem('vx_last_user', JSON.stringify(localU));
-            updateBioLoginUI();
-            enterApp();
-            toast(`Đăng nhập thành công: ${localU.name || localU.full_name}`, 'success');
+            setTimeout(() => switchAuthTab('register'), 1400);
         }
     } finally {
         btn.classList.remove('loading');
@@ -335,7 +391,7 @@ async function handleLogin(e){
 async function handleRegister(e){
     e.preventDefault();
     const fullName = document.getElementById('regFullName').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
+    const email = document.getElementById('regEmail').value.trim().toLowerCase();
     const phone = document.getElementById('regPhone').value.trim();
     const pw = document.getElementById('regPw').value;
     const captchaInput = document.getElementById('regCaptchaInput').value.trim().toUpperCase();
@@ -352,18 +408,23 @@ async function handleRegister(e){
     if (errEl) errEl.style.display = 'none';
 
     // 2. Kiểm tra các trường dữ liệu
-    if(!fullName || !email || !phone || pw.length < 6){
-        toast('Vui lòng điền đủ họ tên, email, SĐT và mật khẩu ≥ 6 ký tự.', 'error');
+    if(!fullName || (!email && !phone) || pw.length < 6){
+        toast('Vui lòng điền đủ họ tên, email/SĐT và mật khẩu ≥ 6 ký tự.', 'error');
         return;
     }
 
     // 3. Kiểm tra xem tài khoản đã tồn tại trong local users chưa
-    const cleanPhone = phone.replace(/\s+/g, '');
     const localUsers = getRegisteredUsers();
-    const exists = localUsers.some(x => x.email === email || (x.phone && x.phone.replace(/\s+/g,'') === cleanPhone));
+    const exists = localUsers.find(x => matchUserContact(x, email) || (phone && matchUserContact(x, phone)));
     if(exists){
-        toast('Email hoặc Số điện thoại này đã được đăng ký. Vui lòng Đăng nhập!', 'warning');
-        setTimeout(() => swAuthTab('login'), 1200);
+        toast('Email hoặc Số điện thoại này đã có tài khoản. Đang chuyển sang Đăng nhập...', 'info');
+        const loginInp = document.getElementById('loginEmail');
+        if(loginInp) loginInp.value = email || phone;
+        setTimeout(() => {
+            switchAuthTab('login');
+            const pwInp = document.getElementById('loginPw');
+            if(pwInp) pwInp.focus();
+        }, 1000);
         return;
     }
 
@@ -404,6 +465,16 @@ async function handleRegister(e){
             localStorage.setItem('vx_last_user', JSON.stringify(u));
             enterApp();
             toast(`Đăng ký tài khoản thành công: ${fullName}`, 'success');
+        } else if(res.status === 409 || (data.error && data.error.includes('đã được đăng ký'))){
+            saveRegisteredUser(newUserObj, pw);
+            toast('Email/SĐT đã được đăng ký trước đó. Đang chuyển sang Đăng nhập...', 'warning');
+            const loginInp = document.getElementById('loginEmail');
+            if(loginInp) loginInp.value = email || phone;
+            setTimeout(() => {
+                switchAuthTab('login');
+                const pwInp = document.getElementById('loginPw');
+                if(pwInp) pwInp.focus();
+            }, 1200);
         } else {
             toast(data.error || 'Email hoặc Số điện thoại đã được đăng ký trước đó.', 'error');
             refreshCaptcha();
@@ -488,9 +559,8 @@ async function sendForgotOtpCode(){
         }, 1000);
 
     } catch(e) {
-        const cleanContact = contact.replace(/\s+/g, '');
         const regUsers = getRegisteredUsers();
-        const found = regUsers.some(x => x.email === contact || (x.phone && x.phone.replace(/\s+/g, '') === cleanContact));
+        const found = regUsers.find(x => matchUserContact(x, contact));
         if(found){
             const fakeOtp = Math.floor(100000 + Math.random() * 900000).toString();
             forgotOtpCode = fakeOtp;
@@ -551,9 +621,11 @@ async function handleResetPassword(e){
             const u = data.user;
             u.name = u.full_name || u.name || contact.split('@')[0];
             u.avatar = u.avatar_url || 'assets/logo.jpg';
+            saveRegisteredUser(u, newPw);
             S.loggedIn = true;
             S.user = u;
             localStorage.setItem('vx_u', JSON.stringify(u));
+            localStorage.setItem('vx_last_user', JSON.stringify(u));
             closeForgotPwModal();
             enterApp();
             toast('Đã cập nhật mật khẩu thành công.', 'success');
@@ -562,16 +634,16 @@ async function handleResetPassword(e){
             toast(data.error || 'Mã xác thực không chính xác hoặc đã hết hạn.', 'error');
         }
     } catch(err) {
-        const cleanContact = contact.replace(/\s+/g, '');
         const regUsers = getRegisteredUsers();
-        const found = regUsers.find(x => x.email === contact || (x.phone && x.phone.replace(/\s+/g, '') === cleanContact));
+        const found = regUsers.find(x => matchUserContact(x, contact));
         if(found){
             found.password = newPw;
             found.pw = newPw;
-            localStorage.setItem('vx_registered_users', JSON.stringify(regUsers));
+            saveRegisteredUser(found, newPw);
             S.loggedIn = true;
             S.user = found;
             localStorage.setItem('vx_u', JSON.stringify(found));
+            localStorage.setItem('vx_last_user', JSON.stringify(found));
             closeForgotPwModal();
             enterApp();
             toast('Đặt lại mật khẩu thành công.', 'success');
@@ -677,6 +749,20 @@ async function loadTransactionsFromBackend(){
                 if(document.getElementById('pgHist')?.classList.contains('active')){
                     filterTransactions();
                 }
+            } else if(S.transactions && S.transactions.length > 0){
+                // Nếu serverless vừa khởi động lại (DB rỗng) nhưng client có dữ liệu, đồng bộ lên serverless
+                S.transactions.slice(0, 20).forEach(t => {
+                    sendBE({
+                        user_id: uid,
+                        merchant_name: t.name,
+                        amount: t.amt,
+                        type: t.type || 'expense',
+                        transaction_date: t.date,
+                        category: t.cat,
+                        notes: t.note || '',
+                        receipt_image_path: t.receipt_image_path || ''
+                    });
+                });
             }
         }
     } catch(e){
@@ -777,12 +863,21 @@ function enterApp(){
     document.documentElement.setAttribute('data-theme',savedTheme);
     
     const uid = S.user?.id || 1;
-    const cachedTx = localStorage.getItem('vx_transactions_' + uid) || localStorage.getItem('vx_transactions');
-    if (cachedTx) {
-        try { S.transactions = JSON.parse(cachedTx); } catch(e){ S.transactions = []; }
-    } else {
-        S.transactions = [...DEMO_TX];
+    let cachedTxList = [];
+    try {
+        const perUser = localStorage.getItem('vx_transactions_' + uid);
+        const globalTx = localStorage.getItem('vx_transactions');
+        const parsedPer = perUser ? JSON.parse(perUser) : [];
+        const parsedGlobal = globalTx ? JSON.parse(globalTx) : [];
+        if (Array.isArray(parsedPer) && parsedPer.length > 0) {
+            cachedTxList = parsedPer;
+        } else if (Array.isArray(parsedGlobal) && parsedGlobal.length > 0) {
+            cachedTxList = parsedGlobal;
+        }
+    } catch(e) {
+        cachedTxList = [];
     }
+    S.transactions = cachedTxList;
     const cachedBgt = localStorage.getItem('vx_budgets_' + uid);
     S.budgets = cachedBgt ? JSON.parse(cachedBgt) : [...DEMO_BGT];
     const cachedSav = localStorage.getItem('vx_savings_' + uid);

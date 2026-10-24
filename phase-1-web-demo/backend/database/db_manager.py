@@ -314,15 +314,17 @@ class DatabaseManager:
         if not contact:
             return None
         clean_contact = contact.strip()
-        clean_phone = clean_contact.replace(" ", "").replace("-", "").replace(".", "")
+        clean_phone = clean_contact.replace(" ", "").replace("-", "").replace(".", "").replace("+84", "0")
+        if clean_phone.startswith("84") and len(clean_phone) >= 11:
+            clean_phone = "0" + clean_phone[2:]
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT * FROM users 
                 WHERE LOWER(TRIM(COALESCE(email, ''))) = LOWER(?) 
                    OR phone = ? 
-                   OR REPLACE(REPLACE(REPLACE(COALESCE(phone, ''), ' ', ''), '-', ''), '.', '') = ?
-                   OR username = ?
+                   OR REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(phone, ''), ' ', ''), '-', ''), '.', ''), '+84', '0') = ?
+                   OR LOWER(username) = LOWER(?)
             """, (clean_contact, clean_contact, clean_phone, clean_contact))
             row = cursor.fetchone()
             return dict(row) if row else None
@@ -330,8 +332,12 @@ class DatabaseManager:
     def register_user(self, full_name: str, email: Optional[str] = None, phone: Optional[str] = None, password: str = "123456") -> Dict[str, Any]:
         """Đăng ký tài khoản người dùng mới bằng Email hoặc SĐT thực."""
         # Chuẩn hóa
-        clean_email = email.strip() if email else None
+        clean_email = email.strip().lower() if email else None
         clean_phone = phone.strip() if phone else None
+        if clean_phone:
+            clean_phone = clean_phone.replace(" ", "").replace("-", "").replace(".", "").replace("+84", "0")
+            if clean_phone.startswith("84") and len(clean_phone) >= 11:
+                clean_phone = "0" + clean_phone[2:]
         clean_name = full_name.strip() if full_name else "Người dùng Ví Xinh"
 
         # Sinh username tự động
