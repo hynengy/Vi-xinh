@@ -153,13 +153,21 @@ class DatabaseManager:
         except Exception:
             pass
         self.seed_demo = seed_demo
-        self.init_database()
+        try:
+            self.init_database()
+        except Exception as e:
+            logger.error(f"init_database trên PostgreSQL lỗi: {e}. Tự động fallback sang SQLite.")
+            self.is_postgres = False
+            try:
+                self.init_database()
+            except Exception as e2:
+                logger.error(f"init_database trên SQLite cũng lỗi: {e2}")
 
     def get_connection(self):
         """Tạo kết nối với CSDL (PostgreSQL nếu có DATABASE_URL, fallback SQLite)."""
         if self.is_postgres:
             try:
-                raw_conn = psycopg2.connect(self.database_url)
+                raw_conn = psycopg2.connect(self.database_url, connect_timeout=5)
                 return PostgresConnectionWrapper(raw_conn)
             except Exception as e:
                 logger.error(f"PostgreSQL connection error: {e}. Falling back to SQLite.")
@@ -186,10 +194,16 @@ class DatabaseManager:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """)
-            try:
-                cursor.execute("ALTER TABLE users ADD COLUMN password_hash TEXT DEFAULT '123456'")
-            except sqlite3.OperationalError:
-                pass
+            if not self.is_postgres:
+                try:
+                    cursor.execute("ALTER TABLE users ADD COLUMN password_hash TEXT DEFAULT '123456'")
+                except Exception:
+                    pass
+            else:
+                try:
+                    cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT DEFAULT '123456'")
+                except Exception:
+                    pass
 
             # 2. Bảng categories
             cursor.execute("""
