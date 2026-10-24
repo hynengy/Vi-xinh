@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ví Xinh - Quản Lý Tài Chính Thông Minh</title>
     <meta name="description" content="Ví Xinh - Ứng dụng quản lý chi tiêu cá nhân & nhóm thông minh.">
-    <link rel="stylesheet" href="css/style.css?v=3.9.3">
+    <link rel="stylesheet" href="css/style.css?v=3.9.4">
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#5286E8">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -656,7 +656,8 @@ setTimeout(function(){
                 <div class="cam-box" id="camBox" onclick="handleCamBoxClick()">
                     <video id="camV" autoplay playsinline></video>
                     <div class="cam-frame" id="camFrame"></div>
-                    <div class="cam-hint" id="camHint"><i class="ri-scan-2-line"></i> Căn hóa đơn vào khung</div>
+                    <div class="cam-scanner-beam"></div>
+                    <div class="cam-hint" id="camHint"><i class="ri-scan-2-line"></i> Căn trọn toàn bộ hóa đơn vào khung</div>
                     <div id="camFallbackBox" class="cam-fallback-box" style="display:none">
                         <div class="cam-fallback-icon"><i class="ri-camera-3-fill"></i></div>
                         <div class="cam-fallback-title">Mở Camera iPhone / Android</div>
@@ -665,8 +666,13 @@ setTimeout(function(){
                     </div>
                 </div>
                 <canvas id="camC" style="display:none"></canvas>
-                <div style="margin-top:0.75rem">
-                    <button id="capBtn" class="btn btn-p btn-block" onclick="capPhoto()"><i class="ri-camera-lens-line"></i> Chụp ảnh hóa đơn</button>
+                <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.4rem">
+                    <button id="capBtn" class="btn btn-p btn-block" onclick="capPhoto()" style="padding:0.75rem;font-size:0.92rem">
+                        <i class="ri-camera-lens-line"></i> Chụp ảnh trong khung
+                    </button>
+                    <button type="button" class="btn btn-block" onclick="triggerNativeCamera()" style="padding:0.6rem;font-size:0.8rem;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:var(--r-pill);display:flex;align-items:center;justify-content:center;gap:0.35rem">
+                        <i class="ri-fullscreen-line" style="color:var(--primary);font-size:0.95rem"></i> Mở máy ảnh điện thoại (Hóa đơn dài)
+                    </button>
                 </div>
             </div>
             <!-- TAB TẢI ẢNH -->
@@ -1209,6 +1215,6 @@ setTimeout(function(){
 </div>
 
 <div class="toast-box" id="toastBox"></div>
-<script src="js/app.js?v=3.9.3"></script>
+<script src="js/app.js?v=3.9.4"></script>
 </body>
 </html>

@@ -1212,13 +1212,12 @@ function openCam(){
     if(S.camStream) return;
 
     if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-        // Yêu cầu camera góc rộng / toàn cảnh 16:9 Full HD không cắt xén viền hóa đơn
+        // Yêu cầu camera sau (environment) chất lượng cao, tự động tối ưu hóa theo hướng dọc của điện thoại
         const constraints = {
             video: {
                 facingMode: { ideal: 'environment' },
-                width: { ideal: 1920, min: 1280 },
-                height: { ideal: 1080, min: 720 },
-                aspectRatio: { ideal: 1.777777778 }
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
             }
         };
         navigator.mediaDevices.getUserMedia(constraints).catch(() => {
