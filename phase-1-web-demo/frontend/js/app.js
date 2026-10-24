@@ -1092,7 +1092,7 @@ function saveTx(e){
     toast(`Đã lưu giao dịch ${fmt(amt)}`,'success');
 }
 
-// ===== PHOTO / CAMERA =====
+// ===== PHOTO / CAMERA ("Chụp Toàn Cảnh 16:9 Panoramic") =====
 function openCam(){
     const v=document.getElementById('camV');if(!v)return;
     const fb=document.getElementById('camFallbackBox');
@@ -1102,7 +1102,19 @@ function openCam(){
     if(S.camStream) return;
 
     if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-        navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}}).then(s=>{
+        // Yêu cầu camera góc rộng / toàn cảnh 16:9 Full HD không cắt xén viền hóa đơn
+        const constraints = {
+            video: {
+                facingMode: { ideal: 'environment' },
+                width: { ideal: 1920, min: 1280 },
+                height: { ideal: 1080, min: 720 },
+                aspectRatio: { ideal: 1.777777778 }
+            }
+        };
+        navigator.mediaDevices.getUserMedia(constraints).catch(() => {
+            // Fallback nếu thiết bị không hỗ trợ độ phân giải cao
+            return navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+        }).then(s=>{
             S.camStream=s;
             v.srcObject=s;
             v.style.display='block';
@@ -1154,7 +1166,10 @@ function capPhoto(){
     const v=document.getElementById('camV'), c=document.getElementById('camC');
     if(S.camStream && v && v.videoWidth){
         c.width=v.videoWidth; c.height=v.videoHeight;
-        c.getContext('2d').drawImage(v,0,0);
+        const ctx=c.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(v, 0, 0, v.videoWidth, v.videoHeight);
         const dataUrl=c.toDataURL('image/jpeg', 0.95);
         stopCam();
         c.toBlob(blob => {
@@ -3546,18 +3561,18 @@ function renderNotifications(){
             .trim();
 
         return `
-        <div class="notif-item ${n.unread ? 'unread' : ''}" style="display:flex;flex-direction:column;gap:0.25rem;padding:0.65rem 0.85rem;background:${n.unread ? 'var(--card)' : 'var(--bg)'};border-radius:12px;border:1px solid ${n.unread ? 'rgba(244,91,138,0.25)' : 'var(--border)'};cursor:pointer;position:relative;transition:all 0.2s ease" onclick="handleNotifClick('${n.id}')">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.4rem">
-                <strong style="font-size:0.83rem;color:var(--text);font-weight:600">${cleanTitle}</strong>
-                <div style="display:flex;align-items:center;gap:0.35rem">
-                    ${n.unread ? '<span class="notif-dot" style="width:6px;height:6px;border-radius:50%;background:var(--primary);flex-shrink:0"></span>' : ''}
-                    <button type="button" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0 2px;font-size:0.85rem;line-height:1" onclick="event.stopPropagation();deleteNotif('${n.id}')" title="Xóa thông báo">✕</button>
+        <div class="notif-item ${n.unread ? 'unread' : ''}" onclick="handleNotifClick('${n.id}')">
+            <div class="notif-hdr">
+                <div class="notif-title">${cleanTitle}</div>
+                <div class="notif-actions-right">
+                    ${n.unread ? '<span class="notif-dot"></span>' : ''}
+                    <button type="button" class="notif-del-btn" onclick="event.stopPropagation();deleteNotif('${n.id}')" title="Xóa thông báo">✕</button>
                 </div>
             </div>
-            <div style="font-size:0.75rem;color:var(--text2);line-height:1.35">${cleanBody}</div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;gap:0.4rem">
-                <span style="font-size:0.68rem;color:var(--text3)">${formatNotifTime(n.time)}</span>
-                ${n.actionText ? `<span style="font-size:0.7rem;color:var(--primary);font-weight:600">${n.actionText}</span>` : ''}
+            <div class="notif-body">${cleanBody}</div>
+            <div class="notif-foot">
+                <span class="notif-time">${formatNotifTime(n.time)}</span>
+                ${n.actionText ? `<span class="notif-action-link">${n.actionText}</span>` : ''}
             </div>
         </div>
         `;
