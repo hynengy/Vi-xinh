@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác Thực Kết Quả Quét Hóa Đơn - Ví Xinh</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">
+                <span class="logo-badge"><i class="ri-wallet-3-line"></i></span>
+                <span>Ví Xinh</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/"><i class="ri-home-4-line"></i> Trang Chủ</a></li>
+                <li><a href="/groups"><i class="ri-funds-box-line"></i> Quỹ Chung & Chia Tiền</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header" style="margin-bottom: 1.2rem;">
+            <h1 class="page-title"><i class="ri-file-search-line"></i> Xác Nhận Hóa Đơn</h1>
+            <p class="page-subtitle">Kiểm tra thông tin trước khi ghi nhận</p>
+        </div>
+
+        <div class="grid-2">
+            <!-- Left: Receipt Image Preview & AI Extracted Raw Text -->
+            <div class="card">
+                <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.8rem; display:flex; align-items:center; gap:0.4rem">
+                    <i class="ri-image-line" style="color:var(--primary)"></i> Ảnh hóa đơn
+                </h2>
+                <div style="background: var(--bg); border-radius: var(--radius-md); overflow: hidden; text-align: center; max-height: 420px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.8rem; border:1px solid var(--border)">
+                    <img id="review-image" src="" alt="Ảnh hóa đơn" style="max-width: 100%; max-height: 400px; object-fit: contain;">
+                </div>
+
+                <details style="margin-top: 0.8rem;">
+                    <summary style="font-weight: 600; cursor: pointer; color: var(--primary); display:inline-flex; align-items:center; gap:0.3rem; font-size:0.82rem">
+                        <i class="ri-code-s-slash-line"></i> Xem văn bản trích xuất gốc
+                    </summary>
+                    <pre id="review-raw-text" style="background: #0f172a; color: #f8fafc; padding: 0.8rem; border-radius: var(--radius-sm); font-size: 0.8rem; margin-top: 0.4rem; overflow-x: auto; max-height: 180px; line-height:1.4"></pre>
+                </details>
+            </div>
+
+            <!-- Right: Editable Form with Extracted Values -->
+            <div class="card">
+                <h2 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.8rem; display:flex; align-items:center; gap:0.4rem">
+                    <i class="ri-edit-box-line" style="color:var(--primary)"></i> Thông Tin Hóa Đơn
+                </h2>
+                <form id="verify-form" onsubmit="handleConfirmTransaction(event)">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.8rem;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Nơi giao dịch</label>
+                            <input type="text" id="verify-merchant" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Số HĐ / Mã bill</label>
+                            <input type="text" id="verify-invoice-no" class="form-control" placeholder="HD..." style="font-family:monospace;font-weight:600">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8rem;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Số tiền (₫)</label>
+                            <input type="number" id="verify-amount" class="form-control" required style="font-weight:800;color:var(--danger)">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Ngày</label>
+                            <input type="date" id="verify-date" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Giờ</label>
+                            <input type="time" id="verify-time" class="form-control">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Thuế VAT (₫)</label>
+                            <input type="number" id="verify-vat" class="form-control" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight:700;font-size:0.82rem">Hình thức TT</label>
+                            <input type="text" id="verify-payment-method" class="form-control" placeholder="Tiền mặt, Chuyển khoản...">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight:700;font-size:0.82rem">Danh mục</label>
+                        <select id="verify-category" class="form-control">
+                            <option value="Ăn uống">Ăn uống & Cafe</option>
+                            <option value="Mua sắm">Mua sắm & Tiêu dùng</option>
+                            <option value="Đi lại">Di chuyển / Xăng xe</option>
+                            <option value="Giải trí">Giải trí</option>
+                            <option value="Hoá đơn">Hóa đơn & Dịch vụ</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight:700;font-size:0.82rem">Nguồn tiền</label>
+                        <select id="verify-group-id" class="form-control">
+                            <option value="">Ví Cá Nhân</option>
+                            <option value="1">Quỹ Chi Tiêu Chung</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight:700;font-size:0.82rem">Ghi chú</label>
+                        <textarea id="verify-notes" class="form-control" rows="2" placeholder="Ghi chú thêm..."></textarea>
+                    </div>
+
+                    <!-- Line Items Table (Chi Tiết Các Dịch Vụ) -->
+                    <div id="line-items-card" style="margin-top: 1rem; display: none; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.85rem; background: var(--bg);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                            <label class="form-label" style="margin: 0; font-size: 0.88rem; font-weight:700">
+                                <i class="ri-list-check-2"></i> Chi tiết dịch vụ / hàng hóa
+                            </label>
+                            <span class="badge" style="background:#FFF0F4;color:var(--primary)" id="item-count-badge">0 mục</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table style="margin-top: 0; width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Hạng mục</th>
+                                        <th style="width:70px">SL</th>
+                                        <th>Đơn giá</th>
+                                        <th>Thành tiền (₫)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="line-items-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top: 0.6rem; padding: 0.5rem 0.75rem; background: #e0e7ff; border-radius: var(--radius-sm); font-size: 0.78rem; color: #3730a3; font-weight: 600;" id="room-split-hint">
+                            <i class="ri-scales-3-line"></i> Ước tính chia đều: ~0 ₫/người
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 0.6rem; margin-top: 1.2rem;">
+                        <a href="/" class="btn btn-secondary" style="flex: 1;"><i class="ri-arrow-left-line"></i> Quay lại</a>
+                        <button type="submit" class="btn btn-primary" style="flex: 2;"><i class="ri-check-line"></i> Lưu giao dịch</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer style="text-align:center;padding:1.2rem;color:var(--text3);font-size:0.78rem;border-top:1px solid var(--border);margin-top:1.5rem">
+        <p>Ví Xinh · Quản lý tài chính thông minh</p>
+    </footer>
+
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dataStr = sessionStorage.getItem('ocr_result');
+            if (dataStr) {
+                const data = JSON.parse(dataStr);
+                document.getElementById('verify-merchant').value = data.merchant_name || '';
+                document.getElementById('verify-amount').value = data.amount || 0;
+                document.getElementById('verify-date').value = data.transaction_date || '';
+                if (document.getElementById('verify-invoice-no')) {
+                    document.getElementById('verify-invoice-no').value = data.invoice_no || '';
+                }
+                if (document.getElementById('verify-time')) {
+                    document.getElementById('verify-time').value = data.transaction_time || '';
+                }
+                if (document.getElementById('verify-vat')) {
+                    document.getElementById('verify-vat').value = data.vat || '';
+                }
+                if (document.getElementById('verify-payment-method')) {
+                    document.getElementById('verify-payment-method').value = data.payment_method || '';
+                }
+                if (document.getElementById('verify-notes')) {
+                    document.getElementById('verify-notes').value = data.notes || '';
+                }
+                document.getElementById('review-raw-text').textContent = data.raw_text || '(Không có văn bản thô)';
+                if (data.image_url) {
+                    document.getElementById('review-image').src = data.image_url;
+                }
+
+                // Render danh sách chi tiết các dịch vụ (Line Items)
+                const items = data.items || [];
+                const lineItemsCard = document.getElementById('line-items-card');
+                const tbody = document.getElementById('line-items-table-body');
+                const badge = document.getElementById('item-count-badge');
+
+                if (items.length > 0 && tbody && lineItemsCard) {
+                    lineItemsCard.style.display = 'block';
+                    badge.textContent = `${items.length} hạng mục`;
+
+                    tbody.innerHTML = items.map((it, idx) => `
+                        <tr>
+                            <td style="font-weight: 600;">
+                                <span style="margin-right:0.35rem">${it.icon || '📦'}</span>
+                                ${it.name}
+                            </td>
+                            <td style="color: var(--primary); font-size: 0.82rem; font-weight:700">
+                                ${it.quantity || 1}
+                            </td>
+                            <td style="color: var(--text2); font-size: 0.8rem">
+                                ${new Intl.NumberFormat('vi-VN').format(it.unit_price || it.amount)} ₫
+                            </td>
+                            <td>
+                                <input type="number" class="form-control item-price-input" 
+                                       value="${it.amount}" 
+                                       style="width: 120px; padding: 0.35rem 0.6rem; font-weight: 700; color: #b91c1c;"
+                                       onchange="recalcTotalFromItemInputs()">
+                            </td>
+                        </tr>
+                    `).join('');
+
+                    updateSplitHint(data.amount || 0);
+                }
+            }
+        });
+
+        function updateSplitHint(total) {
+            const splitHint = document.getElementById('room-split-hint');
+            if (splitHint) {
+                const perPerson = Math.round(total / 4);
+                splitHint.innerHTML = `<i class="ri-scales-3-line"></i> Ước tính chia 4 người: <strong>${new Intl.NumberFormat('vi-VN').format(perPerson)} ₫ / người</strong>`;
+            }
+        }
+
+        function recalcTotalFromItemInputs() {
+            const inputs = document.querySelectorAll('.item-price-input');
+            let sum = 0;
+            inputs.forEach(inp => {
+                sum += parseFloat(inp.value) || 0;
+            });
+            document.getElementById('verify-amount').value = sum;
+            updateSplitHint(sum);
+        }
+    </script>
+</body>
+</html>
