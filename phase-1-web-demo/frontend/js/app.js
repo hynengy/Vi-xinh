@@ -3433,15 +3433,26 @@ async function requestAiSpendingSummary(){
     if(btn) btn.disabled = true;
 
     try {
-        const res = await fetch('/api/ai/spending-summary', {
+        const uid = (typeof currentUser !== 'undefined' && currentUser && currentUser.id) ? currentUser.id : 1;
+        const res = await fetch('/api/ai/spending-summary?user_id=' + uid, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'}
+            headers: {
+                'Content-Type': 'application/json',
+                'Bypass-Tunnel-Reminder': 'true'
+            }
         });
-        const d = await res.json();
+
         loadingBox.style.display = 'none';
         if(btn) btn.disabled = false;
 
-        if(res.ok && d.success){
+        let d;
+        try {
+            d = await res.json();
+        } catch(parseErr) {
+            d = { success: false, error: 'Không thể đọc phản hồi từ máy chủ (' + res.status + ')' };
+        }
+
+        if(res.ok && d && d.success){
             const metricsHtml = `
             <div style="margin-bottom:0.5rem;padding-bottom:0.4rem;border-bottom:1px dashed var(--border);display:flex;align-items:center;justify-content:space-between;font-size:0.68rem;color:var(--text3)">
                 <span><i class="ri-sparkling-fill" style="color:#f59e0b"></i> <strong>${d.model || 'Gemini 1.5 Flash'}</strong></span>
@@ -3453,7 +3464,7 @@ async function requestAiSpendingSummary(){
             contentBox.style.display = 'block';
             toast('AI đã phân tích xong chi tiêu của bạn!', 'success');
         } else {
-            toast(d.error || 'Không thể tạo phân tích lúc này', 'error');
+            toast(d?.error || 'Không thể tạo phân tích lúc này', 'error');
         }
     } catch(e){
         loadingBox.style.display = 'none';
