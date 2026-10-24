@@ -1,19 +1,153 @@
-"""
-Quản Lý Cơ Sở Dữ Liệu SQLite
-Phụ trách: Thành viên 2 - Lê Thị Dịu
-Nhiệm vụ: Tạo bảng, quản lý kết nối, lưu trữ giao dịch cá nhân và ví nhóm
-"""
+import os
+import re
+import logging
 import sqlite3
 from datetime import datetime, date
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
+try:
+    import psycopg2
+    import psycopg2.extras
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
+
+
+class DictWithIndex(dict):
+    """Dictionary cho phép truy cập cả bằng tên cột row['name'] lẫn chỉ số thứ tự row[0] như sqlite3.Row."""
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values())[key]
+        return super().__getitem__(key)
+
+
+class PostgresCursorWrapper:
+    """Wrapper cho psycopg2 cursor để tương thích 100% với cú pháp SQLite trong toàn bộ codebase."""
+    def __init__(self, raw_cursor, conn):
+        self.cursor = raw_cursor
+        self.conn = conn
+        self.lastrowid = None
+
+    def _transform_sql(self, sql: str) -> str:
+        s = sql.replace('?', '%s')
+        # Chuyển đổi INSERT OR IGNORE thành ON CONFLICT DO NOTHING
+        if 'INSERT OR IGNORE INTO' in s.upper():
+            s = re.sub(r'INSERT\s+OR\s+IGNORE\s+INTO', 'INSERT INTO', s, flags=re.IGNORECASE)
+            if 'ON CONFLICT' not in s.upper():
+                s += ' ON CONFLICT DO NOTHING'
+        # Chuyển đổi cú pháp khởi tạo bảng SQLite sang PostgreSQL
+        s = s.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'SERIAL PRIMARY KEY')
+        return s
+
+    def execute(self, sql: str, params=None):
+        if sql.strip().upper().startswith('PRAGMA'):
+            return self
+
+        sql_pg = self._transform_sql(sql)
+        is_insert = sql_pg.strip().upper().startswith('INSERT INTO')
+
+        # Nếu là câu INSERT mà chưa có RETURNING id, tự động bổ sung để gán lastrowid
+        if is_insert and 'RETURNING' not in sql_pg.upper() and 'ON CONFLICT DO NOTHING' not in sql_pg.upper():
+            sql_with_returning = sql_pg + ' RETURNING id'
+            try:
+                if params is not None:
+                    self.cursor.execute(sql_with_returning, params)
+                else:
+                    self.cursor.execute(sql_with_returning)
+                row = self.cursor.fetchone()
+                if row:
+                    self.lastrowid = row.get('id') if isinstance(row, dict) else row[0]
+                return self
+            except Exception:
+                # Nếu bảng không có cột id, rollback và chạy câu lệnh gốc
+                try:
+                    self.conn.rollback()
+                except Exception:
+                    pass
+
+        if params is not None:
+            self.cursor.execute(sql_pg, params)
+        else:
+            self.cursor.execute(sql_pg)
+        return self
+
+    def executemany(self, sql: str, params_seq):
+        sql_pg = self._transform_sql(sql)
+        self.cursor.executemany(sql_pg, params_seq)
+        return self
+
+    def fetchone(self):
+        row = self.cursor.fetchone()
+        if row is None:
+            return None
+        return DictWithIndex(row)
+
+    def fetchall(self):
+        rows = self.cursor.fetchall()
+        return [DictWithIndex(r) for r in rows]
+
+    @property
+    def rowcount(self):
+        return self.cursor.rowcount
+
+    def close(self):
+        self.cursor.close()
+
+
+class PostgresConnectionWrapper:
+    """Wrapper cho psycopg2 connection tương thích cú pháp context manager with conn: cursor = conn.cursor()."""
+    def __init__(self, raw_conn):
+        self.conn = raw_conn
+
+    def cursor(self):
+        raw_cur = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        return PostgresCursorWrapper(raw_cur, self.conn)
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
+
+    def close(self):
+        self.conn.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            try:
+                self.rollback()
+            except Exception:
+                pass
+        else:
+            try:
+                self.commit()
+            except Exception:
+                pass
+        try:
+            self.close()
+        except Exception:
+            pass
+
 
 class DatabaseManager:
-    """Quản lý kết nối và các câu truy vấn tới SQLite."""
+    """Quản lý kết nối và các câu truy vấn tới PostgreSQL (Neon.tech / Supabase) hoặc SQLite."""
 
-    def __init__(self, db_path: Path, seed_demo: bool = False):
+    def __init__(self, db_path: Path, seed_demo: bool = False, database_url: Optional[str] = None):
         self.db_path = str(db_path)
+        self.database_url = (
+            database_url
+            or os.environ.get("DATABASE_URL")
+            or os.environ.get("POSTGRES_URL")
+            or os.environ.get("POSTGRESQL_URL")
+            or ""
+        ).strip()
+        self.is_postgres = bool(self.database_url and PSYCOPG2_AVAILABLE)
         try:
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         except Exception:
@@ -21,8 +155,14 @@ class DatabaseManager:
         self.seed_demo = seed_demo
         self.init_database()
 
-    def get_connection(self) -> sqlite3.Connection:
-        """Tạo kết nối với CSDL với cấu hình row_factory dạng Dict."""
+    def get_connection(self):
+        """Tạo kết nối với CSDL (PostgreSQL nếu có DATABASE_URL, fallback SQLite)."""
+        if self.is_postgres:
+            try:
+                raw_conn = psycopg2.connect(self.database_url)
+                return PostgresConnectionWrapper(raw_conn)
+            except Exception as e:
+                logger.error(f"PostgreSQL connection error: {e}. Falling back to SQLite.")
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")

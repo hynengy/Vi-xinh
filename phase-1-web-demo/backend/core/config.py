@@ -63,6 +63,12 @@ except Exception:
         pass
 
 DB_PATH = DATA_DIR / "vixinh.sqlite3"
+DATABASE_URL = (
+    os.environ.get("DATABASE_URL")
+    or os.environ.get("POSTGRES_URL")
+    or os.environ.get("POSTGRESQL_URL")
+    or ""
+)
 
 # Allowed upload extensions
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "bmp"}

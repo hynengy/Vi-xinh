@@ -12,5 +12,8 @@ numpy>=1.24.0
 # LLM API & Network
 requests>=2.31.0
 
+# Database & Cloud PostgreSQL (Neon.tech / Supabase)
+psycopg2-binary>=2.9.9
+
 # Testing & Quality Assurance
 pytest>=8.0.0

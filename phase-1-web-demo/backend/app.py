@@ -12,7 +12,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 try:
-    from .core.config import UPLOAD_FOLDER, FRONTEND_DIR, ALLOWED_EXTENSIONS, DB_PATH
+    from .core.config import UPLOAD_FOLDER, FRONTEND_DIR, ALLOWED_EXTENSIONS, DB_PATH, DATABASE_URL
     from .core.pipeline import ProcessingPipeline
     from .core.email_service import send_otp_email, is_smtp_configured
     from .database.db_manager import DatabaseManager
@@ -20,7 +20,7 @@ try:
 except (ImportError, ValueError):
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from core.config import UPLOAD_FOLDER, FRONTEND_DIR, ALLOWED_EXTENSIONS, DB_PATH
+    from core.config import UPLOAD_FOLDER, FRONTEND_DIR, ALLOWED_EXTENSIONS, DB_PATH, DATABASE_URL
     from core.pipeline import ProcessingPipeline
     from core.email_service import send_otp_email, is_smtp_configured
     from database.db_manager import DatabaseManager
@@ -40,8 +40,8 @@ def add_header(response):
     response.headers["Expires"] = "0"
     return response
 
+db = DatabaseManager(DB_PATH, database_url=DATABASE_URL)
 pipeline = ProcessingPipeline()
-db = DatabaseManager(DB_PATH)
 group_wallet = GroupWalletManager(db)
 
 
