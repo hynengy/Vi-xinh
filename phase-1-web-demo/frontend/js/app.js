@@ -91,15 +91,15 @@ function saveRegisteredUser(u, password){
 const USERS = getRegisteredUsers();
 
 const CATS = {
-    food:          {label:'Ăn uống',   ic:'ri-restaurant-line',         color:'#0071E3', bg:'#F5F5F7'},
-    transport:     {label:'Di chuyển', ic:'ri-taxi-line',               color:'#0071E3', bg:'#F5F5F7'},
-    shopping:      {label:'Mua sắm',   ic:'ri-shopping-bag-3-line',     color:'#0071E3', bg:'#F5F5F7'},
-    entertainment: {label:'Giải trí',  ic:'ri-gamepad-line',            color:'#0071E3', bg:'#F5F5F7'},
-    health:        {label:'Sức khỏe',  ic:'ri-heart-pulse-line',        color:'#0071E3', bg:'#F5F5F7'},
-    education:     {label:'Học tập',   ic:'ri-book-open-line',          color:'#0071E3', bg:'#F5F5F7'},
-    bills:         {label:'Hoá đơn',   ic:'ri-bill-line',               color:'#0071E3', bg:'#F5F5F7'},
-    salary:        {label:'Lương',     ic:'ri-money-dollar-circle-line',color:'#0071E3', bg:'#F5F5F7'},
-    other:         {label:'Khác',      ic:'ri-archive-line',            color:'#0071E3', bg:'#F5F5F7'},
+    food:          {label:'Ăn uống',   ic:'ri-restaurant-line',         color:'#F97316', bg:'#FFEDD5'}, // Cam ấm
+    transport:     {label:'Di chuyển', ic:'ri-taxi-line',               color:'#0284C7', bg:'#E0F2FE'}, // Xanh dương
+    shopping:      {label:'Mua sắm',   ic:'ri-shopping-bag-3-line',     color:'#8B5CF6', bg:'#EDE9FE'}, // Tím thời trang
+    entertainment: {label:'Giải trí',  ic:'ri-gamepad-line',            color:'#EC4899', bg:'#FCE7F3'}, // Hồng phấn
+    health:        {label:'Sức khỏe',  ic:'ri-heart-pulse-line',        color:'#10B981', bg:'#D1FAE5'}, // Xanh lá ngọc
+    education:     {label:'Học tập',   ic:'ri-book-open-line',          color:'#6366F1', bg:'#EEF2FF'}, // Xanh Indigo
+    bills:         {label:'Hoá đơn',   ic:'ri-bill-line',               color:'#F43F5E', bg:'#FFE4E6'}, // Đỏ hồng san hô
+    salary:        {label:'Lương',     ic:'ri-money-dollar-circle-line',color:'#059669', bg:'#A7F3D0'}, // Xanh tài lộc
+    other:         {label:'Khác',      ic:'ri-archive-line',            color:'#64748B', bg:'#F1F5F9'}, // Xám Slate
 };
 
 const SAVICONS = {
@@ -2742,7 +2742,7 @@ function renderPie(){
     const arcs=sorted.map(([k,v])=>{const ct=CATS[k]||CATS.other;const pct=v/grand;const dash=pct*CI;const o=off;off+=dash;
         return`<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${ct.color}" stroke-width="18" stroke-dasharray="${dash} ${CI-dash}" stroke-dashoffset="${-o}" style="--circ:${CI};--off:${CI-dash};animation:drawIn 0.8s ease forwards" transform="rotate(-90 ${CX} ${CY})"/>`;}).join('');
     const legend=sorted.map(([k,v])=>{const ct=CATS[k]||CATS.other;const pct=((v/grand)*100).toFixed(0);
-        return`<div class="leg-row"><div class="leg-dot" style="background:${ct.color}"></div><span class="leg-name"><i class="${ct.ic}" style="margin-right:4px"></i>${ct.label}</span><span class="leg-pct">${pct}%</span></div>`;}).join('');
+        return`<div class="leg-row"><div class="leg-dot" style="background:${ct.color};box-shadow:0 0 6px ${ct.color}40"></div><span class="leg-name"><i class="${ct.ic}" style="margin-right:5px;color:${ct.color}"></i>${ct.label}</span><span class="leg-pct" style="color:${ct.color};background:${ct.bg};border:1px solid ${ct.color}25">${pct}%</span></div>`;}).join('');
     c.innerHTML=`<div class="pie-wrap"><svg width="120" height="120" viewBox="0 0 120 120">${arcs}</svg><div class="pie-ctr"><div class="pie-cv">100%</div><div class="pie-cl">Tỷ trọng</div></div></div><div class="pie-leg">${legend}</div>`;
     const cd=document.getElementById('catDet');if(cd){
         cd.innerHTML=sorted.map(([k,v],i)=>{const ct=CATS[k]||CATS.other;const pct=((v/grand)*100).toFixed(0);const cnt=exps.filter(t=>t.cat===k).length;

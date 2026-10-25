@@ -1005,6 +1005,24 @@ input#rememberMeCheck {
 .cat-chip.sel { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
 .cat-chip span { font-size: 0.72rem; font-weight: 600; color: var(--text2); }
 
+/* Màu sắc chuyên biệt cho từng danh mục */
+.cat-chip[data-c="food"] i { color: #F97316; }
+.cat-chip[data-c="food"].sel { border-color: #F97316; background: #FFEDD5; color: #C2410C; }
+.cat-chip[data-c="transport"] i { color: #0284C7; }
+.cat-chip[data-c="transport"].sel { border-color: #0284C7; background: #E0F2FE; color: #0369A1; }
+.cat-chip[data-c="shopping"] i { color: #8B5CF6; }
+.cat-chip[data-c="shopping"].sel { border-color: #8B5CF6; background: #EDE9FE; color: #6D28D9; }
+.cat-chip[data-c="entertainment"] i { color: #EC4899; }
+.cat-chip[data-c="entertainment"].sel { border-color: #EC4899; background: #FCE7F3; color: #BE185D; }
+.cat-chip[data-c="health"] i { color: #10B981; }
+.cat-chip[data-c="health"].sel { border-color: #10B981; background: #D1FAE5; color: #047857; }
+.cat-chip[data-c="education"] i { color: #6366F1; }
+.cat-chip[data-c="education"].sel { border-color: #6366F1; background: #EEF2FF; color: #4338CA; }
+.cat-chip[data-c="bills"] i { color: #F43F5E; }
+.cat-chip[data-c="bills"].sel { border-color: #F43F5E; background: #FFE4E6; color: #BE123C; }
+.cat-chip[data-c="other"] i { color: #64748B; }
+.cat-chip[data-c="other"].sel { border-color: #64748B; background: #F1F5F9; color: #334155; }
+
 /* Upload Zone */
 .upload {
     border: 2px dashed var(--border);
