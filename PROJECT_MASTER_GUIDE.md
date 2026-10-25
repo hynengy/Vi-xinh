@@ -18,7 +18,7 @@
    - [5.2. Giải Thuật Xử Lý Hóa Đơn Tiền Trọ Có 2 Phần Tổng Tiền Kép](#52-giải-thuật-xử-lý-hóa-đơn-tiền-trọ-có-2-phần-tổng-tiền-kép)
    - [5.3. Hệ Thống Đo Lường Chi Phí & Độ Trễ (Cost & Latency Management)](#53-hệ-thống-đo-lường-chi-phí--độ-trễ-cost--latency-management)
    - [5.4. Kiến Trúc Cơ Sở Dữ Liệu Lai (Cloud Neon PostgreSQL + SQLite Fallback)](#54-kiến-trúc-cơ-sở-dữ-liệu-lai-cloud-neon-postgresql--sqlite-fallback)
-   - [5.5. Quỹ Nhóm, Bù Trừ Nợ Tối Thiểu & Sinh Mã Thanh Toán VietQR](#55-quỹ-nhóm-bù-trừ-nợ-tối-thiểu--sinh-mã-thanh-toán-vietqr)
+   - [5.5. Quản Lý Ngân Sách Cá Nhân & Hũ Tiết Kiệm Mục Tiêu](#55-quản-lý-ngân-sách-cá-nhân--hũ-tiết-kiệm-mục-tiêu)
    - [5.6. Xác Thực Tài Khoản & Gửi Mã OTP Qua Email (SMTP)](#56-xác-thực-tài-khoản--gửi-mã-otp-qua-email-smtp)
 6. [HƯỚNG DẪN KHỞI CHẠY & KIỂM THỬ (AUTOMATED TESTING)](#6-hướng-dẫn-khởi-chạy--kiểm-thử-automated-testing)
 7. [BỘ CÂU HỎI VẤN ĐÁP THƯỜNG GẶP KHI BẢO VỆ ĐỒ ÁN (FAQ DEFENSE)](#7-bộ-câu-hỏi-vấn-đáp-thường-gặp-khi-bảo-vệ-đồ-án-faq-defense)
@@ -44,7 +44,7 @@
 | STT | Thành Viên | Module Phụ Trách | Nhiệm Vụ Kỹ Thuật Chi Tiết | File Mã Nguồn Đại Diện |
 |:---:|:---|:---|:---|:---|
 | 1 | **Nguyễn Thúy Hiền** | **Prompt Engineering & Model Evaluator** | Thiết kế System Prompt đóng vai chuyên gia tài chính; xây dựng tập luật trích xuất Few-shot rules; đánh giá chất lượng phản hồi của Gemini qua các kịch bản hóa đơn. | `backend/prompts/receipt_prompt.py` |
-| 2 | **Lê Thị Dịu** | **Database & Financial Logic** | Thiết kế CSDL quan hệ lưu trữ JSON hóa đơn; thuật toán quản lý ngân sách, thống kê thu chi, chia tiền nhóm và đồng bộ giao dịch. | `backend/database/db_manager.py`<br>`backend/core/wallet_logic.py` |
+| 2 | **Lê Thị Dịu** | **Database & Financial Analytics** | Thiết kế CSDL quan hệ lưu trữ JSON hóa đơn; thuật toán quản lý ngân sách cá nhân, thống kê thu chi, chi phí định kỳ và đồng bộ giao dịch. | `backend/database/db_manager.py`<br>`backend/core/wallet_logic.py` |
 | 3 | **Lê Tiến Quân** | **Structured Output & Schema Validation** | Xây dựng JSON Schema kiểm soát đầu ra; phát triển bộ lọc Regex Validator dự phòng (`ReceiptParser`), kiểm tra toàn vẹn số học và xử lý hóa đơn phức tạp (tiền trọ, VAT, giảm giá). | `backend/extractor/regex_parser.py`<br>`backend/extractor/rules.py` |
 | 4 | **Lê Ngọc Duy** | **Giao Diện UI/UX (Web & Flutter)** | Thiết kế Dashboard tương tác, bảng Review 4 cột kiểm tra hóa đơn, bảng hiển thị chỉ số đo lường Latency (ms), Token Usage, Chi phí và AI tư vấn tài chính. | `frontend/index.html`<br>`review.html`<br>`phase-2-mobile-app/` |
 | 5 | **Nguyễn Việt Anh** | **LLM Backend & Cost/Latency Optimization** | Tích hợp Google Gemini API; thuật toán nén ảnh giảm latency; đo token count / chi phí API; tích hợp AI Financial Advisor; quản trị CI/CD và triển khai Vercel. | `backend/llm/gemini_extractor.py`<br>`backend/llm/image_preprocessing.py`<br>`api/index.py` |
@@ -76,7 +76,7 @@ graph TD
     end
     
     DBAdapter --> FinancialAI[AI Phân Tích & Cố Vấn Tiết Kiệm]
-    DBAdapter --> GroupFund[Quỹ Nhóm & Sinh Mã VietQR]
+    DBAdapter --> BudgetManager[Quản Trị Ngân Sách & Hũ Tiết Kiệm]
 ```
 
 ---
@@ -86,7 +86,6 @@ graph TD
 ### 📁 Thư mục Gốc (Root)
 - **`index.html`**: Giao diện ứng dụng chính trên nền Web (Dashboard tài chính, danh sách giao dịch, biểu đồ thu chi, modal quét hóa đơn, giao diện AI phân tích).
 - **`review.html`**: Giao diện kiểm tra và chỉnh sửa dữ liệu hóa đơn sau khi quét (Review 4 cột: Tên món, Đơn vị, Số lượng, Đơn giá, Thành tiền) kèm bảng thông số Latency, Tokens và Chi phí.
-- **`groups.html`**: Giao diện chuyên biệt cho tính năng Quỹ nhóm, chia tiền đi ăn / du lịch và hiển thị mã VietQR chuyển khoản.
 - **`vercel.json`**: Tệp cấu hình triển khai Serverless trên hạ tầng Vercel Cloud (định tuyến `/api/(.*)` sang `api/index.py`).
 - **`requirements.txt`**: Danh sách thư viện Python phụ thuộc (`google-genai`, `fastapi`, `uvicorn`, `psycopg2-binary`, `pillow`, `pytest`...).
 - **`Procfile`**: Tệp chỉ dẫn khởi chạy ứng dụng khi deploy lên PaaS (Heroku/Render).
@@ -224,14 +223,12 @@ Theo đúng yêu cầu nghiên cứu của **Hướng 3**, ứng dụng không c
 
 ---
 
-### 5.5. Quỹ Nhóm, Bù Trừ Nợ Tối Thiểu & Sinh Mã Thanh Toán VietQR
-- Khi một nhóm bạn đi ăn hoặc đi du lịch: Người trả tiền có thể chụp hóa đơn lên mục "Ví Nhóm".
-- Thuật toán `wallet_logic.py`:
-  - Tính toán số tiền mỗi thành viên phải đóng (chia đều hoặc chia theo món đã ăn).
-  - Thuật toán bù trừ nợ: Phân loại thành 2 nhóm: người trả thừa (chủ nợ) và người trả thiếu (con nợ), ghép cặp ưu tiên số tiền lớn nhất để số lượng giao dịch chuyển khoản là **ít nhất**.
-  - Tự động sinh đường dẫn ảnh **VietQR** theo chuẩn Napas 24/7:
-    `https://img.vietqr.io/image/{bank_code}-{account_number}-compact2.png?amount={amount}&addInfo={content}`
-  - Thành viên trong nhóm chỉ cần mở app ngân hàng quét mã là xong, không cần nhập tay STK hay số tiền.
+### 5.5. Quản Lý Ngân Sách Cá Nhân & Hũ Tiết Kiệm Mục Tiêu
+- Người dùng có thể thiết lập hạn mức chi tiêu cho từng danh mục riêng biệt (Ăn uống, Mua sắm, Di chuyển, Giải trí, Hóa đơn...).
+- Cơ chế kiểm soát tự động:
+  - Khi chi tiêu trong tháng vượt 80% hạn mức: Thanh tiến độ chuyển sang màu vàng cảnh báo.
+  - Khi vượt 100%: Tự động kích hoạt cảnh báo nguy cấp (đỏ) trên bảng điều khiển Dashboard và gửi thông báo vào Trung tâm Thông báo.
+  - Tích hợp tính năng tạo các Hũ Tiết Kiệm (Savings Goals) với tiến độ phần trăm trực quan, giúp người dùng theo đuổi các kế hoạch tài chính cá nhân dài hạn.
 
 ---
 

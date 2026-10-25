@@ -75,9 +75,6 @@ def review():
     return send_from_directory(str(FRONTEND_DIR), "review.html")
 
 
-@app.route("/groups")
-def groups_page():
-    return send_from_directory(str(FRONTEND_DIR), "groups.html")
 
 
 @app.route("/uploads/<path:filename>")
@@ -609,142 +606,12 @@ def upload_avatar(user_id):
 
 
 # ==================================================================
-#  API 5: GROUPS (VÍ NHÓM)
+#  API 5: GROUPS ĐÃ GỠ BỎ HOÀN TOÀN (TẬP TRUNG TÀI CHÍNH CÁ NHÂN HƯỚNG 3)
 # ==================================================================
 @app.route("/api/groups", methods=["GET", "POST"])
 def handle_groups():
-    """
-    GET: Lấy danh sách ví nhóm (query: user_id)
-    POST: Tạo ví nhóm mới
-    """
-    if request.method == "POST":
-        data = request.json or {}
-        group_id = db.create_group(data)
-        return jsonify({"success": True, "group_id": group_id}), 201
+    return jsonify([])
 
-    user_id = request.args.get("user_id", type=int)
-    groups_list = db.get_groups(user_id=user_id)
-    return jsonify(groups_list)
-
-
-@app.route("/api/groups/<int:group_id>", methods=["GET"])
-def group_detail(group_id):
-    """Lấy chi tiết ví nhóm bao gồm thành viên và giao dịch."""
-    detail = db.get_group_detail(group_id)
-    if detail:
-        return jsonify(detail)
-    return jsonify({"error": "Không tìm thấy nhóm"}), 404
-
-
-@app.route("/api/groups/<int:group_id>/members", methods=["GET", "POST"])
-def group_members(group_id):
-    """
-    GET: Lấy danh sách thành viên nhóm
-    POST: Thêm thành viên mới
-    """
-    if request.method == "POST":
-        data = request.json or {}
-        success = db.add_group_member(group_id, data["user_id"], data.get("role", "member"))
-        if success:
-            return jsonify({"success": True}), 201
-        return jsonify({"error": "Thành viên đã tồn tại trong nhóm"}), 409
-
-    members = db.get_group_members(group_id)
-    return jsonify(members)
-
-
-@app.route("/api/groups/<int:group_id>/fund", methods=["GET", "POST"])
-def group_fund(group_id):
-    """GET: Lấy quỹ nhóm. POST: Góp quỹ nhóm."""
-    if request.method == "GET":
-        group = db.get_group_detail(group_id)
-        if group:
-            return jsonify({
-                "group_id": group_id,
-                "balance": group.get("balance", 0.0),
-                "members": group.get("members", [])
-            })
-        return jsonify({"error": "Không tìm thấy nhóm"}), 404
-
-    data = request.json or {}
-    user_id = data.get("user_id", 1)
-    amount = float(data.get("amount", 0))
-    if amount <= 0:
-        return jsonify({"error": "Số tiền phải lớn hơn 0"}), 400
-    success = db.update_group_fund(group_id, user_id, amount)
-    if success:
-        return jsonify({"success": True})
-    return jsonify({"error": "Cập nhật thất bại"}), 400
-
-
-# ==================================================================
-#  API 6: SPLIT BILL (CHIA TIỀN)
-# ==================================================================
-@app.route("/api/groups/<int:group_id>/split-equal", methods=["POST"])
-def split_equal(group_id):
-    """Tính toán chia đều tiền trong ví nhóm."""
-    data = request.json or {}
-    total_amount = float(data.get("amount", 0))
-    member_ids = data.get("member_ids", [])
-
-    if not member_ids:
-        members = db.get_group_members(group_id)
-        member_ids = [m["id"] for m in members]
-
-    result = GroupWalletManager.split_equally(total_amount, member_ids)
-    return jsonify(result)
-
-
-@app.route("/api/splits/<int:transaction_id>", methods=["GET"])
-def get_splits(transaction_id):
-    """Lấy chi tiết chia tiền của 1 giao dịch."""
-    splits = db.get_expense_splits(transaction_id)
-    return jsonify(splits)
-
-
-@app.route("/api/splits/<int:split_id>/settle", methods=["POST"])
-def settle_split(split_id):
-    """Đánh dấu khoản chia đã thanh toán."""
-    success = db.settle_split(split_id)
-    if success:
-        return jsonify({"success": True})
-    return jsonify({"error": "Không tìm thấy khoản chia"}), 404
-
-
-@app.route("/api/debts", methods=["GET"])
-@app.route("/api/debts/<int:user_id>", methods=["GET"])
-def get_debts(user_id=1):
-    """Lấy các khoản nợ chưa thanh toán."""
-    debts = db.get_unsettled_debts(user_id)
-    return jsonify(debts)
-
-
-@app.route("/api/groups/<int:group_id>/calculate-debts", methods=["GET"])
-def calculate_group_debts(group_id):
-    """Tính toán công nợ tịnh tiến giữa các thành viên nhóm."""
-    detail = db.get_group_detail(group_id)
-    if not detail:
-        return jsonify({"error": "Không tìm thấy nhóm"}), 404
-
-    # Lấy tất cả giao dịch nhóm kèm splits
-    tx_with_splits = []
-    for tx in detail["transactions"]:
-        splits = db.get_expense_splits(tx["id"])
-        tx_with_splits.append({
-            "user_id": tx["user_id"],
-            "amount": tx["amount"],
-            "splits": [{"user_id": s["user_id"], "split_amount": s["split_amount"]} for s in splits]
-        })
-
-    settlements = GroupWalletManager.calculate_debts(tx_with_splits)
-
-    # Enrich with names
-    users = {u["id"]: u["full_name"] for u in db.get_users()}
-    for s in settlements:
-        s["from_name"] = users.get(s["from_user_id"], "???")
-        s["to_name"] = users.get(s["to_user_id"], "???")
-
-    return jsonify(settlements)
 
 
 # ==================================================================
@@ -1029,12 +896,12 @@ def ai_spending_summary():
             "params": {}
         },
         {
-            "id": "act_group",
-            "type": "group",
-            "title": "Tách bill chia tiền & Quỹ nhóm",
-            "desc": "Chia tiền ăn uống/mua chung để giảm gánh nặng ngân sách cá nhân.",
-            "icon": "ri-group-line",
-            "color": "#3b82f6",
+            "id": "act_savings",
+            "type": "savings",
+            "title": "Tạo hũ tiết kiệm mục tiêu",
+            "desc": "Tích lũy tài chính định kỳ cho các mục tiêu cá nhân quan trọng.",
+            "icon": "ri-safe-2-line",
+            "color": "#10b981",
             "params": {}
         }
     ]
@@ -1068,7 +935,6 @@ if __name__ == "__main__":
     print(">> Vi Xinh Backend Server dang khoi chay...")
     print(f">> Trang chu:      http://127.0.0.1:{port}")
     print(f">> Xac thuc AI:    http://127.0.0.1:{port}/review")
-    print(f">> Vi nhom:        http://127.0.0.1:{port}/groups")
     print(f">> API Docs & Doc: http://127.0.0.1:{port}/api/stats")
     print("=" * 60 + "\n")
     app.run(host="0.0.0.0", port=port, debug=False)

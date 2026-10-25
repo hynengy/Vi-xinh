@@ -6,18 +6,7 @@
 
 const S = {
     loggedIn:false, user:null, balVis:true, txType:'expense', selCat:'food',
-    calY:2026, calM:9, transactions:[], budgets:[], savings:[], recurring:[], camStream:null,
-    groupFund:null,
-    ocrEngine: 'mlkit', // 'mlkit' (Google ML Kit On-Device) | 'server' (Tesseract OpenCV)
-    billScope: 'personal', // 'personal' | 'split' | 'fund'
-    splitCount: 4,
-    splitPayRole: 'mine_only', // 'mine_only' | 'advance_all'
-    selectedFund: 'room',
-    availableFunds: {
-        couple: { name: 'Quỹ Cặp Đôi', balance: 1850000, history: [] },
-        travel: { name: 'Quỹ Du Lịch & Dã Ngoại', balance: 3200000, history: [] },
-        room:   { name: 'Quỹ Chi Tiêu Chung', balance: 2400000, history: [] }
-    }
+    calY:2026, calM:9, transactions:[], budgets:[], savings:[], recurring:[], camStream:null
 };
 
 const SEED_USERS = [];
@@ -1651,8 +1640,7 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
             image_url: data.image_url || previewSrc,
             items: Array.isArray(data.items) ? data.items : [],
             notes: data.notes || '',
-            isGroup: (cat === 'bills') || merLower.includes('trọ') || merLower.includes('phòng') || (data.amount >= 2000000),
-            engine: data.engine || 'google_vision_cloud'
+            engine: data.engine || 'google_ai_studio_gemini'
         };
 
         S.lastOcr = detected;
@@ -3758,110 +3746,6 @@ async function handleConfirmTransaction(event) {
     }
 }
 
-async function loadGroupMembersUI() {
-    const listEl = document.getElementById('member-checkbox-list');
-    if (!listEl) return;
-
-    let members = [
-        { id: 1, name: 'Thành viên 1', role: 'Trưởng nhóm' },
-        { id: 2, name: 'Lê Thị Dịu', role: 'Thành viên' },
-        { id: 3, name: 'Lê Tiến Quân', role: 'Thành viên' },
-        { id: 4, name: 'Lê Ngọc Duy', role: 'Thành viên' },
-        { id: 5, name: 'Nguyễn Việt Anh', role: 'Thành viên' }
-    ];
-
-    try {
-        const res = await fetch('/api/users');
-        if (res.ok) {
-            const data = await res.json();
-            if (Array.isArray(data) && data.length > 0) {
-                members = data.map(u => ({ id: u.id, name: u.full_name, role: u.id === 1 ? 'Trưởng nhóm' : 'Thành viên' }));
-            }
-        }
-    } catch (e) {
-        console.log('Sử dụng danh sách thành viên mặc định');
-    }
-
-    listEl.innerHTML = members.map(m => `
-        <label style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0.8rem;background:#f8fafc;border-radius:var(--radius-sm);cursor:pointer;border:1px solid #e2e8f0;">
-            <input type="checkbox" name="split_member" value="${m.id}" checked style="accent-color:var(--primary);width:18px;height:18px;">
-            <div style="flex:1;">
-                <div style="font-weight:600;font-size:0.92rem;color:var(--text);">${m.name}</div>
-                <div style="font-size:0.75rem;color:var(--text-muted);">${m.role}</div>
-            </div>
-            <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:0.75rem;">Nhóm</span>
-        </label>
-    `).join('');
-}
-
-async function calculateSplit(event) {
-    if (event) event.preventDefault();
-    const amountInput = document.getElementById('split-amount-input');
-    const payerSelect = document.getElementById('split-payer-select');
-    const resultBox = document.getElementById('split-result');
-    const detailsBox = document.getElementById('split-result-details');
-
-    if (!amountInput || !detailsBox) return;
-
-    const amount = parseFloat(amountInput.value) || 0;
-    if (amount <= 0) {
-        toast('Nhập số tiền hợp lệ!', 'error');
-        return;
-    }
-
-    const checkboxes = document.querySelectorAll('input[name="split_member"]:checked');
-    const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value, 10));
-
-    if (selectedIds.length === 0) {
-        toast('Chọn ít nhất 1 thành viên!', 'warning');
-        return;
-    }
-
-    let result = null;
-    try {
-        const res = await fetch('/api/groups/1/split-equal', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: amount, member_ids: selectedIds })
-        });
-        if (res.ok) {
-            result = await res.json();
-        }
-    } catch (e) {
-        console.warn('Lỗi gọi API chia tiền, tính toán offline:', e);
-    }
-
-    const perPerson = result ? result.per_person : Math.round(amount / selectedIds.length);
-    const memberCount = selectedIds.length;
-    const payerName = payerSelect ? payerSelect.options[payerSelect.selectedIndex].text : 'Người trả';
-
-    resultBox.style.display = 'block';
-    detailsBox.innerHTML = `
-        <div style="font-size:1.15rem;font-weight:800;color:var(--primary);margin-bottom:0.3rem;">
-            ${fmt(perPerson)} / người
-        </div>
-        <div style="font-size:0.8rem;color:var(--text3);margin-bottom:0.6rem;">
-            Tổng: <strong>${fmt(amount)}</strong> chia <strong>${memberCount} người</strong> · Trả trước: <strong>${payerName}</strong>
-        </div>
-        <div style="margin-top:0.6rem;padding:0.6rem;background:var(--card);border-radius:var(--r-sm);border:1px solid var(--border);">
-            <div style="font-size:0.78rem;font-weight:700;margin-bottom:0.35rem;">Tin nhắn gửi Zalo:</div>
-            <textarea id="splitZaloText" readonly style="width:100%;height:54px;font-size:0.78rem;padding:0.35rem 0.5rem;border-radius:4px;border:1px solid var(--border);background:var(--bg);resize:none;color:var(--text);">Tiền chia: ${fmt(amount)} (${payerName} trả trước) chia ${memberCount} người = ${fmt(perPerson)}/người nha!</textarea>
-            <button type="button" class="btn btn-p btn-sm btn-block" style="margin-top:0.35rem;" onclick="copyZaloText()">
-                <i class="ri-file-copy-line"></i> Sao chép tin nhắn
-            </button>
-        </div>
-    `;
-}
-
-function copyZaloText() {
-    const area = document.getElementById('splitZaloText');
-    if (area) {
-        area.select();
-        document.execCommand('copy');
-        toast('Đã sao chép tin nhắn!', 'success');
-    }
-}
-
 // ===== TRUNG TÂM THÔNG BÁO HOÀN CHỈNH & THEO DÕI BIẾN ĐỘNG THỰC TẾ =====
 function initNotifications(){
     try {
@@ -4325,9 +4209,6 @@ function executeAiAction(type, params = {}){
     } else if(type === 'camera'){
         openModal('camera');
         toast('Đã mở Quét hóa đơn AI', 'info');
-    } else if(type === 'group'){
-        go('group');
-        toast('Chuyển đến Quỹ nhóm & Chia tiền', 'info');
     } else if(type === 'history'){
         go('history');
     }

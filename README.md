@@ -47,9 +47,8 @@ Nhập liệu chi tiêu từ hóa đơn giấy (siêu thị, quán ăn, nhà hà
 ### 1.2. Giải pháp của dự án "Ví Xinh"
 Ứng dụng khai thác sức mạnh của **Mô hình Ngôn ngữ lớn Đa phương thức (Multimodal LLM — Google AI Studio Gemini Flash Lite `gemini-flash-lite-latest`)** kết hợp bộ thẩm định **Structured Regex Validator**:
 - **Trích xuất thông tin có cấu trúc 100%:** Bóc tách chính xác Tên cửa hàng, Ngày giờ, Danh sách từng mặt hàng (Tên, Số lượng, Đơn vị, Đơn giá, Thành tiền), Tiền giảm giá, Thuế VAT, Phương thức thanh toán.
-- **AI Phân tích & Cố vấn Tài chính (Financial Advisor):** Đọc hiểu lịch sử chi tiêu trong tháng, tóm tắt 3 khoản chi lớn nhất, cảnh báo danh mục vượt hạn mức và đưa ra 3 lời khuyên tài chính cá nhân hóa.
-- **Quỹ nhóm & Chia tiền thông minh:** Tự động tính toán công nợ tối thiểu giữa các thành viên và tạo mã thanh toán chuyển khoản **VietQR** chuẩn Napas 24/7.
-- **Trung tâm thông báo toàn diện (Notification Center):** Theo dõi lịch sử biến động số dư, quét hóa đơn, nạp rút quỹ nhóm, đọc/xóa thông báo và cảnh báo ngân sách.
+- **Quản lý Ngân sách & Mục tiêu tiết kiệm thông minh:** Tự động theo dõi và cảnh báo khi chi tiêu vượt hạn mức từng danh mục, lập hũ tích lũy cho các kế hoạch tài chính cá nhân.
+- **Trung tâm thông báo toàn diện (Notification Center):** Theo dõi lịch sử biến động số dư tức thì, kết quả quét hóa đơn AI, đọc/xóa thông báo và cảnh báo ngân sách.
 - **Trải nghiệm ứng dụng di động cao cấp:** Tối ưu hóa hiển thị theo chuẩn Khung thiết bị di động (Mobile Hardware Frame 440px) ngay trên trình duyệt máy tính.
 
 ---
@@ -59,7 +58,7 @@ Nhập liệu chi tiêu từ hóa đơn giấy (siêu thị, quán ăn, nhà hà
 | STT | Thành Viên | Module Kỹ Thuật Phụ Trách | Nhiệm Vụ Kỹ Thuật Chi Tiết | File Mã Nguồn Đại Diện |
 |:---:|:---|:---|:---|:---|
 | 1 | **Nguyễn Thúy Hiền** | **Prompt Engineering & Model Evaluator** | Thiết kế System Prompt đóng vai chuyên gia tài chính; xây dựng tập luật trích xuất Few-shot rules; đánh giá chất lượng phản hồi của Gemini qua các kịch bản hóa đơn. | `phase-1-web-demo/backend/prompts/receipt_prompt.py` |
-| 2 | **Lê Thị Dịu** | **Database & Financial Logic** | Thiết kế CSDL quan hệ; xây dựng thuật toán quản lý ngân sách, thống kê thu chi thu nhập, chia tiền nhóm và đồng bộ giao dịch. | `phase-1-web-demo/backend/database/db_manager.py`<br>`phase-1-web-demo/backend/core/wallet_logic.py` |
+| 2 | **Lê Thị Dịu** | **Database & Financial Analytics** | Thiết kế CSDL quan hệ; xây dựng thuật toán quản lý ngân sách cá nhân, thống kê thu chi thu nhập, theo dõi chi phí định kỳ và đồng bộ giao dịch. | `phase-1-web-demo/backend/database/db_manager.py`<br>`phase-1-web-demo/backend/core/wallet_logic.py` |
 | 3 | **Lê Tiến Quân** | **Structured Output & Schema Validation** | Xây dựng JSON Schema kiểm soát đầu ra; phát triển bộ lọc Regex Validator dự phòng (`ReceiptParser`), kiểm tra toàn vẹn số học và xử lý hóa đơn phức tạp (tiền trọ, VAT, giảm giá). | `phase-1-web-demo/backend/extractor/regex_parser.py`<br>`phase-1-web-demo/backend/extractor/rules.py` |
 | 4 | **Lê Ngọc Duy** | **Giao Diện UI/UX (Web & Flutter)** | Thiết kế Dashboard tương tác, Mobile Hardware Frame, Trung tâm thông báo, Review 4 cột kiểm tra hóa đơn, bảng hiển thị chỉ số Latency (ms), Token Usage, Chi phí và AI tư vấn tài chính. | `css/style.css`<br>`index.html`<br>`review.html`<br>`phase-2-mobile-app/` |
 | 5 | **Nguyễn Việt Anh** | **LLM Backend & Cost/Latency Optimization** | Tích hợp Google Gemini API qua Google AI Studio; thuật toán nén ảnh giảm latency; đo token count / chi phí API; tích hợp AI Financial Advisor; quản trị CI/CD và triển khai Vercel. | `phase-1-web-demo/backend/llm/gemini_extractor.py`<br>`phase-1-web-demo/backend/core/config.py`<br>`api/index.py` |
@@ -156,7 +155,6 @@ Ví Xinh/
 │   └── test_wallet_logic.py     # 6 test cases chia tiền & bù trừ nợ
 ├── index.html                   # Trang chủ ứng dụng Web PWA (Tích hợp Trung tâm thông báo)
 ├── review.html                  # Giao diện Review kết quả bóc tách 4 cột
-├── groups.html                  # Giao diện tính năng Quỹ nhóm & VietQR
 ├── vercel.json                  # Cấu hình điều hướng Vercel Serverless
 ├── PROJECT_MASTER_GUIDE.md      # Cẩm nang toàn diện dự án Ví Xinh
 └── README.md                    # Tài liệu giới thiệu chính của Repository
