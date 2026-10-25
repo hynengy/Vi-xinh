@@ -1823,12 +1823,7 @@ function formatModelDisplayName(raw) {
         // Hiển thị danh sách từng món và toàn văn văn bản OCR
         renderOcrItemsAndRawText(detected);
 
-        const fb = document.getElementById('ocrFundBalance');
-        if(fb && S.groupFund) fb.textContent = fmt(S.groupFund.balance);
-
-        if(detected.amount >= 2000000 || merLower.includes('trọ') || merLower.includes('phòng')){
-            setBillScope('fund');
-        }
+        setBillScope('personal');
         // Kiểm tra xem đã cấu hình Google Cloud Vision API Key chưa
         if(data.success === false || data.error_code === 'not_configured'){
             showApiKeyConfigBanner(data.error);
@@ -1854,19 +1849,15 @@ function formatModelDisplayName(raw) {
     }
 }
 
-// ===== 3-WAY BILL SCOPE & GROUP-FREE SPLIT SYSTEM =====
 function setBillScope(scope){
-    S.billScope = scope;
-    document.getElementById('btnScopeP')?.classList.toggle('active', scope === 'personal');
-    document.getElementById('btnScopeS')?.classList.toggle('active', scope === 'split');
-    document.getElementById('btnScopeF')?.classList.toggle('active', scope === 'fund');
+    S.billScope = (scope === 'split') ? 'split' : 'personal';
+    document.getElementById('btnScopeP')?.classList.toggle('active', S.billScope === 'personal');
+    document.getElementById('btnScopeS')?.classList.toggle('active', S.billScope === 'split');
 
-    document.getElementById('scopePersonalBox')?.classList.toggle('hidden', scope !== 'personal');
-    document.getElementById('scopeSplitBox')?.classList.toggle('hidden', scope !== 'split');
-    document.getElementById('scopeFundBox')?.classList.toggle('hidden', scope !== 'fund');
+    document.getElementById('scopePersonalBox')?.classList.toggle('hidden', S.billScope !== 'personal');
+    document.getElementById('scopeSplitBox')?.classList.toggle('hidden', S.billScope !== 'split');
 
     updateSplitBillCalculations();
-    updateFundSelection();
 }
 
 // Tương thích ngược
@@ -1916,16 +1907,14 @@ function updateSplitBillCalculations(){
     // Cập nhật nhãn nút lưu tương ứng (gọn gàng, súc tích)
     const btnTxt = document.getElementById('ocrSaveBtnTxt');
     if(btnTxt){
-        if(S.billScope === 'personal'){
-            btnTxt.textContent = `Lưu vào Ví (${fmt(total)})`;
-        } else if(S.billScope === 'split'){
+        if(S.billScope === 'split'){
             if(S.splitPayRole === 'mine_only'){
                 btnTxt.textContent = `Lưu phần tôi (${fmt(perPerson)})`;
             } else {
                 btnTxt.textContent = `Lưu & Thu tiền (${fmt(perPerson)})`;
             }
         } else {
-            btnTxt.textContent = `Trích Quỹ (${fmt(total)})`;
+            btnTxt.textContent = `Lưu vào Ví (${fmt(total)})`;
         }
     }
 }
@@ -2406,29 +2395,6 @@ function copyItemizedZaloMessage(memberName, amt){
     }
 }
 
-function updateFundSelection(){
-    const sb = document.getElementById('fundSelectBox');
-    const key = sb ? sb.value : (S.selectedFund || 'room');
-    S.selectedFund = key;
-
-    if(!S.availableFunds){
-        S.availableFunds = {
-            couple: { name: 'Quỹ Cặp Đôi', balance: 1850000, history: [] },
-            travel: { name: 'Quỹ Du Lịch & Dã Ngoại', balance: 3200000, history: [] },
-            room:   { name: 'Quỹ Chi Tiêu Chung', balance: (S.groupFund ? S.groupFund.balance : 2400000), history: [] }
-        };
-    }
-    if(S.groupFund && S.availableFunds.room){
-        S.availableFunds.room.balance = S.groupFund.balance;
-    }
-
-    const fund = S.availableFunds[key] || S.availableFunds.room;
-    const total = S.lastOcr ? S.lastOcr.amount : 145000;
-    const after = Math.max(0, fund.balance - total);
-
-    const af = document.getElementById('fundAfterBalance');
-    if(af) af.textContent = fmt(after);
-}
 
 function loadSampleRoomRentInvoice(){
     openModal('camera');
@@ -2597,56 +2563,7 @@ async function saveOcr(){
         return;
     }
 
-    // 3. TRƯỜNG HỢP: TRÍCH TỪ QUỸ CHUNG (CẶP ĐÔI, DU LỊCH, PHÒNG TRỌ)
-    if(S.billScope === 'fund'){
-        const fundKey = S.selectedFund || 'room';
-        if(!S.availableFunds) updateFundSelection();
-        const fund = S.availableFunds[fundKey] || S.availableFunds.room;
 
-        fund.balance = Math.max(0, fund.balance - data.amount);
-        if(fundKey === 'room' && S.groupFund){
-            S.groupFund.balance = fund.balance;
-            S.groupFund.bills.unshift({
-                id: Date.now(),
-                name: data.merchant,
-                amt: data.amount,
-                date: dateStr,
-                payerId: 'fund',
-                payerName: fund.name,
-                mode: 'fund',
-                note: `Trích ${fmt(data.amount)} từ ${fund.name}`
-            });
-            S.groupFund.history.unshift({
-                id: Date.now(),
-                type: 'out',
-                title: `Chi trả: ${data.merchant}`,
-                amt: data.amount,
-                date: dateStr,
-                user: S.user ? S.user.name : 'Thành viên 1'
-            });
-        }
-
-        renderAll();
-        renderGroup();
-        closeModal();
-
-        const now = new Date();
-        const dParts = dateStr ? dateStr.split('-') : [];
-        const dateFormatted = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}/${dParts[0]}` : dateStr;
-        const fundTimeFull = `${nowStr || now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})} ngày ${dateFormatted}`;
-
-        addAppNotification({
-            title: 'Trích chi quỹ nhóm',
-            body: `Trích ${fmt(data.amount)} từ ${fund.name} trả ${data.merchant}.`,
-            type: 'fund',
-            actionUrl: 'group',
-            actionText: 'Xem quỹ phòng →'
-        });
-
-        toast(`Đã trích ${fmt(data.amount)} từ ${fund.name}!`, 'success');
-        return;
-    }
-}
 
 // ===== MODAL VIETQR & CHIA BILL NHANH (KHÔNG CẦN CÀI APP) =====
 function showQuickSplitQrModal(merchant, totalAmt, count, perPerson){
