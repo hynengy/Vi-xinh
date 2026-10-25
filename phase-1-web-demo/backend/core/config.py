@@ -48,8 +48,8 @@ def _load_env_file() -> None:
 
 _load_env_file()
 
-# Google Cloud Vision & Gemini API Key
-GOOGLE_VISION_API_KEY = os.environ.get("GOOGLE_VISION_API_KEY") or os.environ.get("GOOGLE_API_KEY") or ""
+# Google Cloud Vision & Gemini API Key (Google AI Studio)
+GOOGLE_VISION_API_KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GOOGLE_VISION_API_KEY") or ""
 
 # Upload & Data storage directories
 UPLOAD_FOLDER = DATA_DIR / "uploads"

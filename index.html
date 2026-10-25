@@ -654,17 +654,17 @@ setTimeout(function(){
                     <p id="ocrLoadingSubText" style="font-size:0.75rem;color:var(--text3);margin-top:0.2rem">Mô hình Multimodal Gemini LLM</p>
                 </div>
                 <div id="ocrData" class="hidden" style="background:var(--bg);border-radius:var(--r-md);padding:0.75rem;margin-top:0.5rem">
-                    <!-- BANNER CẢNH BÁO THIẾU GOOGLE_API_KEY -->
+                    <!-- BANNER CẢNH BÁO THIẾU GEMINI_API_KEY -->
                     <div id="ocrApiKeyBanner" class="hidden" style="margin-bottom:0.65rem;padding:0.75rem 0.85rem;background:#FFF4E5;border:1px solid #FFE2B2;border-radius:12px;color:#7A4100">
                         <div style="display:flex;align-items:flex-start;gap:0.45rem;font-size:0.78rem">
                             <i class="ri-key-2-line" style="font-size:1.15rem;color:#D97706;margin-top:0.05rem"></i>
                             <div style="flex:1">
-                                <strong style="display:block;margin-bottom:0.2rem;font-size:0.82rem;color:#92400E">Chưa cấu hình GOOGLE_API_KEY</strong>
+                                <strong style="display:block;margin-bottom:0.2rem;font-size:0.82rem;color:#92400E">Chưa cấu hình GEMINI_API_KEY (Google AI Studio)</strong>
                                 <p style="margin:0 0 0.45rem;line-height:1.4;font-size:0.73rem;color:#78350F">
-                                    Để quét hóa đơn thực tế qua <b>Google Cloud Vision</b>, bạn cần dán API Key của Google Cloud (miễn phí 1.000 hóa đơn/tháng).
+                                    Để trích xuất hóa đơn tự động bằng <b>Gemini 1.5 Flash</b>, bạn chỉ cần dán API Key lấy từ <b>Google AI Studio</b> (hoàn toàn miễn phí tại aistudio.google.com).
                                 </p>
                                 <div style="display:flex;gap:0.35rem">
-                                    <input type="password" id="inputGoogleApiKey" placeholder="Dán khóa API (AIzaSy...)" style="flex:1;padding:0.38rem 0.55rem;font-size:0.75rem;border:1px solid #D97706;border-radius:6px;outline:none;background:#fff">
+                                    <input type="password" id="inputGoogleApiKey" placeholder="Dán API Key Google AI Studio (AIzaSy...)" style="flex:1;padding:0.38rem 0.55rem;font-size:0.75rem;border:1px solid #D97706;border-radius:6px;outline:none;background:#fff">
                                     <button type="button" class="btn btn-sm btn-p" onclick="saveGoogleApiKeyFromUi()" style="padding:0.38rem 0.65rem;font-size:0.74rem;background:#D97706;border-color:#D97706;white-space:nowrap">
                                         Lưu Key
                                     </button>

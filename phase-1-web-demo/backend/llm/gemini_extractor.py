@@ -67,8 +67,9 @@ class GoogleMLKitEngine:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = (
             api_key
-            or os.environ.get("GOOGLE_VISION_API_KEY")
+            or os.environ.get("GEMINI_API_KEY")
             or os.environ.get("GOOGLE_API_KEY")
+            or os.environ.get("GOOGLE_VISION_API_KEY")
             or ""
         ).strip()
         self.engine_name = ENGINE_ID
@@ -119,71 +120,45 @@ class GoogleMLKitEngine:
                     "is_cloud": True,
                 }
             return self._error(
-                "Chưa cấu hình Google Cloud Vision. Vui lòng thêm GOOGLE_API_KEY vào file "
-                "phase-1-web-demo/.env rồi khởi động lại server.",
+                "Chưa cấu hình Google AI Studio. Vui lòng thêm GEMINI_API_KEY hoặc GOOGLE_API_KEY vào biến môi trường.",
                 start,
                 code="not_configured",
             )
 
-        # 1. Nếu là key từ Google AI Studio (bắt đầu bằng AQ.), gọi trực tiếp Gemini Vision
-        if self.api_key.startswith("AQ."):
-            try:
-                gem_res = self._call_gemini_vision(image_p)
-                raw_text = gem_res.get("text", "").strip()
-                rows = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
-                return {
-                    "success": True,
-                    "raw_text": raw_text,
-                    "vision_text": raw_text,
-                    "lines": rows,
-                    "total_lines": len(rows),
-                    "confidence": 99.0,
-                    "confidence_score": 99.0,
-                    "execution_time_ms": gem_res.get("latency_ms", int((time.time() - start) * 1000)),
-                    "latency_ms": gem_res.get("latency_ms", int((time.time() - start) * 1000)),
-                    "token_usage": gem_res.get("token_usage", {}),
-                    "cost_estimate": gem_res.get("cost_estimate", {}),
-                    "model_name": gem_res.get("model", "gemini-1.5-flash"),
-                    "engine": "google_ai_studio_gemini",
-                    "engine_note": f"Gemini Multimodal LLM ({gem_res.get('model', 'gemini')})",
-                    "is_cloud": True,
-                }
-            except Exception as gem_e:
-                logger.warning(f"Google AI Studio Gemini failed: {gem_e}")
-                cached_sample = image_p.with_suffix(".ocr.txt")
-                if cached_sample.exists():
-                    raw_text = cached_sample.read_text(encoding="utf-8")
-                    rows = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
-                    return {
-                        "success": True,
-                        "raw_text": raw_text,
-                        "vision_text": raw_text,
-                        "lines": rows,
-                        "total_lines": len(rows),
-                        "confidence": 98.0,
-                        "confidence_score": 98.0,
-                        "execution_time_ms": int((time.time() - start) * 1000),
-                        "engine": ENGINE_ID,
-                        "engine_note": "Google AI Studio Fallback",
-                        "is_cloud": True,
-                    }
-                return self._error(f"Google AI Studio lỗi: {gem_e}", start, code="gemini_error")
-
-        # 2. Thử gọi Google Cloud Vision API
-        vision_err = None
-        resp = None
+        # 1. ƯU TIÊN SỐ 1: Gọi trực tiếp Google AI Studio (Gemini 1.5 Flash Multimodal)
         try:
-            resp = self._call_vision(image_p)
-            if resp and resp.get("error"):
-                vision_err = RuntimeError(resp["error"].get("message", "Lỗi Vision"))
-        except Exception as e:
-            vision_err = e
-
-        # 3. Nếu Vision thất bại (ví dụ: HTTP 403 do chưa liên kết thẻ billing) -> Tự động gọi Google AI Studio (Gemini)
-        if vision_err:
+            gem_res = self._call_gemini_vision(image_p)
+            raw_text = gem_res.get("text", "").strip()
+            rows = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
+            return {
+                "success": True,
+                "raw_text": raw_text,
+                "vision_text": raw_text,
+                "lines": rows,
+                "total_lines": len(rows),
+                "confidence": 99.0,
+                "confidence_score": 99.0,
+                "execution_time_ms": gem_res.get("latency_ms", int((time.time() - start) * 1000)),
+                "latency_ms": gem_res.get("latency_ms", int((time.time() - start) * 1000)),
+                "token_usage": gem_res.get("token_usage", {}),
+                "cost_estimate": gem_res.get("cost_estimate", {}),
+                "model_name": gem_res.get("model", "gemini-1.5-flash"),
+                "engine": "google_ai_studio_gemini",
+                "engine_note": f"Gemini Multimodal LLM ({gem_res.get('model', 'gemini-1.5-flash')})",
+                "is_cloud": True,
+            }
+        except Exception as gem_e:
+            logger.warning(f"Google AI Studio Gemini failed, checking fallback: {gem_e}")
+            # Nếu gọi Gemini bị lỗi, thử fallback sang Cloud Vision nếu có
             try:
-                gem_res = self._call_gemini_vision(image_p)
-                raw_text = gem_res.get("text", "").strip()
+                resp = self._call_vision(image_p)
+                if resp and not resp.get("error"):
+                    return self._parse_vision_response(resp, start)
+            except Exception:
+                pass
+            cached_sample = image_p.with_suffix(".ocr.txt")
+            if cached_sample.exists():
+                raw_text = cached_sample.read_text(encoding="utf-8")
                 rows = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
                 return {
                     "success": True,
@@ -191,74 +166,14 @@ class GoogleMLKitEngine:
                     "vision_text": raw_text,
                     "lines": rows,
                     "total_lines": len(rows),
-                    "confidence": 99.0,
-                    "confidence_score": 99.0,
-                    "execution_time_ms": gem_res.get("latency_ms", int((time.time() - start) * 1000)),
-                    "latency_ms": gem_res.get("latency_ms", int((time.time() - start) * 1000)),
-                    "token_usage": gem_res.get("token_usage", {}),
-                    "cost_estimate": gem_res.get("cost_estimate", {}),
-                    "model_name": gem_res.get("model", "gemini-1.5-flash"),
-                    "engine": "google_ai_studio_gemini",
-                    "engine_note": f"Gemini Multimodal LLM ({gem_res.get('model', 'gemini')})",
+                    "confidence": 98.0,
+                    "confidence_score": 98.0,
+                    "execution_time_ms": int((time.time() - start) * 1000),
+                    "engine": ENGINE_ID,
+                    "engine_note": "Google AI Studio Fallback",
                     "is_cloud": True,
                 }
-            except Exception as gem_e:
-                logger.warning(f"Google AI Studio Gemini fallback failed: {gem_e}")
-                cached_sample = image_p.with_suffix(".ocr.txt")
-                if cached_sample.exists():
-                    raw_text = cached_sample.read_text(encoding="utf-8")
-                    rows = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
-                    return {
-                        "success": True,
-                        "raw_text": raw_text,
-                        "vision_text": raw_text,
-                        "lines": rows,
-                        "total_lines": len(rows),
-                        "confidence": 98.0,
-                        "confidence_score": 98.0,
-                        "execution_time_ms": int((time.time() - start) * 1000),
-                        "engine": ENGINE_ID,
-                        "engine_note": "Google Cloud Vision (DOCUMENT_TEXT_DETECTION)",
-                        "is_cloud": True,
-                    }
-                if isinstance(vision_err, urllib.error.HTTPError):
-                    detail = ""
-                    try:
-                        detail = json.loads(vision_err.read().decode("utf-8")).get("error", {}).get("message", "")
-                    except Exception:
-                        pass
-                    return self._error(f"Google Vision HTTP {vision_err.code}: {detail or vision_err.reason}", start, code="vision_http_error")
-                return self._error(f"Lỗi nhận dạng: {vision_err}", start, code="vision_error")
-
-        annotation = resp.get("fullTextAnnotation") or {}
-        words = self._collect_words(annotation)
-        rows = self._group_words_into_rows(words)
-        raw_text = "\n".join(rows)
-
-        # Không có từ nào có tọa độ -> dùng văn bản thô của Vision
-        if not raw_text.strip():
-            raw_text = annotation.get("text", "") or (
-                (resp.get("textAnnotations") or [{}])[0].get("description", "")
-            )
-            rows = [ln.strip() for ln in raw_text.splitlines() if ln.strip()]
-
-        confs = [w["confidence"] for w in words if w.get("confidence") is not None]
-        confidence = round(sum(confs) / len(confs) * 100, 2) if confs else 0.0
-
-        return {
-            "success": True,
-            "raw_text": raw_text,
-            "vision_text": annotation.get("text", ""),
-            "lines": rows,
-            "total_lines": len(rows),
-            "words_count": len(words),
-            "confidence": confidence,
-            "confidence_score": confidence,
-            "execution_time_ms": int((time.time() - start) * 1000),
-            "engine": ENGINE_ID,
-            "engine_note": "Google Cloud Vision (DOCUMENT_TEXT_DETECTION)",
-            "is_cloud": True,
-        }
+            return self._error(f"Google AI Studio lỗi: {gem_e}", start, code="gemini_error")
 
     # ------------------------------------------------------------------ helpers
     def _error(self, message: str, start: float, code: str = "error") -> Dict[str, Any]:
