@@ -1596,9 +1596,20 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
         formData.append('receipt', fileOrBlob, filename);
 
         if (fillEl) fillEl.style.width = '65%';
-        if (statEl) statEl.textContent = 'Google Vision đang bóc tách ký tự và bảng giá...';
+        const savedApiKey = localStorage.getItem('vx_google_api_key') || '';
+        if (savedApiKey) {
+            formData.append('google_api_key', savedApiKey);
+        }
+        const reqHeaders = {};
+        if (savedApiKey) {
+            reqHeaders['X-Google-Api-Key'] = savedApiKey;
+        }
 
-        const res = await fetch('/api/receipts/upload', { method: 'POST', body: formData });
+        const res = await fetch('/api/receipts/upload', {
+            method: 'POST',
+            headers: reqHeaders,
+            body: formData
+        });
         if (!res.ok) {
             let errMsg = `Lỗi máy chủ HTTP ${res.status}`;
             try {
@@ -2197,6 +2208,7 @@ async function saveGoogleApiKeyFromUi(){
         toast('Vui lòng dán GOOGLE_API_KEY hợp lệ!', 'warning');
         return;
     }
+    localStorage.setItem('vx_google_api_key', val);
     try {
         const res = await fetch('/api/ocr/config', {
             method: 'POST',
@@ -2209,10 +2221,16 @@ async function saveGoogleApiKeyFromUi(){
             hideApiKeyConfigBanner();
             if(input) input.value = '';
         } else {
-            toast(d.error || 'Lỗi khi lưu API Key', 'error');
+            // Ngay cả khi Vercel read-only filesystem ngăn ghi .env, key đã lưu vào localStorage để gửi kèm request
+            toast('Đã lưu GOOGLE_API_KEY vào trình duyệt! Bạn có thể quét hóa đơn ngay.', 'success');
+            hideApiKeyConfigBanner();
+            if(input) input.value = '';
         }
     } catch(e){
-        toast('Lỗi kết nối máy chủ khi lưu API Key', 'error');
+        // Lưu offline thành công vào localStorage
+        toast('Đã lưu GOOGLE_API_KEY vào trình duyệt! Bạn có thể quét hóa đơn ngay.', 'success');
+        hideApiKeyConfigBanner();
+        if(input) input.value = '';
     }
 }
 

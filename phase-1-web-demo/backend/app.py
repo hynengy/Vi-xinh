@@ -143,6 +143,17 @@ def upload_receipt():
             saved_path = tmp_uploads / saved_filename
             file.save(str(saved_path))
 
+        # Nhận diện Google API Key từ header hoặc form (đặc biệt hữu ích trên môi trường Serverless Vercel)
+        req_key = (
+            request.headers.get("X-Google-Api-Key")
+            or request.headers.get("X-Gemini-Api-Key")
+            or request.form.get("google_api_key")
+            or ""
+        ).strip()
+        if req_key:
+            pipeline.mlkit_engine.api_key = req_key
+            os.environ["GOOGLE_API_KEY"] = req_key
+
         # Chạy quy trình OCR & bóc tách cấu trúc
         result = pipeline.process_receipt_image(saved_path)
         result["file_name"] = saved_filename
@@ -877,7 +888,10 @@ def ocr_config():
                 if not line.strip().startswith("GOOGLE_API_KEY="):
                     lines.append(line)
         lines.append(f"GOOGLE_API_KEY={new_key}")
-        env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        try:
+            env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        except Exception:
+            pass
 
         # Cập nhật runtime
         import os
