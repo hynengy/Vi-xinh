@@ -260,16 +260,6 @@ setTimeout(function(){
             </div>
         </div>
 
-        <div class="sec" style="margin-top:0.75rem">
-            <div class="group-preview-card" onclick="handleGroupClick()">
-                <div class="gpc-icon" id="homeGroupIcon"><i class="ri-add-circle-line"></i></div>
-                <div class="gpc-info">
-                    <div class="gpc-title" id="homeGroupTitle">Tạo Ví Nhóm & Quỹ Chung</div>
-                    <div class="gpc-sub" id="homeGroupSub">Chưa có nhóm · Chạm để tạo nhóm chia tiền & quản lý quỹ</div>
-                </div>
-                <div class="gpc-arrow"><i class="ri-arrow-right-s-line"></i></div>
-            </div>
-        </div>
 
         <div class="sec">
             <div class="sec-hdr"><span class="sec-title">Tiện ích</span></div>
@@ -909,17 +899,14 @@ setTimeout(function(){
                             </div>
                         </div>
 
-                        <!-- 3 CHẾ ĐỘ PHÂN BỔ: CÁ NHÂN | CHIA TIỀN | QUỸ CHUNG -->
+                        <!-- CHẾ ĐỘ PHÂN BỔ: CÁ NHÂN | CHIA TIỀN -->
                         <div style="margin-top:0.6rem;padding-top:0.55rem;border-top:1px solid var(--border)">
-                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.3rem;margin-bottom:0.5rem">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;margin-bottom:0.5rem">
                                 <button type="button" class="scope-chip active" id="btnScopeP" onclick="setBillScope('personal')">
                                     Cá nhân
                                 </button>
                                 <button type="button" class="scope-chip" id="btnScopeS" onclick="setBillScope('split')">
                                     Chia tiền
-                                </button>
-                                <button type="button" class="scope-chip" id="btnScopeF" onclick="setBillScope('fund')">
-                                    Quỹ chung
                                 </button>
                             </div>
                             
@@ -984,23 +971,6 @@ setTimeout(function(){
                                         </div>
                                         <div style="font-size:0.68rem;color:var(--text3);margin-top:0.25rem">Thu lại: <strong id="roleCollectOthersTxt" style="color:var(--danger)">0 ₫</strong></div>
                                     </div>
-                                </div>
-                            </div>
-
-                            <!-- 3. QUỸ CHUNG -->
-                            <div id="scopeFundBox" class="hidden" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:0.6rem 0.75rem">
-                                <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.35rem">
-                                    <span style="font-size:0.75rem;color:var(--text3)">Chọn quỹ:</span>
-                                    <select class="fc" id="fundSelectBox" onchange="updateFundSelection()" style="padding:0.25rem 0.4rem;font-size:0.75rem;flex:1">
-                                        <option value="couple">Quỹ Cặp Đôi (1.850.000 ₫)</option>
-                                        <option value="travel">Quỹ Du Lịch (3.200.000 ₫)</option>
-                                        <option value="room" selected>Quỹ Chi Tiêu Chung (2.400.000 ₫)</option>
-                                    </select>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;padding-top:0.3rem;border-top:1px dashed var(--border)">
-                                    <span style="color:var(--text2)">Số dư sau chi:</span>
-                                    <strong style="color:var(--success)" id="fundAfterBalance">1.950.000 ₫</strong>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -1253,6 +1223,6 @@ setTimeout(function(){
 </div>
 
 <div class="toast-box" id="toastBox"></div>
-<script src="js/app.js?v=4.1.0"></script>
+<script src="js/app.js?v=4.2.0"></script>
 </body>
 </html>
