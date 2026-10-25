@@ -114,6 +114,40 @@ def test_extract_line_items_room_services():
     assert any("điện" in n.lower() or "Số điện" in n for n in item_names)
 
 
+def test_extract_compound_room_rent_bill():
+    """Test bóc tách hóa đơn tiền trọ có 2 phần tổng tiền: Tổng tiền DV + Tổng tiền phòng."""
+    sample_bill = """
+    THÔNG BÁO TIỀN TRỌ
+    Tháng 10/2026
+    Kính gửi phòng: 801
+    Bảng tính tiền điện nước của tháng trước và tiền phòng, dịch vụ của tháng tới
+
+    Dịch vụ | Cũ | Mới | Tiêu thụ | Thành Tiền
+    Số điện | 17247 | 17738 | 491 | 1.865.800 đ
+    Số nước | 1107 | 1135 | 28 | 650.000 đ
+    Số người
+    Wifi | 100.000 đ | TIỀN DỊCH VỤ CHUYỂN VÀO STK HỒNG NHUNG
+    Máy giặt | 350.000 đ
+    Vệ sinh, điện chung | 5 | 150.000 đ
+    Để xe | 0 đ
+    Thang máy | 250.000 đ
+    TỔNG TIỀN DV | 3.365.800 đ
+    TỔNG TIỀN PHÒNG | 3.800.000 đ | TIỀN PHÒNG CHUYỂN STK HKD SIMPLE STAY
+    """
+    res = ReceiptParser.parse_all(sample_bill)
+    assert res["amount"] == 7165800.0  # 3.365.800 (DV) + 3.800.000 (Phòng)
+    assert res["subtotal"] == 7165800.0
+    assert len(res["items"]) >= 7
+    item_names = [it["name"] for it in res["items"]]
+    assert "Tiền phòng" in item_names
+    assert "Wifi" in item_names
+    assert "Thang máy" in item_names
+    assert any("Để xe" in n or "xe" in n.lower() for n in item_names)
+    assert any(b["label"] == "Tổng tiền dịch vụ" and b["amount"] == 3365800.0 for b in res["breakdown"])
+    assert any(b["label"] == "Tổng tiền phòng" and b["amount"] == 3800000.0 for b in res["breakdown"])
+
+
+
 def test_pipeline_real_receipt_extraction():
     """Test kết nối toàn diện Pipeline: Image Preprocessing -> Multimodal LLM Extraction -> Structure Parser."""
     from backend.core.pipeline import ProcessingPipeline

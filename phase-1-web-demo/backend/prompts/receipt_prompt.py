@@ -27,7 +27,10 @@ YÊU CẦU QUAN TRỌNG VỀ ĐỊNH DẠNG:
    | Mỳ Tôm trẻ em | gói | 3 | 1 000 | 3 000
 3. BẢO TOÀN SỐ HỌC: Bắt buộc 'Số lượng * Đơn giá = Thành tiền'. Không lấy nhầm thông số đóng gói (như 50/b, 30b/t, 50g) làm giá tiền.
 4. Ghi rõ các dòng tổng kết: Tiền thanh toán thực tế, Tạm tính, Chiết khấu/Giảm giá, Thuế VAT.
-5. TUYỆT ĐỐI KHÔNG dùng ký tự gạch đầu dòng (* hoặc -), tiêu đề (#), và KHÔNG thêm lời chào hay giải thích nào khác ngoài văn bản hóa đơn.
+5. ĐỐI VỚI HÓA ĐƠN TIỀN TRỌ / CHUNG CƯ:
+   - Nếu hóa đơn có tách riêng 'TỔNG TIỀN DỊCH VỤ' (điện, nước, wifi, máy giặt, vệ sinh, thang máy...) và 'TỔNG TIỀN PHÒNG', thì 'total_amount' PHẢI là TỔNG CỦA CẢ HAI (total_amount = Tổng tiền DV + Tổng tiền phòng).
+   - Trích xuất đầy đủ tất cả các dịch vụ (điện, nước, wifi, máy giặt, vệ sinh, thang máy, để xe...) và tiền phòng vào danh sách 'items', không được bỏ sót bất kỳ mục nào (kể cả dịch vụ 0đ như để xe miễn phí).
+6. TUYỆT ĐỐI KHÔNG dùng ký tự gạch đầu dòng (* hoặc -), tiêu đề (#), và KHÔNG thêm lời chào hay giải thích nào khác ngoài văn bản hóa đơn.
 """
 
 # =============================================================================

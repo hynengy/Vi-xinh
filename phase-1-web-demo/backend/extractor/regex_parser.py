@@ -389,7 +389,7 @@ class ReceiptParser:
         return datetime.now().strftime("%Y-%m-%d")
 
     @classmethod
-    def parse_amount_str(cls, amount_str: str) -> Optional[float]:
+    def parse_amount_str(cls, amount_str: str, allow_zero: bool = False) -> Optional[float]:
         """Chuyển chuỗi tiền thành float, tự động loại trừ số điện thoại/hotline, giờ giấc, ngày tháng và năm."""
         cleaned = amount_str.strip()
         # Nếu là số điện thoại hoặc giờ, không parse thành tiền!
@@ -430,6 +430,8 @@ class ReceiptParser:
 
         try:
             val = float(cleaned)
+            if allow_zero and val == 0.0:
+                return 0.0
             # Giới hạn số tiền hợp lý: 1.000 đ đến 2 tỷ đ
             if 1_000 <= val <= 2_000_000_000:
                 if 2023 <= val <= 2030:
@@ -497,6 +499,24 @@ class ReceiptParser:
         discount_amount, discount_note = cls.extract_discount(lines)
         breakdown = []
 
+        # 0. Kiểm tra hóa đơn tiền trọ có tách riêng: Tổng tiền DV + Tổng tiền phòng
+        room_service_total = None
+        room_rent_total = None
+        for line in lines:
+            ll = line.lower()
+            if any(k in ll for k in ["tổng tiền dv", "tong tien dv", "tổng dv", "tong dv", "tiền dịch vụ", "tien dich vu", "tổng tiền dịch vụ", "tong tien dich vu"]):
+                for n in AMOUNT_PATTERN.findall(line):
+                    v = cls.parse_amount_str(n)
+                    if v and v >= 1_000:
+                        room_service_total = v
+                        break
+            elif any(k in ll for k in ["tổng tiền phòng", "tong tien phong", "tiền phòng", "tien phong"]):
+                for n in AMOUNT_PATTERN.findall(line):
+                    v = cls.parse_amount_str(n)
+                    if v and v >= 100_000:
+                        room_rent_total = v
+                        break
+
         for i in range(len(lines) - 1, -1, -1):
             line = lines[i]
             if cls.is_table_header(line):
@@ -512,6 +532,12 @@ class ReceiptParser:
             # Bỏ qua dòng số hóa đơn, số bill (Số HĐ: 100088, HD002605...)
             if INVOICE_NUMBER_PATTERN.search(line) or any(k in line_lower for k in ["số hđ", "so hd", "sđ hd", "sd hd", "mã hđ", "ma hd", "mã bill", "số bill", "số:", "so:"]):
                 continue
+
+            # Nếu là hóa đơn tiền trọ có cả 2 phần tổng tiền (Dịch vụ & Tiền phòng)
+            if room_service_total and room_rent_total:
+                # Tránh lấy riêng lẻ một dòng tổng con làm due_payment
+                if any(k in line_lower for k in ["tổng tiền dv", "tong tien dv", "tổng dv", "tiền dịch vụ", "tổng tiền phòng", "tong tien phong"]):
+                    continue
 
             # Phân loại rõ dòng tiền khách đưa / tiền đã nhận / tiền thối
             is_paid_line = any(re.search(kw, line_lower) for kw in PAID_AMOUNT_KEYWORDS)
@@ -565,11 +591,24 @@ class ReceiptParser:
                         subtotal = val
                         break
 
+        # Nếu là hóa đơn tiền trọ có 2 phần tổng tiền và chưa có grand total riêng
+        if room_service_total and room_rent_total:
+            compound_room_total = room_service_total + room_rent_total
+            if due_payment is None or due_payment in (room_service_total, room_rent_total):
+                due_payment = compound_room_total
+            if subtotal is None:
+                subtotal = compound_room_total
+            breakdown.append({"label": "Tổng tiền dịch vụ", "amount": room_service_total})
+            breakdown.append({"label": "Tổng tiền phòng", "amount": room_rent_total})
+
         # Xác định final_payment (số tiền thực tế ghi nhận vào ví)
         final_payment = None
         if due_payment is not None:
             final_payment = due_payment
-            breakdown.append({"label": "Khách phải trả", "amount": due_payment})
+            if room_service_total and room_rent_total:
+                breakdown.append({"label": "Tổng thanh toán (Phòng + Dịch vụ)", "amount": due_payment})
+            else:
+                breakdown.append({"label": "Khách phải trả", "amount": due_payment})
         elif paid_cash is not None and change_amount is not None and paid_cash > change_amount:
             # Ví dụ: Khách đưa 500k, thối 50k -> thực chi = 450k
             final_payment = paid_cash - change_amount
@@ -719,10 +758,14 @@ class ReceiptParser:
             return "🌐"
         if "phòng" in name_lower:
             return "🏠"
-        if any(k in name_lower for k in ["xe", "gửi xe"]):
+        if any(k in name_lower for k in ["xe", "gửi xe", "để xe", "giữ xe"]):
             return "🛵"
-        if any(k in name_lower for k in ["giặt", "vệ sinh"]):
+        if any(k in name_lower for k in ["giặt", "máy giặt"]):
             return "🧺"
+        if any(k in name_lower for k in ["vệ sinh", "rác"]):
+            return "🧹"
+        if any(k in name_lower for k in ["thang máy", "thang may"]):
+            return "🛗"
 
         return "📦"
 
@@ -749,12 +792,12 @@ class ReceiptParser:
         ]
 
         amt_pattern = re.compile(
-            r"(\d{1,3}(?:[.,\s]\d{3})+|\d{4,9})\s*(?:[đ₫dD]|vn[dđ])?",
+            r"(\b0\b|\d{1,3}(?:[.,\s]\d{3})+|\d{4,9})\s*(?:[đ₫dD]|vn[dđ])?",
             re.IGNORECASE
         )
         vowels = "aeiouyáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ"
 
-        is_room_rent_bill = any(k in "\n".join(lines[:5]).lower() for k in ["tiền trọ", "tien tro", "thông báo tiền trọ", "phòng trọ"])
+        is_room_rent_bill = any(k in "\n".join(lines[:6]).lower() for k in ["tiền trọ", "tien tro", "thông báo tiền trọ", "phòng trọ", "phòng:", "phòng "])
 
         def is_skip_line(l_str: str) -> bool:
             l_low = l_str.lower().strip()
@@ -762,12 +805,17 @@ class ReceiptParser:
                 return True
 
             # Dịch vụ phòng trọ chỉ áp dụng cho hóa đơn trọ thực sự
-            if is_room_rent_bill and any(k in l_low for k in ["tiền phòng", "tien phong", "tiền điện", "tiền nước", "tiền wifi"]):
-                if not any(k in l_low for k in ["pass", "password", "mật khẩu", "hotline", "sđt"]):
+            if is_room_rent_bill and any(k in l_low for k in [
+                "tiền phòng", "tien phong", "tiền điện", "tiền nước", "tiền wifi", "wifi", "wi-fi",
+                "máy giặt", "may giat", "vệ sinh", "ve sinh", "thang máy", "thang may", "để xe", "de xe", "gửi xe", "gui xe"
+            ]):
+                if not any(k in l_low for k in ["pass", "password", "mật khẩu", "mat khau", "pw:", "pw "]):
                     return False
 
             # Bỏ qua dòng wifi, mật khẩu wifi, pass wifi
-            if any(k in l_low for k in ["wifi", "wi-fi", "pass", "password", "mật khẩu", "mat khau", "mk:", "mk ", "pw:", "pw "]):
+            if any(k in l_low for k in ["pass", "password", "mật khẩu", "mat khau", "mk:", "mk ", "pw:", "pw "]):
+                return True
+            if any(k in l_low for k in ["wifi", "wi-fi"]) and not is_room_rent_bill and not any(k in l_low for k in ["đ", "₫", "vnd", "tiền"]):
                 return True
 
             # Bỏ qua dòng số điện thoại, hotline, liên hệ
@@ -816,7 +864,10 @@ class ReceiptParser:
             if cls.is_table_header(l_str):
                 return True
             if any(p in l_low for p in ignored_phrases):
-                return True
+                if is_room_rent_bill and any(s in l_low for s in ["wifi", "wi-fi", "máy giặt", "may giat", "vệ sinh", "thang máy", "để xe", "điện", "nước"]):
+                    pass
+                else:
+                    return True
             if any(k in l_low for k in ["đơn giá", "don gia", "thành tiền", "thanh tien", "t.tiền", "thực đơn"]) and any(k in l_low for k in ["sl", "s1", "đơn giá", "don gia"]):
                 return True
             return False
@@ -838,9 +889,11 @@ class ReceiptParser:
                 i += 1
                 continue
 
+            line_cleaned = re.sub(r"\|\s*(?:ti[ềe]n\s*(?:d[ịi]ch\s*v[ụu]|dv|ph[òo]ng)\s*)?chuy[ểe]n\s*(?:v[àa]o\s*)?stk.*$", "", line, flags=re.IGNORECASE).strip()
+
             # 1. Nhận diện dòng Tiền Phòng
             if ("tiền phòng" in line_lower or "tien phong" in line_lower) and not any(it["name"] == "Tiền phòng" for it in items):
-                matches = list(amt_pattern.finditer(line))
+                matches = list(amt_pattern.finditer(line_cleaned))
                 if matches:
                     val = cls.parse_amount_str(matches[-1].group(0))
                     if val and val >= 100_000:
@@ -855,29 +908,33 @@ class ReceiptParser:
                 i += 1
                 continue
 
-            # 2. Nhận diện các dịch vụ sinh hoạt phòng trọ (Điện, Nước, Wifi, Rác, Xe)
+            # 2. Nhận diện các dịch vụ sinh hoạt phòng trọ (Điện, Nước, Wifi, Rác, Xe, Thang máy, Máy giặt)
             handled_service = False
             if is_room_rent_bill:
                 for skw, sname, sicon in [
                     ("điện", "Điện", "⚡"),
                     ("nước", "Nước", "💧"),
                     ("wifi", "Wifi", "🌐"),
+                    ("máy giặt", "Máy giặt", "🧺"),
+                    ("thang máy", "Thang máy", "🛗"),
+                    ("vệ sinh", "Vệ sinh", "🧹"),
                     ("rác", "Vệ sinh & Rác", "🧺"),
-                    ("gửi xe", "Gửi xe", "🛵")
+                    ("gửi xe", "Gửi xe", "🛵"),
+                    ("để xe", "Để xe", "🛵")
                 ]:
                     if skw == "nước" and any(k in line_lower for k in ["ngọt", "ngot", "lọc", "loc", "khoáng", "khoang", "suối", "suoi", "ép", "ep", "mía", "mia", "chanh", "uống", "uong", "lon", "chai", "ly", "cốc", "tương", "mắm"]):
                         continue
-                    if (line_lower.startswith(skw) or f" {skw} " in f" {line_lower} " or f"{skw}:" in line_lower) and not any(it["name"] == sname for it in items):
-                        matches = list(amt_pattern.finditer(line))
+                    if (line_lower.startswith(skw) or f" {skw} " in f" {line_lower} " or f"{skw}:" in line_lower or f"{skw} " in line_lower) and not any(it["name"] == sname for it in items):
+                        matches = list(amt_pattern.finditer(line_cleaned))
                         if matches:
-                            val = cls.parse_amount_str(matches[-1].group(0))
-                            if val and val >= 1_000:
+                            val = cls.parse_amount_str(matches[-1].group(0), allow_zero=True)
+                            if val is not None and (val >= 1_000 or (is_room_rent_bill and val == 0.0)):
                                 items.append({
                                     "name": sname,
                                     "quantity": 1.0,
                                     "unit_price": val,
                                     "amount": val,
-                                    "consumption": "SL: 1",
+                                    "consumption": "Miễn phí (0 ₫)" if val == 0.0 else "SL: 1",
                                     "icon": sicon
                                 })
                                 handled_service = True
@@ -887,22 +944,27 @@ class ReceiptParser:
                     continue
 
             # 3. Phân tích Dòng Bảng có ký tự phân cách '|' (Table Format)
-            if "|" in line:
-                raw_parts = [p.strip() for p in line.split("|")]
+            if "|" in line_cleaned:
+                raw_parts = [p.strip() for p in line_cleaned.split("|")]
                 while raw_parts and not raw_parts[0]:
                     raw_parts.pop(0)
                 while raw_parts and not raw_parts[-1]:
                     raw_parts.pop()
+                if raw_parts and any(k in raw_parts[-1].lower() for k in ["chuyển vào stk", "chuyển stk", "stk", "hkd simple"]):
+                    raw_parts.pop()
 
                 if len(raw_parts) >= 2:
-                    p_amt = cls.parse_amount_str(raw_parts[-1])
-                    if p_amt and p_amt >= 1000:
+                    p_amt = cls.parse_amount_str(raw_parts[-1], allow_zero=True)
+                    if p_amt is not None and (p_amt >= 1000 or (is_room_rent_bill and p_amt == 0.0)):
                         p_up = None
                         p_qty = 1.0
                         p_unit = ""
                         p_name = raw_parts[0]
 
-                        if len(raw_parts) >= 3:
+                        if p_amt == 0.0:
+                            p_up = 0.0
+                            p_qty = 1.0
+                        elif len(raw_parts) >= 3:
                             cand_up = cls.parse_amount_str(raw_parts[-2])
                             if cand_up and cand_up >= 100:
                                 p_up = cand_up
@@ -933,8 +995,10 @@ class ReceiptParser:
                                         pass
                                 p_name = raw_parts[0]
 
-                        if not p_up and p_qty > 0:
+                        if not p_up and p_qty > 0 and p_amt > 0:
                             p_up = round(p_amt / p_qty, 0)
+                        elif p_amt == 0.0:
+                            p_up = 0.0
 
                         # Nếu tên bị ngắn hoặc là phần tiếp nối dòng trước (vd: 'ú)' hoặc '(gói lẻ)')
                         prev_l = lines[i-1] if i > 0 else ""
@@ -950,7 +1014,7 @@ class ReceiptParser:
 
                         if len(p_clean_name) >= 2 and not any(k in p_clean_name.lower() for k in ["tổng", "thanh toán", "tiền mặt", "thu ngân", "phụ trách", "bàn"]):
                             icon = cls._detect_item_icon(p_clean_name.lower())
-                            q_disp = f"SL: {int(p_qty) if p_qty.is_integer() else p_qty}"
+                            q_disp = "Miễn phí (0 ₫)" if p_amt == 0.0 else f"SL: {int(p_qty) if p_qty.is_integer() else p_qty}"
                             items.append({
                                 "name": p_clean_name,
                                 "quantity": p_qty,
