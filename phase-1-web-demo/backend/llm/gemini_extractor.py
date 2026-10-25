@@ -67,9 +67,8 @@ class GoogleMLKitEngine:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = (
             api_key
-            or os.environ.get("GEMINI_API_KEY")
             or os.environ.get("GOOGLE_API_KEY")
-            or os.environ.get("GOOGLE_VISION_API_KEY")
+            or os.environ.get("GEMINI_API_KEY")
             or ""
         ).strip()
         self.engine_name = ENGINE_ID
@@ -120,7 +119,7 @@ class GoogleMLKitEngine:
                     "is_cloud": True,
                 }
             return self._error(
-                "Chưa cấu hình Google AI Studio. Vui lòng thêm GEMINI_API_KEY hoặc GOOGLE_API_KEY vào biến môi trường.",
+                "Chưa cấu hình GOOGLE_API_KEY. Vui lòng thêm GOOGLE_API_KEY vào biến môi trường.",
                 start,
                 code="not_configured",
             )
