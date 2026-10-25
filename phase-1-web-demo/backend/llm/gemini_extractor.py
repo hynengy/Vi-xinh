@@ -249,8 +249,10 @@ class GoogleMLKitEngine:
             }
         }
 
-        # Các model hỗ trợ generateContent của Google AI Studio (ưu tiên gemini-1.5-flash chính thức)
+        # Các model hỗ trợ generateContent của Google AI Studio (ưu tiên Flash Multimodal)
         models = (
+            "gemini-flash-lite-latest",
+            "gemini-flash-latest",
             "gemini-1.5-flash",
             "gemini-1.5-flash-latest",
             "gemini-2.0-flash",
