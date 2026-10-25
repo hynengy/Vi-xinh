@@ -154,7 +154,7 @@ def upload_receipt():
             pipeline.mlkit_engine.api_key = req_key
             os.environ["GOOGLE_API_KEY"] = req_key
 
-        # Chạy quy trình OCR & bóc tách cấu trúc
+        # Chạy quy trình Multimodal LLM & bóc tách cấu trúc
         result = pipeline.process_receipt_image(saved_path)
         result["file_name"] = saved_filename
 
@@ -171,7 +171,7 @@ def upload_receipt():
 @app.route("/api/receipts/upload-image", methods=["POST"])
 def upload_receipt_image_only():
     """
-    Chỉ tải ảnh lên máy chủ để lấy URL lưu trữ (dành cho client-side Google ML Kit OCR).
+    Chỉ tải ảnh lên máy chủ để lấy URL lưu trữ (dành cho client gửi ảnh/chuỗi văn bản).
     """
     try:
         if "receipt" not in request.files:
@@ -220,10 +220,11 @@ def parse_receipt_text():
     return jsonify(result)
 
 
+@app.route("/api/llm/engines", methods=["GET"])
 @app.route("/api/ocr/engines", methods=["GET"])
-def get_ocr_engines():
+def get_llm_engines():
     """
-    Thông tin mô hình trích xuất: Google AI Studio Gemini Multimodal LLM.
+    Thông tin mô hình trích xuất: Google AI Studio Gemini Multimodal LLM (Hướng 3).
     """
     return jsonify({
         "default": "gemini_multimodal",
@@ -865,15 +866,15 @@ def list_categories():
 # ==================================================================
 @app.route("/api/llm/status", methods=["GET"])
 @app.route("/api/ocr/status", methods=["GET"])
-def ocr_status():
-    """Kiểm tra trạng thái Gemini Multimodal AI / LLM Engine."""
+def llm_status():
+    """Kiểm tra trạng thái Gemini Multimodal AI / LLM Engine (Hướng 3)."""
     return jsonify(pipeline.mlkit_engine.get_engine_info())
 
 
 @app.route("/api/llm/config", methods=["GET", "POST"])
 @app.route("/api/ocr/config", methods=["GET", "POST"])
-def ocr_config():
-    """Lấy hoặc lưu cấu hình GOOGLE_API_KEY."""
+def llm_config():
+    """Lấy hoặc lưu cấu hình GOOGLE_API_KEY (Google AI Studio)."""
     env_file = Path(__file__).resolve().parent.parent / ".env"
     if request.method == "POST":
         data = request.get_json() or {}

@@ -33,10 +33,10 @@ class ProcessingPipeline:
 
     def process_receipt_image(self, image_path: Path, engine: str = "google_mlkit") -> Dict[str, Any]:
         """
-        Thực thi quy trình Google ML Kit OCR -> Regex Parser bóc tách dữ liệu hóa đơn.
+        Thực thi quy trình Gemini Multimodal LLM -> Regex Validator bóc tách dữ liệu hóa đơn (Hướng 3).
         """
         image_path = Path(image_path)
-        logger.info(f"Bắt đầu Google ML Kit pipeline xử lý ảnh: {image_path}")
+        logger.info(f"Bắt đầu Gemini Multimodal LLM pipeline xử lý ảnh: {image_path}")
 
         ml_res = self.mlkit_engine.process_image(str(image_path))
         raw_text = ml_res.get("raw_text", "")
@@ -63,7 +63,7 @@ class ProcessingPipeline:
 
     def parse_extracted_text(self, raw_text: str, image_url: str = "") -> Dict[str, Any]:
         """
-        Bóc tách cấu trúc hóa đơn trực tiếp từ chuỗi văn bản thô (phù hợp với Google ML Kit on-device client).
+        Bóc tách cấu trúc hóa đơn trực tiếp từ chuỗi văn bản thô do Multimodal LLM trích xuất.
         """
         parsed_data = self.parser.parse_all(raw_text)
 
