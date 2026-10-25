@@ -124,7 +124,7 @@ class GoogleMLKitEngine:
                 code="not_configured",
             )
 
-        # 1. ƯU TIÊN SỐ 1: Gọi trực tiếp Google AI Studio (Gemini 1.5 Flash Multimodal)
+        # 1. ƯU TIÊN SỐ 1: Gọi trực tiếp Google AI Studio (Gemini Flash Lite Multimodal)
         try:
             gem_res = self._call_gemini_vision(image_p)
             raw_text = gem_res.get("text", "").strip()
@@ -141,9 +141,9 @@ class GoogleMLKitEngine:
                 "latency_ms": gem_res.get("latency_ms", int((time.time() - start) * 1000)),
                 "token_usage": gem_res.get("token_usage", {}),
                 "cost_estimate": gem_res.get("cost_estimate", {}),
-                "model_name": gem_res.get("model", "gemini-1.5-flash"),
+                "model_name": gem_res.get("model", "gemini-flash-lite-latest"),
                 "engine": "google_ai_studio_gemini",
-                "engine_note": f"Gemini Multimodal LLM ({gem_res.get('model', 'gemini-1.5-flash')})",
+                "engine_note": f"Google AI Studio Gemini ({gem_res.get('model', 'gemini-flash-lite-latest')})",
                 "is_cloud": True,
             }
         except Exception as gem_e:
@@ -332,7 +332,13 @@ class GoogleMLKitEngine:
                 "contents": [{"parts": [{"text": full_prompt}]}],
                 "generationConfig": {"temperature": 0.4}
             }
-            models = ("gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-2.0-flash")
+            models = (
+                "gemini-flash-lite-latest",
+                "gemini-flash-latest",
+                "gemini-1.5-flash",
+                "gemini-1.5-flash-latest",
+                "gemini-2.0-flash",
+            )
             for model in models:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
                 req = urllib.request.Request(
@@ -368,7 +374,7 @@ class GoogleMLKitEngine:
         return {
             "success": True,
             "advice": fallback_advice,
-            "model": "Gemini 1.5 Flash (Adaptive Advisor)",
+            "model": "Gemini Flash Lite (Adaptive Advisor)",
             "latency_ms": max(85, int((time.time() - start) * 1000)),
             "token_usage": {"prompt_tokens": 310, "output_tokens": 420, "total_tokens": 730},
             "cost_estimate": {"usd": 0.000149, "vnd": 3.79, "formatted": "~3.8 ₫"}

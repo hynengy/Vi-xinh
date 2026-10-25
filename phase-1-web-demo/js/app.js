@@ -1691,12 +1691,25 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
             ocrCatBadge.style.color = ct.color;
         }
 
+function formatModelDisplayName(raw) {
+    if (!raw) return 'Gemini Flash Lite (AI Studio)';
+    const s = String(raw).trim();
+    const sl = s.toLowerCase();
+    if (sl.includes('flash-lite')) return 'Gemini Flash Lite (AI Studio)';
+    if (sl.includes('flash-latest') || sl === 'gemini-flash') return 'Gemini Flash (AI Studio)';
+    if (sl.includes('2.0-flash')) return 'Gemini 2.0 Flash (AI Studio)';
+    if (sl.includes('1.5-flash')) return 'Gemini 1.5 Flash (AI Studio)';
+    if (sl.includes('1.5-pro')) return 'Gemini 1.5 Pro (AI Studio)';
+    return raw;
+}
+
         // Cập nhật nhãn mô hình Gemini LLM (Hướng 3)
         const engineTag = document.getElementById('ocrEngineTag');
         if (engineTag) {
-            const mName = data.model_name || 'Gemini 1.5 Flash';
-            engineTag.innerHTML = `<i class="ri-sparkling-fill" style="color:#f59e0b"></i> ${mName}`;
-            engineTag.title = 'Gemini Multimodal LLM API (Hướng 3)';
+            const rawModel = data.model_name || 'gemini-flash-lite-latest';
+            const dispName = formatModelDisplayName(rawModel);
+            engineTag.innerHTML = `<i class="ri-sparkling-fill" style="color:#f59e0b"></i> ${escapeHtml(dispName)}`;
+            engineTag.title = `Mô hình: ${rawModel} qua Google AI Studio API`;
         }
 
         const latEl = document.getElementById('ocrLatencyDisp');
@@ -4207,7 +4220,7 @@ async function requestAiSpendingSummary(){
         if(res.ok && d && d.success){
             const metricsHtml = `
             <div style="margin-bottom:0.6rem;padding-bottom:0.5rem;border-bottom:1px dashed var(--border);display:flex;align-items:center;justify-content:space-between;font-size:0.68rem;color:var(--text3);flex-wrap:wrap;gap:0.35rem">
-                <span><i class="ri-sparkling-fill" style="color:#f59e0b"></i> <strong>${escapeHtml(d.model || 'Gemini 1.5 Flash')}</strong></span>
+                <span><i class="ri-sparkling-fill" style="color:#f59e0b"></i> <strong>${escapeHtml(formatModelDisplayName(d.model))}</strong></span>
                 <span><i class="ri-flashlight-line" style="color:#f59e0b"></i> ${(d.latency_ms/1000).toFixed(1)}s</span>
                 <span><i class="ri-cpu-line" style="color:#6366f1"></i> ${d.token_usage?.total_tokens || 0} tokens</span>
                 <span><i class="ri-money-dollar-circle-line" style="color:#10b981"></i> ${escapeHtml(d.cost_estimate?.formatted || '~3.5 ₫')}</span>

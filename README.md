@@ -45,7 +45,7 @@ Nhập liệu chi tiêu từ hóa đơn giấy (siêu thị, quán ăn, nhà hà
 - Đặc thù hóa đơn Việt Nam có **2 phần tổng tiền kép** (như hóa đơn tiền trọ gồm *Tổng tiền dịch vụ* và *Tổng tiền phòng* chuyển vào 2 số tài khoản ngân hàng khác nhau mà không có dòng tổng cộng in sẵn).
 
 ### 1.2. Giải pháp của dự án "Ví Xinh"
-Ứng dụng khai thác sức mạnh của **Mô hình Ngôn ngữ lớn Đa phương thức (Multimodal LLM — Gemini 1.5 Flash / Flash Lite)** kết hợp bộ thẩm định **Structured Regex Validator**:
+Ứng dụng khai thác sức mạnh của **Mô hình Ngôn ngữ lớn Đa phương thức (Multimodal LLM — Google AI Studio Gemini Flash Lite `gemini-flash-lite-latest`)** kết hợp bộ thẩm định **Structured Regex Validator**:
 - **Trích xuất thông tin có cấu trúc 100%:** Bóc tách chính xác Tên cửa hàng, Ngày giờ, Danh sách từng mặt hàng (Tên, Số lượng, Đơn vị, Đơn giá, Thành tiền), Tiền giảm giá, Thuế VAT, Phương thức thanh toán.
 - **AI Phân tích & Cố vấn Tài chính (Financial Advisor):** Đọc hiểu lịch sử chi tiêu trong tháng, tóm tắt 3 khoản chi lớn nhất, cảnh báo danh mục vượt hạn mức và đưa ra 3 lời khuyên tài chính cá nhân hóa.
 - **Quỹ nhóm & Chia tiền thông minh:** Tự động tính toán công nợ tối thiểu giữa các thành viên và tạo mã thanh toán chuyển khoản **VietQR** chuẩn Napas 24/7.
@@ -72,7 +72,7 @@ Nhập liệu chi tiêu từ hóa đơn giấy (siêu thị, quán ăn, nhà hà
 graph TD
     A[Ảnh Hóa Đơn Chụp Từ Web / Điện Thoại] --> B[Image Preprocessing & Resizing<br/>Nén thích ứng giảm 75% Image Tokens]
     B --> C[Prompt Engineering Controller<br/>System Prompt + Few-Shot Rules]
-    C --> D[Gemini 1.5 Flash / Flash Lite API<br/>Google AI Studio Endpoint]
+    C --> D[Gemini Flash Lite API<br/>Google AI Studio Endpoint (gemini-flash-lite-latest)]
     
     D --> E[Structured Output Controller<br/>Strict JSON Schema Validation]
     
@@ -134,7 +134,7 @@ Ví Xinh/
 │   │   │   ├── regex_parser.py  # Bộ bóc tách Regex toàn diện (hóa đơn trọ kép, VAT...)
 │   │   │   └── rules.py         # Từ điển từ khóa hóa đơn tiếng Việt
 │   │   ├── llm/
-│   │   │   ├── gemini_extractor.py       # Tích hợp Gemini 1.5 Flash, đo Latency & Token
+│   │   │   ├── gemini_extractor.py       # Tích hợp Google AI Studio Gemini Flash Lite, đo Latency & Token
 │   │   │   └── image_preprocessing.py   # Thuật toán nén ảnh giảm chi phí/độ trễ
 │   │   ├── prompts/
 │   │   │   └── receipt_prompt.py        # System Prompt & JSON Schema chuẩn
@@ -288,10 +288,11 @@ flutter build apk --release
 
 ## 7. TÀI LIỆU HỖ TRỢ VẤN ĐÁP BẢO VỆ ĐỒ ÁN (FAQ DEFENSE)
 
-### ❓ Câu 1: Tại sao nhóm chọn Gemini 1.5 Flash qua Google AI Studio mà không dùng GPT-4o hay Tesseract OCR truyền thống?
+### ❓ Câu 1: Tại sao nhóm chọn Gemini Flash Lite (`gemini-flash-lite-latest`) qua Google AI Studio mà không dùng GPT-4o hay Tesseract OCR truyền thống?
 > **Trả lời:**
 > 1. *So với OCR truyền thống (Tesseract):* Tesseract chỉ nhận diện ký tự đơn thuần, không hiểu bố cục bảng và ngữ nghĩa tiếng Việt. Với hóa đơn nhăn, mờ hoặc hóa đơn tiền trọ có tổng tiền kép, Tesseract sẽ sinh văn bản rác và cần hàng nghìn dòng regex chắp vá. Gemini là Multimodal Vision-Language Model có khả năng đọc hiểu trực tiếp ngữ nghĩa không gian của bức ảnh.
-> 2. *So với GPT-4o:* `gemini-1.5-flash` có tốc độ xử lý nhanh gấp 2-3 lần (độ trễ ~1-2.5 giây) và chi phí cực kỳ tiết kiệm ($0.075 / 1 triệu token đầu vào so với $2.5 - $5.0 của GPT-4o), hoàn toàn phù hợp với bài toán quản lý tài chính thực tế cần phản hồi nhanh và tiết kiệm chi phí vận hành.
+> 2. *So với GPT-4o và các model lớn khác:* Mô hình `gemini-flash-lite-latest` (Gemini Flash Lite thế hệ mới nhất của Google AI Studio) có tốc độ xử lý nhanh vượt trội (độ trễ chỉ ~1.5 - 2.5 giây) và chi phí siêu tiết kiệm ($0.0375 - $0.075 / 1 triệu token đầu vào so với $2.5 - $5.0 của GPT-4o), hoàn toàn phù hợp với bài toán quản lý tài chính thực tế cần phản hồi tức thì và tiết kiệm chi phí vận hành.
+> 3. *Về tên gọi kỹ thuật:* Google AI Studio đã chuẩn hóa endpoint thế hệ mới sang `gemini-flash-lite-latest` và `gemini-flash-latest` (thay vì alias cũ `gemini-1.5-flash` vốn trả về 404 trên API v1beta đối với các gói dự án mới). Hệ thống của nhóm tự động ưu tiên `gemini-flash-lite-latest` và tự động fallback tuần tự sang các model Flash khác nếu cần.
 
 ### ❓ Câu 2: Nhóm đã làm thế nào để đảm bảo LLM không bị "ảo giác" (Hallucination) và luôn trả về JSON hợp lệ?
 > **Trả lời:**

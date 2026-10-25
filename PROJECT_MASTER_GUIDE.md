@@ -4,7 +4,7 @@
 > **Tên đồ án:** Ứng Dụng Quản Lý Tài Chính & Trích Xuất Dữ Liệu Hóa Đơn Bằng Mô Hình Ngôn Ngữ Lớn (LLM API)  
 > **Định hướng đề tài:** **Hướng 3 — Ứng dụng Mô hình Ngôn ngữ lớn qua API (Gemini API)**  
 > **Lớp:** 23CN1 — **Nhóm:** 05  
-> **Phiên bản:** 2.0 (Hỗ trợ Cloud Database Neon PostgreSQL + Gemini 1.5 Flash + Regex Fallback + 50/50 Tests Passed)
+> **Phiên bản:** 2.0 (Hỗ trợ Cloud Database Neon PostgreSQL + Google AI Studio Gemini Flash Lite (`gemini-flash-lite-latest`) + Regex Fallback + 50/50 Tests Passed)
 
 ---
 
@@ -32,7 +32,7 @@
 - Các ứng dụng OCR truyền thống (Tesseract OCR thuần, Regex đơn giản) gặp khó khăn lớn trước hóa đơn Việt Nam: chữ in nhiệt bị mờ, giấy nhăn, bố cục bảng phức tạp, và đặc biệt là hóa đơn có tổng tiền kép (như tiền trọ gồm *tiền phòng* và *tiền dịch vụ* chuyển vào 2 tài khoản khác nhau).
 
 ### 1.2. Giải pháp của dự án "Ví Xinh"
-- **Khai thác Mô hình Ngôn ngữ lớn đa phương thức (Multimodal LLM - Gemini 1.5 Flash):** Đọc hiểu ngữ nghĩa hình ảnh hóa đơn trực tiếp, tự động bóc tách cấu trúc JSON hoàn hảo gồm: Tên quán, ngày giờ, số tiền, chi tiết từng món hàng kèm số lượng & đơn giá, thuế VAT, tiền giảm giá.
+- **Khai thác Mô hình Ngôn ngữ lớn đa phương thức (Multimodal LLM — Google AI Studio Gemini Flash Lite):** Đọc hiểu ngữ nghĩa hình ảnh hóa đơn trực tiếp bằng mô hình `gemini-flash-lite-latest`, tự động bóc tách cấu trúc JSON hoàn hảo gồm: Tên quán, ngày giờ, số tiền, chi tiết từng món hàng kèm số lượng & đơn giá, thuế VAT, tiền giảm giá.
 - **Ràng buộc định dạng bằng JSON Schema (Structured Output):** Loại bỏ hoàn toàn lỗi sinh văn bản tự do (hallucination), đảm bảo 100% dữ liệu sẵn sàng lưu trữ vào CSDL.
 - **Tối ưu Chi phí & Độ trễ:** Nén ảnh thích ứng để tiết kiệm Token tiêu thụ, giảm độ trễ API xuống dưới 2-3s, hiển thị số liệu minh bạch cho người dùng.
 - **Bộ máy Regex Fallback Engine:** Chạy song song làm lớp thẩm định tính toàn vẹn số học ($Số lượng \times Đơn giá = Thành tiền$) và làm phương án dự phòng khi mất kết nối mạng hoặc hết quota API.
@@ -59,7 +59,7 @@ graph TD
     
     subgraph LLM_Pipeline [Pipeline Bóc Tách Hướng 3]
         API -->|2. Nén & Tối ưu kích thước| Preproc[Image Preprocessing<br/>Giảm Token & Latency]
-        Preproc -->|3. Gửi ảnh + Prompt| LLM[Gemini 1.5 Flash API]
+        Preproc -->|3. Gửi ảnh + Prompt| LLM[Google AI Studio Gemini Flash Lite API<br/>(gemini-flash-lite-latest)]
         Prompt[System Prompt & Strict JSON Schema] -.-> LLM
         LLM -->|4. Phản hồi JSON có cấu trúc| Validator[Schema Validator & Mathematical Checker]
         
@@ -172,7 +172,7 @@ graph TD
 ### 5.1. Pipeline Bóc Tách Hóa Đơn Bằng Multimodal LLM & Regex Validator
 1. **Bước 1 (Client Upload):** Người dùng chụp ảnh hóa đơn từ Web hoặc Mobile gửi đến API `/api/ocr/upload`.
 2. **Bước 2 (Image Preprocessing):** Backend kiểm tra kích thước. Nếu ảnh quá lớn, hàm `compress_and_resize_image` sẽ nén về độ phân giải tối ưu, chuyển về RGB.
-3. **Bước 3 (Gemini Multimodal Inference):** Ảnh nén kèm `RECEIPT_EXTRACTION_SYSTEM_PROMPT` và `RECEIPT_JSON_SCHEMA` được gửi đến mô hình `gemini-1.5-flash`.
+3. **Bước 3 (Gemini Multimodal Inference):** Ảnh nén kèm `RECEIPT_EXTRACTION_SYSTEM_PROMPT` và `RECEIPT_JSON_SCHEMA` được gửi đến mô hình `gemini-flash-lite-latest` (hoặc `gemini-flash-latest`).
 4. **Bước 4 (Structured Extraction & Cost Tracking):**
    - Gemini đọc trực tiếp văn bản từ ảnh và trả về JSON thuần chuẩn xác.
    - Hệ thống ghi nhận: $t_{latency} = t_1 - t_0$, đếm `prompt_token_count` và `candidates_token_count`, tính chi phí VNĐ.
@@ -267,10 +267,11 @@ git push origin main
 
 ## 7. BỘ CÂU HỎI VẤN ĐÁP THƯỜNG GẶP KHI BẢO VỆ ĐỒ ÁN (FAQ DEFENSE)
 
-### ❓ Câu 1: Tại sao nhóm chọn Gemini 1.5 Flash mà không dùng GPT-4o hay Tesseract OCR truyền thống?
+### ❓ Câu 1: Tại sao nhóm chọn Gemini Flash Lite (`gemini-flash-lite-latest`) qua Google AI Studio mà không dùng GPT-4o hay Tesseract OCR truyền thống?
 > **Trả lời:**
 > 1. *So với Tesseract OCR truyền thống:* Tesseract chỉ nhận dạng chữ cái đơn thuần, không hiểu ngữ nghĩa, gặp hóa đơn nhàu nát hay hóa đơn tiền trọ phức tạp sẽ cho ra văn bản rác và phải viết hàng nghìn dòng regex chắp vá. Gemini là Multimodal LLM có khả năng hiểu bố cục không gian hình ảnh và ngữ nghĩa tiếng Việt cực tốt.
-> 2. *So với GPT-4o:* `gemini-1.5-flash` có tốc độ xử lý nhanh hơn 2-3 lần (độ trễ ~1-2s), chi phí cực kỳ rẻ ($0.075 / triệu token so với $2.5 - $5 của GPT-4o), rất phù hợp với bài toán thực tế của ứng dụng tài chính cần phản hồi nhanh và tiết kiệm chi phí vận hành.
+> 2. *So với GPT-4o và các model lớn khác:* Mô hình `gemini-flash-lite-latest` (Gemini Flash Lite thế hệ mới của Google AI Studio) có tốc độ xử lý nhanh hơn 2-3 lần (độ trễ chỉ ~1.5 - 2.5s), chi phí cực kỳ rẻ ($0.0375 - $0.075 / triệu token so với $2.5 - $5 của GPT-4o), rất phù hợp với bài toán thực tế của ứng dụng tài chính cần phản hồi nhanh và tiết kiệm chi phí vận hành.
+> 3. *Về tên gọi kỹ thuật:* Google AI Studio đã chuẩn hóa endpoint thế hệ mới sang `gemini-flash-lite-latest` và `gemini-flash-latest` (thay vì alias cũ `gemini-1.5-flash` vốn trả về 404 trên API v1beta đối với các gói dự án mới). Hệ thống của nhóm tự động ưu tiên `gemini-flash-lite-latest` và tự động fallback tuần tự sang các model Flash khác nếu cần.
 
 ### ❓ Câu 2: Nhóm làm thế nào để đảm bảo LLM không bị "ảo giác" (Hallucination) và luôn trả về JSON chuẩn?
 > **Trả lời:**

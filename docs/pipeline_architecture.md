@@ -20,7 +20,7 @@ sequenceDiagram
     UI->>Opt: Gửi ảnh gốc
     Opt->>Opt: Resize (max 1024px) & Nén JPEG (giảm latency)
     Opt->>LLM: Gửi ảnh đã nén + System Prompt & JSON Schema
-    Note over LLM: Model: Gemini 1.5 Flash<br/>Suy luận ngữ nghĩa & Bóc tách cấu trúc
+    Note over LLM: Model: Gemini Flash Lite (gemini-flash-lite-latest)<br/>Suy luận ngữ nghĩa & Bóc tách cấu trúc
     LLM-->>Opt: Trả về JSON + Token Usage (Prompt & Output tokens)
     Opt->>Val: Kiểm tra tính hợp lệ của JSON Schema
     Val->>Val: Validate trường dữ liệu & kiểm tra logic (SL × ĐG = TT)
@@ -76,7 +76,7 @@ sequenceDiagram
 * Tầng Validator tại Backend thực hiện đối soát lại kiểu dữ liệu trước khi đẩy vào hệ thống.
 
 ### 4. Quản Lý Chi Phí & Độ Trễ (Cost & Latency Tracking)
-* **Lựa chọn Model:** Dùng `gemini-1.5-flash` / `gemini-flash-latest` (đáp ứng tiêu chí phản hồi nhanh, chi phí siêu rẻ).
+* **Lựa chọn Model:** Dùng `gemini-flash-lite-latest` / `gemini-flash-latest` (đáp ứng tiêu chí phản hồi nhanh ~1.5-2.5s, chi phí siêu rẻ).
 * **Đo lường thời gian thực:**
   * `Latency (ms)`: Đo thời gian từ lúc gửi ảnh đến khi nhận phản hồi hoàn chỉnh.
   * `Token Usage`: Trích xuất số lượng `promptTokenCount` và `candidatesTokenCount` từ API `usageMetadata`.

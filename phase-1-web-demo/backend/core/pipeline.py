@@ -48,7 +48,7 @@ class ProcessingPipeline:
             response["error_code"] = ml_res.get("error_code", "ocr_error")
         response["engine"] = ml_res.get("engine", "google_vision_cloud")
         response["engine_note"] = ml_res.get("engine_note", "") or ml_res.get("error", "")
-        response["model_name"] = ml_res.get("model_name", "Gemini 1.5 Flash")
+        response["model_name"] = ml_res.get("model_name", "gemini-flash-lite-latest")
         response["token_usage"] = ml_res.get("token_usage", {})
         response["cost_estimate"] = ml_res.get("cost_estimate", {})
         response["latency_ms"] = ml_res.get("latency_ms", ml_res.get("execution_time_ms", 0))
