@@ -1586,9 +1586,9 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
     const statEl = document.getElementById('ocrLoadingStatusText');
     const subEl = document.getElementById('ocrLoadingSubText');
 
-    if (subEl) subEl.textContent = 'Mô hình Google Vision OCR Cloud';
+    if (subEl) subEl.textContent = 'Mô hình Gemini Multimodal Vision (Google AI Studio)';
     if (fillEl) fillEl.style.width = '35%';
-    if (statEl) statEl.textContent = 'Đang tải hóa đơn lên Google Vision Cloud...';
+    if (statEl) statEl.textContent = 'Đang gửi ảnh tới Gemini Flash Lite API...';
 
     try {
         const formData = new FormData();
@@ -1596,6 +1596,7 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
         formData.append('receipt', fileOrBlob, filename);
 
         if (fillEl) fillEl.style.width = '65%';
+        if (statEl) statEl.textContent = 'Gemini đang đọc hiểu ngữ nghĩa & bóc tách cấu trúc...';
         const savedApiKey = localStorage.getItem('vx_google_api_key') || '';
         if (savedApiKey) {
             formData.append('google_api_key', savedApiKey);
@@ -1621,7 +1622,7 @@ async function sendReceiptToBackendOcr(fileOrBlob, previewSrc){
         const data = await res.json();
 
         if (fillEl) fillEl.style.width = '100%';
-        console.log('Kết Quả Bóc Tách Hóa Đơn (Google Vision):', data);
+        console.log('Kết Quả Bóc Tách Hóa Đơn (Gemini Vision):', data);
 
         // Lưu vào sessionStorage để đồng bộ tức thời với trang review.html
         sessionStorage.setItem('ocr_result', JSON.stringify(data));

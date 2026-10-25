@@ -223,16 +223,16 @@ def parse_receipt_text():
 @app.route("/api/ocr/engines", methods=["GET"])
 def get_ocr_engines():
     """
-    Thông tin mô hình nhận dạng OCR: Google ML Kit duy nhất.
+    Thông tin mô hình trích xuất: Google AI Studio Gemini Multimodal LLM.
     """
     return jsonify({
-        "default": "google_mlkit",
+        "default": "gemini_multimodal",
         "engines": [
             {
-                "id": "google_mlkit",
-                "name": "Google ML Kit Text Recognition",
-                "type": "on_device",
-                "description": "Mô hình nhận diện văn bản thông minh Google ML Kit",
+                "id": "gemini_multimodal",
+                "name": "Gemini Flash Lite Multimodal LLM",
+                "type": "cloud_llm",
+                "description": "Mô hình ngôn ngữ lớn đa phương thức Gemini Flash Lite (Google AI Studio)",
                 "status": "ready"
             }
         ]
