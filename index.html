@@ -29,7 +29,7 @@
             <img src="assets/logo.jpg" alt="Ví Xinh" class="splash-logo-img">
         </div>
         <h1 class="splash-title">Ví Xinh</h1>
-        <p class="splash-subtitle">Quản lý chi tiêu thông minh & Ví nhóm</p>
+        <p class="splash-subtitle">Quản lý chi tiêu thông minh</p>
         <div class="splash-spinner"></div>
     </div>
 </div>
@@ -266,7 +266,6 @@ setTimeout(function(){
             <div class="svc-grid">
                 <button class="svc-item" onclick="openModal('manual')"><div class="svc-ic si-1"><i class="ri-edit-2-line"></i></div><span class="svc-lbl">Nhập tay</span></button>
                 <button class="svc-item" onclick="openModal('camera')"><div class="svc-ic si-2"><i class="ri-camera-lens-line"></i></div><span class="svc-lbl">Quét bill</span></button>
-                <button class="svc-item" onclick="go('group')"><div class="svc-ic si-g"><i class="ri-community-line"></i></div><span class="svc-lbl">Ví nhóm</span></button>
                 <button class="svc-item" onclick="go('budget')"><div class="svc-ic si-4"><i class="ri-funds-line"></i></div><span class="svc-lbl">Ngân sách</span></button>
                 <button class="svc-item" onclick="go('stats')"><div class="svc-ic si-3"><i class="ri-bar-chart-grouped-line"></i></div><span class="svc-lbl">Thống kê</span></button>
                 <button class="svc-item" onclick="go('recurring')"><div class="svc-ic si-5"><i class="ri-repeat-line"></i></div><span class="svc-lbl">Định kỳ</span></button>
@@ -473,75 +472,6 @@ setTimeout(function(){
         </div>
     </div>
 
-    <!-- VÍ NHÓM & QUỸ PHÒNG TRỌ -->
-    <div class="pv" id="pgGroup">
-        <div class="top-bar">
-            <button class="back-btn" onclick="go('home')"><i class="ri-arrow-left-s-line"></i></button>
-            <span class="top-title" id="groupPageHeaderTitle">Ví Nhóm & Quỹ Chung</span>
-            <button class="hdr-btn" id="groupHeaderActionBtn" onclick="openCreateGroupModal()" title="Tạo nhóm"><i class="ri-add-line"></i></button>
-        </div>
-        
-        <!-- Màn hình chưa có nhóm (Empty State - Yêu cầu tự tạo) -->
-        <div id="noGroupState" class="sec" style="margin-top:1.5rem;text-align:center">
-            <div class="empty" style="padding:2.5rem 1.5rem">
-                <div class="empty-ic" style="width:72px;height:72px;margin:0 auto 1.2rem;background:#EEF4FD;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:2rem">
-                    <i class="ri-community-line"></i>
-                </div>
-                <h3 style="font-size:1.15rem;font-weight:700;margin-bottom:0.5rem;color:var(--text)">Bạn chưa có ví nhóm nào</h3>
-                <p style="font-size:0.85rem;color:var(--text3);max-width:320px;margin:0 auto 1.5rem;line-height:1.5">Tạo ví nhóm để cùng bạn bè, bạn cùng phòng chia tiền hóa đơn, bóc tách hóa đơn ăn uống và quản lý quỹ chung minh bạch.</p>
-                <button type="button" class="btn btn-p" onclick="openCreateGroupModal()" style="padding:0.75rem 1.75rem;font-size:0.9rem;border-radius:9999px">
-                    <i class="ri-add-line"></i> Tạo ví nhóm ngay
-                </button>
-            </div>
-        </div>
-
-        <!-- Màn hình khi ĐÃ CÓ NHÓM -->
-        <div id="hasGroupState" class="sec" style="margin-top:0.7rem;display:none">
-            <!-- Thẻ Quỹ Chung Phòng Trọ -->
-            <div class="fund-card">
-                <div class="fund-top">
-                    <div>
-                        <div class="fund-badge" id="groupBadgeName"><i class="ri-community-line"></i> Quỹ nhóm</div>
-                        <div class="fund-label">Số dư quỹ</div>
-                    </div>
-                    <span class="badge" style="background:#E6FCF5;color:#0CA678;font-weight:700">Hoạt động</span>
-                </div>
-                <div class="fund-bal" id="groupFundBal">0 ₫</div>
-                <div class="fund-desc" id="groupFundDesc">0 thành viên · Quỹ chi tiêu chung</div>
-                <div class="fund-btn-row">
-                    <button class="btn btn-p btn-sm" onclick="openFundModal()"><i class="ri-add-line"></i> Nộp quỹ</button>
-                    <button class="btn btn-s btn-sm" onclick="openModal('camera')"><i class="ri-camera-lens-line"></i> Quét hóa đơn chia</button>
-                </div>
-            </div>
-
-            <!-- Tabs Ví Nhóm -->
-            <div class="pg-tabs" id="groupTabs" style="margin-top:0.85rem">
-                <button class="pg-tab active" onclick="swGroupTab(this,'bills')"><i class="ri-receipt-line"></i> Hóa đơn (<span id="gBillCount">0</span>)</button>
-                <button class="pg-tab" onclick="swGroupTab(this,'members')"><i class="ri-group-line"></i> Thành viên</button>
-                <button class="pg-tab" onclick="swGroupTab(this,'history')"><i class="ri-history-line"></i> Lịch sử quỹ</button>
-            </div>
-
-            <!-- Tab 1: Danh Sách Hóa Đơn Chia Tiền -->
-            <div id="gTabBills">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin:0.85rem 0 0.5rem">
-                    <span style="font-size:0.8rem;font-weight:700;color:var(--text)">Khoản chi nhóm</span>
-                </div>
-                <div id="groupBillsList"></div>
-            </div>
-
-            <!-- Tab 2: Danh Sách Thành Viên & Công Nợ -->
-            <div id="gTabMembers" class="hidden">
-                <div style="margin:0.85rem 0 0.5rem;font-size:0.8rem;font-weight:700;color:var(--text)">Thành viên nhóm</div>
-                <div id="groupMembersList"></div>
-            </div>
-
-            <!-- Tab 3: Lịch Sử Biến Động Quỹ -->
-            <div id="gTabHistory" class="hidden">
-                <div style="margin:0.85rem 0 0.5rem;font-size:0.8rem;font-weight:700;color:var(--text)">Biến động quỹ</div>
-                <div id="groupFundHistory"></div>
-            </div>
-        </div>
-    </div>
 
     <!-- SETTINGS -->
     <div class="pv" id="pgSettings">
@@ -996,37 +926,6 @@ setTimeout(function(){
     </div>
 </div>
 
-<!-- ===== MODAL GÓP QUỸ PHÒNG TRỌ ===== -->
-<div class="modal-bg" id="fundModal">
-    <div class="modal-box" style="max-width:380px">
-        <div class="modal-handle"></div>
-        <div class="modal-hdr"><h2 class="modal-title">Góp Quỹ Phòng</h2><button class="modal-x" onclick="closeFundModal()"><i class="ri-close-line"></i></button></div>
-        <div class="modal-body">
-            <form id="fundForm" onsubmit="handleFundContribution(event)">
-                <div class="fg">
-                    <label class="fl">Người nộp</label>
-                    <select class="fc" id="fundPayerSelect">
-                        <option value="1">Tôi (Chủ tài khoản)</option>
-                    </select>
-                </div>
-                <div class="fg">
-                    <label class="fl">Số tiền (₫)</label>
-                    <input type="number" id="fundAmountInput" class="fc" value="500000" required style="font-size:1.15rem;font-weight:800;text-align:center">
-                    <div style="display:flex;gap:0.3rem;margin-top:0.4rem">
-                        <button type="button" class="btn btn-sm btn-s" style="flex:1" onclick="document.getElementById('fundAmountInput').value=200000">200.000 ₫</button>
-                        <button type="button" class="btn btn-sm btn-s" style="flex:1" onclick="document.getElementById('fundAmountInput').value=500000">500.000 ₫</button>
-                        <button type="button" class="btn btn-sm btn-s" style="flex:1" onclick="document.getElementById('fundAmountInput').value=1000000">1.000.000 ₫</button>
-                    </div>
-                </div>
-                <div class="fg">
-                    <label class="fl">Ghi chú</label>
-                    <input type="text" id="fundNoteInput" class="fc" placeholder="VD: Đóng quỹ sinh hoạt...">
-                </div>
-                <button type="submit" class="btn btn-p btn-block" style="margin-top:0.4rem"><i class="ri-check-line"></i> Nộp quỹ</button>
-            </form>
-        </div>
-    </div>
-</div>
 
 <!-- ===== MODAL CHỈNH SỬA THÔNG TIN CÁ NHÂN ===== -->
 <div class="modal-bg" id="editProfileModal">
@@ -1192,37 +1091,7 @@ setTimeout(function(){
 
 
 
-<!-- ===== CREATE GROUP MODAL ===== -->
-<div class="modal-bg" id="createGroupModal">
-    <div class="modal-box">
-        <div class="modal-handle"></div>
-        <div class="modal-hdr">
-            <h2 class="modal-title">Tạo ví nhóm mới</h2>
-            <button class="modal-x" onclick="closeCreateGroupModal()"><i class="ri-close-line"></i></button>
-        </div>
-        <div class="modal-body">
-            <form id="createGroupForm" onsubmit="handleCreateGroupSubmit(event)">
-                <div class="fg">
-                    <label class="fl">Tên nhóm / Quỹ chung</label>
-                    <input type="text" id="newGroupName" class="fc" placeholder="VD: Phòng Trọ 302, Đi Du Lịch Đà Nẵng..." required autofocus>
-                </div>
-                <div class="fg">
-                    <label class="fl">Mục đích chi tiêu (tuỳ chọn)</label>
-                    <input type="text" id="newGroupDesc" class="fc" placeholder="VD: Quỹ ăn uống, tiền điện nước phòng...">
-                </div>
-                <div class="fg">
-                    <label class="fl">Số dư quỹ ban đầu (₫)</label>
-                    <input type="number" id="newGroupInitialBal" class="fc" placeholder="0" min="0" value="0">
-                </div>
-                <button type="submit" class="btn btn-p btn-block" style="margin-top:0.75rem;padding:0.75rem">
-                    <i class="ri-check-line"></i> Tạo nhóm ngay
-                </button>
-            </form>
-        </div>
-    </div>
-</div>
-
 <div class="toast-box" id="toastBox"></div>
-<script src="js/app.js?v=4.2.0"></script>
+<script src="js/app.js?v=4.3.0"></script>
 </body>
 </html>

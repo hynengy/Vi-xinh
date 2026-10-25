@@ -899,14 +899,14 @@ function enterApp(){
 // ===== NAV =====
 function go(pg,sub){
     document.querySelectorAll('.pv').forEach(p=>p.classList.remove('active'));
-    const map={home:'pgHome',stats:'pgStats',history:'pgHist',budget:'pgBgt',savings:'pgSav',recurring:'pgRec',settings:'pgSettings',group:'pgGroup'};
+    const map={home:'pgHome',stats:'pgStats',history:'pgHist',budget:'pgBgt',savings:'pgSav',recurring:'pgRec',settings:'pgSettings',group:'pgHome'};
     document.getElementById(map[pg]||'pgHome')?.classList.add('active');
     document.querySelectorAll('.bnav-item').forEach(n=>n.classList.remove('active'));
     const nm={home:'home',stats:'stats',history:'home',budget:'budget',savings:'more',recurring:'more',settings:'settings'};
     document.querySelectorAll('.bnav-item').forEach(n=>{if(n.dataset.pg===(nm[pg]||pg))n.classList.add('active')});
     window.scrollTo({top:0,behavior:'smooth'});
     if(pg==='settings')renderSettings();
-    if(pg==='group')renderGroup();
+    if(pg==='group'){go('home');return;}
     if(pg==='stats'){renderStOv();if(sub){const tabs={ov:0,cat:1,cal:2,sav:3};const btns=document.querySelectorAll('#sTabs .pg-tab');if(btns[tabs[sub]])swStat(btns[tabs[sub]],sub);}}
     if(pg==='history')filterTransactions();
     if(pg==='budget')renderBgt();
@@ -3246,30 +3246,13 @@ function switchUser(email){
     toast(`Đã chuyển sang tài khoản ${u.name || u.full_name}!`, 'success');
 }
 
-// ===== DYNAMIC GROUP STATE MANAGEMENT =====
 function updateHomeGroupCard(){
-    const titleEl = document.getElementById('homeGroupTitle');
-    const subEl = document.getElementById('homeGroupSub');
-    const iconEl = document.getElementById('homeGroupIcon');
-    if(!titleEl) return;
-    if(!S.groupFund){
-        titleEl.textContent = 'Tạo Ví Nhóm & Quỹ Chung';
-        if(subEl) subEl.textContent = 'Chưa có nhóm · Chạm để tạo nhóm chia tiền & quản lý quỹ';
-        if(iconEl) iconEl.innerHTML = '<i class="ri-add-circle-line"></i>';
-    } else {
-        titleEl.textContent = S.groupFund.name;
-        const memCount = (S.groupFund.members && S.groupFund.members.length) || 1;
-        if(subEl) subEl.innerHTML = `Quỹ: <strong id="homeFundBal">${fmt(S.groupFund.balance)}</strong> · ${memCount} thành viên`;
-        if(iconEl) iconEl.innerHTML = '<i class="ri-community-line"></i>';
-    }
+    const card = document.querySelector('.group-preview-card');
+    if(card) card.style.display = 'none';
 }
 
 function handleGroupClick(){
-    if(!S.groupFund){
-        openCreateGroupModal();
-    } else {
-        go('group');
-    }
+    return;
 }
 
 function openCreateGroupModal(){
