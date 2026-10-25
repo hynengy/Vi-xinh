@@ -538,6 +538,11 @@ input#rememberMeCheck {
     position: relative;
     font-size: 1.15rem;
     flex-shrink: 0;
+    z-index: 10;
+    pointer-events: auto !important;
+}
+.hdr-btn * {
+    pointer-events: none;
 }
 .hdr-btn:hover { background: #E8EEF8; transform: translateY(-1px); color: var(--primary); }
 .hdr-btn .dot {
@@ -939,7 +944,13 @@ input#rememberMeCheck {
     justify-content: center;
     padding: 1rem;
 }
-.modal-bg.active { display: flex; animation: fadeIn 0.25s ease; }
+.modal-bg.active { display: flex !important; animation: fadeIn 0.25s ease; }
+#notifModal {
+    z-index: 10000 !important;
+}
+#notifModal.active {
+    display: flex !important;
+}
 .modal-box {
     background: var(--bg-white);
     border-radius: 20px;
@@ -1340,6 +1351,7 @@ input#rememberMeCheck {
         margin: 8px auto -12px auto;
         position: relative;
         z-index: 102;
+        pointer-events: none !important;
     }
 
     .app-header {
@@ -1375,6 +1387,7 @@ input#rememberMeCheck {
         height: 3.5px;
         background: rgba(0, 0, 0, 0.18);
         border-radius: 99px;
+        pointer-events: none !important;
     }
 
     .login-page {

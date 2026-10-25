@@ -210,7 +210,7 @@ setTimeout(function(){
                     <div><div class="hdr-greeting" id="greeting">Xin chào</div><div class="hdr-name" id="uName">Người dùng</div></div>
                 </div>
                 <div class="hdr-actions">
-                    <button class="hdr-btn" onclick="openNotificationModal()" title="Thông báo"><i class="ri-notification-3-line"></i><span class="dot" id="hdrNotifDot"></span></button>
+                    <button type="button" class="hdr-btn" id="hdrNotifBtn" onclick="openNotificationModal()" title="Thông báo"><i class="ri-notification-3-line"></i><span class="dot" id="hdrNotifDot"></span></button>
                     <button class="hdr-btn" onclick="go('settings')" title="Cài đặt"><i class="ri-settings-3-line"></i></button>
                     <button class="hdr-btn" onclick="handleLogout()" title="Đăng xuất"><i class="ri-logout-box-r-line"></i></button>
                 </div>
@@ -501,6 +501,14 @@ setTimeout(function(){
             <!-- Grouped Cupertino Settings Section 1: Tùy Chọn -->
             <div class="setting-group-box">
                 <div class="sg-header">TÙY CHỌN BẢO MẬT & THÔNG BÁO</div>
+                
+                <div class="sg-item" onclick="openNotificationModal()" style="cursor:pointer" title="Xem trung tâm thông báo">
+                    <div class="sg-left">
+                        <div class="sg-icon sgi-bell"><i class="ri-notification-3-line"></i></div>
+                        <div class="sg-label">Xem trung tâm thông báo</div>
+                    </div>
+                    <i class="ri-arrow-right-s-line" style="color:var(--text3)"></i>
+                </div>
                 
                 <div class="sg-item">
                     <div class="sg-left">

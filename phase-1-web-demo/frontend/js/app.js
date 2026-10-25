@@ -3889,58 +3889,72 @@ function formatNotifTime(timeVal){
 }
 
 function renderNotifications(){
-    const list = document.getElementById('notifList');
-    if(!list) return;
-    const notifs = S.notifications || [];
+    try {
+        const list = document.getElementById('notifList');
+        if(!list) return;
+        const notifs = Array.isArray(S.notifications) ? S.notifications : [];
 
-    const btnMark = document.getElementById('btnMarkAllRead');
-    const btnClear = document.getElementById('btnClearAllNotifs');
+        const btnMark = document.getElementById('btnMarkAllRead');
+        const btnClear = document.getElementById('btnClearAllNotifs');
 
-    if(notifs.length === 0){
-        list.innerHTML = `
-            <div class="empty" style="padding:2.2rem 1rem;text-align:center">
-                <div style="font-size:0.92rem;font-weight:600;color:var(--text);margin-bottom:0.25rem">Không có thông báo nào</div>
-                <div style="font-size:0.75rem;color:var(--text3);line-height:1.45;max-width:280px;margin:0 auto">
-                    Mọi biến động số dư, quét hóa đơn và quỹ nhóm sẽ xuất hiện tại đây.
+        if(notifs.length === 0){
+            list.innerHTML = `
+                <div class="empty" style="padding:2.2rem 1rem;text-align:center">
+                    <div style="font-size:0.92rem;font-weight:600;color:var(--text);margin-bottom:0.25rem">Không có thông báo nào</div>
+                    <div style="font-size:0.75rem;color:var(--text3);line-height:1.45;max-width:280px;margin:0 auto">
+                        Mọi biến động số dư, quét hóa đơn và quỹ nhóm sẽ xuất hiện tại đây.
+                    </div>
+                </div>
+            `;
+            if(btnMark) btnMark.style.display = 'none';
+            if(btnClear) btnClear.style.display = 'none';
+            return;
+        }
+
+        if(btnMark) btnMark.style.display = 'inline-block';
+        if(btnClear) btnClear.style.display = 'inline-block';
+
+        list.innerHTML = notifs.map(n => {
+            if(!n) return '';
+            const rawTitle = typeof n.title === 'string' ? n.title : (n.title ? String(n.title) : 'Thông báo');
+            const cleanTitle = rawTitle
+                .replace(/[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
+                .trim() || 'Thông báo';
+            const rawBody = typeof n.body === 'string' ? n.body : (n.body ? String(n.body) : '');
+            const cleanBody = rawBody
+                .replace(/lúc \d{1,2}:\d{2}(:\d{2})? ngày \d{1,2}\/\d{1,2}\/\d{4}\.?/gi, '')
+                .replace(/vào lúc \d{1,2}:\d{2}\.?/gi, '')
+                .replace(/Cảnh báo lúc [^:]+:\s*/gi, '')
+                .trim();
+            const notifId = n.id ? String(n.id).replace(/['"]/g, '') : String(Date.now());
+            const timeDisplay = n.time ? formatNotifTime(n.time) : 'Vừa xong';
+
+            return `
+            <div class="notif-item ${n.unread ? 'unread' : ''}" onclick="handleNotifClick('${notifId}')">
+                <div class="notif-hdr">
+                    <div class="notif-title">${cleanTitle}</div>
+                    <div class="notif-actions-right">
+                        ${n.unread ? '<span class="notif-dot"></span>' : ''}
+                        <button type="button" class="notif-del-btn" onclick="event.stopPropagation();deleteNotif('${notifId}')" title="Xóa thông báo">✕</button>
+                    </div>
+                </div>
+                <div class="notif-body">${cleanBody}</div>
+                <div class="notif-foot">
+                    <span class="notif-time">${timeDisplay}</span>
+                    ${n.actionText ? `<span class="notif-action-link">${n.actionText}</span>` : ''}
                 </div>
             </div>
-        `;
-        if(btnMark) btnMark.style.display = 'none';
-        if(btnClear) btnClear.style.display = 'none';
-        return;
+            `;
+        }).join('');
+    } catch(err) {
+        console.error('Lỗi khi hiển thị thông báo:', err);
     }
-
-    if(btnMark) btnMark.style.display = 'inline-block';
-    if(btnClear) btnClear.style.display = 'inline-block';
-
-    list.innerHTML = notifs.map(n => {
-        const cleanTitle = (n.title || 'Thông báo')
-            .replace(/[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '')
-            .trim();
-        const cleanBody = (n.body || '')
-            .replace(/lúc \d{1,2}:\d{2}(:\d{2})? ngày \d{1,2}\/\d{1,2}\/\d{4}\.?/gi, '')
-            .replace(/vào lúc \d{1,2}:\d{2}\.?/gi, '')
-            .replace(/Cảnh báo lúc [^:]+:\s*/gi, '')
-            .trim();
-
-        return `
-        <div class="notif-item ${n.unread ? 'unread' : ''}" onclick="handleNotifClick('${n.id}')">
-            <div class="notif-hdr">
-                <div class="notif-title">${cleanTitle}</div>
-                <div class="notif-actions-right">
-                    ${n.unread ? '<span class="notif-dot"></span>' : ''}
-                    <button type="button" class="notif-del-btn" onclick="event.stopPropagation();deleteNotif('${n.id}')" title="Xóa thông báo">✕</button>
-                </div>
-            </div>
-            <div class="notif-body">${cleanBody}</div>
-            <div class="notif-foot">
-                <span class="notif-time">${formatNotifTime(n.time)}</span>
-                ${n.actionText ? `<span class="notif-action-link">${n.actionText}</span>` : ''}
-            </div>
-        </div>
-        `;
-    }).join('');
 }
+window.renderNotifications = renderNotifications;
+window.handleNotifClick = handleNotifClick;
+window.deleteNotif = deleteNotif;
+window.markAllNotifsRead = markAllNotifsRead;
+window.clearAllNotifs = clearAllNotifs;
 
 function addAppNotification(item){
     if(!S.notifications) S.notifications = [];
@@ -4030,12 +4044,32 @@ function checkBudgetAlerts(categoryKey){
 }
 
 function openNotificationModal(){
-    document.getElementById('notifModal')?.classList.add('active');
-    renderNotifications();
+    try {
+        const m = document.getElementById('notifModal');
+        if(m){
+            m.classList.add('active');
+            m.style.display = 'flex';
+        }
+        document.body.style.overflow = 'hidden';
+        renderNotifications();
+    } catch(err) {
+        console.error('Lỗi mở trung tâm thông báo:', err);
+    }
 }
 function closeNotificationModal(){
-    document.getElementById('notifModal')?.classList.remove('active');
+    try {
+        const m = document.getElementById('notifModal');
+        if(m){
+            m.classList.remove('active');
+            m.style.display = '';
+        }
+        document.body.style.overflow = '';
+    } catch(err) {
+        console.error('Lỗi đóng trung tâm thông báo:', err);
+    }
 }
+window.openNotificationModal = openNotificationModal;
+window.closeNotificationModal = closeNotificationModal;
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded',()=>{
@@ -4072,6 +4106,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('txDetailModal')?.addEventListener('click',e=>{if(e.target.id==='txDetailModal')closeTxDetailModal()});
     document.getElementById('savingsDepositModal')?.addEventListener('click',e=>{if(e.target.id==='savingsDepositModal')closeSavingsDepositModal()});
     document.getElementById('notifModal')?.addEventListener('click',e=>{if(e.target.id==='notifModal')closeNotificationModal()});
+    document.getElementById('hdrNotifBtn')?.addEventListener('click',e=>{e.preventDefault();openNotificationModal();});
     document.addEventListener('keydown',e=>{
         if(e.key==='Escape'){
             closeModal();
