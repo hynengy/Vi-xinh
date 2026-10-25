@@ -235,23 +235,6 @@ setTimeout(function(){
             </div>
         </div>
 
-        <!-- CỐ VẤN TÀI CHÍNH AI (HOME INSIGHT WIDGET) -->
-        <div class="sec" style="margin-top:0.8rem">
-            <div class="home-ai-card" onclick="go('stats'); setTimeout(requestAiSpendingSummary, 200);">
-                <div class="home-ai-hdr">
-                    <span class="home-ai-badge"><i class="ri-sparkling-fill"></i> Cố vấn Tài chính AI</span>
-                    <span style="font-size:0.72rem;color:var(--primary);font-weight:700">Phân tích chuyên sâu →</span>
-                </div>
-                <div class="home-ai-text" id="homeAiSummaryTxt">
-                    Gemini AI đang theo dõi ngân sách của bạn. Chạm để xem phân tích cơ cấu chi tiêu & đề xuất hành động tối ưu ví tiền.
-                </div>
-                <div class="home-ai-actions" onclick="event.stopPropagation()">
-                    <button type="button" class="home-ai-chip" onclick="executeAiAction('budget')"><i class="ri-funds-line" style="color:#6366f1"></i> Ngân sách</button>
-                    <button type="button" class="home-ai-chip" onclick="executeAiAction('savings')"><i class="ri-safe-2-line" style="color:#10b981"></i> Tiết kiệm</button>
-                    <button type="button" class="home-ai-chip" onclick="executeAiAction('camera')"><i class="ri-camera-lens-line" style="color:#ec4899"></i> Quét bill AI</button>
-                </div>
-            </div>
-        </div>
 
         <div class="sec" style="margin-top:0.3rem">
             <div class="promo" onclick="openModal('camera')">
@@ -1092,6 +1075,6 @@ setTimeout(function(){
 
 
 <div class="toast-box" id="toastBox"></div>
-<script src="js/app.js?v=4.3.0"></script>
+<script src="js/app.js?v=4.4.0"></script>
 </body>
 </html>
