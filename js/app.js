@@ -3576,7 +3576,7 @@ function copyZaloReminder(billTitle, amt, memberName){
 function openSplitManualModal(){ loadSampleRoomRentInvoice(); }
 function quickSampleRent(){ loadSampleRoomRentInvoice(); }
 
-// ===== HANDLERS CHO REVIEW.HTML & GROUPS.HTML =====
+// ===== HANDLERS CHO REVIEW.HTML =====
 async function handleConfirmTransaction(event) {
     if (event) event.preventDefault();
     const merchant = document.getElementById('verify-merchant')?.value?.trim() || 'Hóa đơn';

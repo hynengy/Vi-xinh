@@ -89,7 +89,7 @@ graph TD
     end
     
     G --> H[AI Financial Advisor<br/>Tóm Tắt Chi Tiêu & Gợi Ý Tiết Kiệm]
-    G --> I[Ví Nhóm / Thuật Toán Chia Nợ / VietQR]
+    G --> I[Chia Tiền Nhanh / Tạo Mã VietQR Không Cần App]
     G --> J[Trung Tâm Thông Báo / Cảnh Báo Ngân Sách]
 
     subgraph Monitoring [Theo Dõi Chi Phí & Độ Trễ Thời Gian Thực]
