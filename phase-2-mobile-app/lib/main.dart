@@ -10,6 +10,7 @@ import 'screens/home/dashboard_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/lock_screen.dart';
 import 'screens/splash/splash_screen.dart';
+import 'screens/web/web_shell_screen.dart';
 import 'services/notification_service.dart';
 import 'services/sync_service.dart';
 
@@ -91,14 +92,6 @@ class _RootGateState extends State<_RootGate> {
       );
     }
 
-    final auth = context.watch<AuthProvider>();
-    if (auth.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (!auth.isLoggedIn) return const LoginScreen();
-    if (!auth.isUnlocked) return const LockScreen();
-    return const DashboardScreen();
+    return const WebShellScreen();
   }
 }

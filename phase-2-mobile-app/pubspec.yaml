@@ -32,6 +32,7 @@ dependencies:
 
   # Biometric Authentication (Face ID / Vân tay / Sinh trắc học)
   local_auth: ^2.1.8
+  webview_flutter: ^4.14.1
 
 dev_dependencies:
   flutter_test:

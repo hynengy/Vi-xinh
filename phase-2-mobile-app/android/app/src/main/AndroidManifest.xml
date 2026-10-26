@@ -14,7 +14,8 @@
     <application
         android:label="Ví Xinh"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
 
         <!-- Tự động tải ML Kit Text Recognition on-device model khi cài đặt app -->
         <meta-data
