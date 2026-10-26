@@ -2562,8 +2562,7 @@ async function saveOcr(){
         }
         return;
     }
-
-
+}
 
 // ===== MODAL VIETQR & CHIA BILL NHANH (KHÔNG CẦN CÀI APP) =====
 function showQuickSplitQrModal(merchant, totalAmt, count, perPerson){
