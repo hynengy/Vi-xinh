@@ -24,7 +24,7 @@
    - [5.2. Hệ Thống Đo Lường Chi Phí & Độ Trễ (Cost & Latency Monitoring)](#52-hệ-thống-đo-lường-chi-phí--độ-trễ-cost--latency-monitoring)
    - [5.3. Kiến Trúc CSDL Lai: Cloud Neon PostgreSQL + SQLite Fallback](#53-kiến-trúc-csdl-lai-cloud-neon-postgresql--sqlite-fallback)
    - [5.4. Giao Diện Khung Phần Cứng Di Động (Mobile Hardware Frame) Trên PC](#54-giao-diện-khung-phần-cứng-di-động-mobile-hardware-frame-trên-pc)
-   - [5.5. Quỹ Nhóm, Bù Trừ Nợ Tối Thiểu & Tạo Mã VietQR Chuẩn Napas 24/7](#55-quỹ-nhóm-bù-trừ-nợ-tối-thiểu--tạo-mã-vietqr-chuẩn-napas-247)
+   - [5.5. Quản Lý Ngân Sách Cá Nhân & Cảnh Báo Vượt Ngưỡng](#55-quản-lý-ngân-sách-cá-nhân--cảnh-báo-vượt-ngưỡng)
    - [5.6. Trung Tâm Thông Báo & Tự Lưu GOOGLE_API_KEY Trên Trình Duyệt](#56-trung-tâm-thông-báo--tự-lưu-google_api_key-trên-trình-duyệt)
 6. [HƯỚNG DẪN KHỞI CHẠY & TRIỂN KHAI (QUICK START & DEPLOYMENT)](#6-hướng-dẫn-khởi-chạy--triển-khai-quick-start--deployment)
    - [6.1. Khởi chạy Web Demo cục bộ (Localhost)](#61-khởi-chạy-web-demo-cục-bộ-localhost)
@@ -195,14 +195,10 @@ Ví Xinh/
   - Mô phỏng phần cứng thực tế với **khe Loa thoại / Dynamic Island** ở đỉnh máy và **thanh Home Indicator** ở chân máy (gán `pointer-events: none` không làm cản trở tương tác).
 - Khi mở trên điện thoại di động thật (< 600px): Giao diện tự động bung full 100% màn hình tự nhiên.
 
-### 5.5. Quỹ Nhóm, Bù Trừ Nợ Tối Thiểu & Tạo Mã VietQR Chuẩn Napas 24/7
-- Hỗ trợ chia tiền linh hoạt: Chia đều (Equal Split), chia theo phần trăm hoặc chia theo món đã dùng.
-- Áp dụng giải thuật bù trừ công nợ tối thiểu (Minimizing Debt Transactions) nhằm giảm thiểu tối đa số lần chuyển tiền qua lại trong nhóm.
-- Tự động sinh đường dẫn ảnh **VietQR**:
-  ```
-  https://img.vietqr.io/image/{bank_code}-{account_number}-compact2.png?amount={amount}&addInfo={content}
-  ```
-  Thành viên trong nhóm chỉ cần dùng app ngân hàng quét mã để thanh toán tức thì.
+### 5.5. Quản Lý Ngân Sách Cá Nhân & Cảnh Báo Vượt Ngưỡng
+- Cho phép người dùng thiết lập hạn mức chi tiêu cho từng danh mục cá nhân (Ăn uống, Mua sắm, Di chuyển, Hóa đơn,...).
+- Hệ thống tự động theo dõi tỷ lệ chi tiêu theo thời gian thực và phát thông báo cảnh báo trực quan khi vượt ngưỡng (80% hoặc 100%).
+- Đảm bảo tính riêng tư, bảo mật và tập trung 100% vào việc tối ưu hóa chi tiêu cá nhân hằng ngày.
 
 ### 5.6. Trung Tâm Thông Báo & Tự Lưu GOOGLE_API_KEY Trên Trình Duyệt
 - **Trung tâm thông báo toàn diện:** Quản lý mọi biến động số dư, quét hóa đơn, cảnh báo ngân sách. Hỗ trợ mở từ Header hoặc qua trang Cài đặt, đánh dấu đọc tất cả, xóa thông báo.

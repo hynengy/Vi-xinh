@@ -128,15 +128,14 @@ graph TD
 - **[`db_manager.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/phase-1-web-demo/backend/database/db_manager.py)**:
   - Kiến trúc Dual-Database Adapter: Tự động phát hiện biến môi trường `DATABASE_URL` để kết nối **Cloud PostgreSQL (Neon.tech / Supabase)** qua `psycopg2`.
   - Cơ chế **Zero-Downtime Fallback**: Nếu Cloud Database mất kết nối hoặc không có Internet, tự động chuyển về **SQLite cục bộ** (`data/app.db`), không bao giờ để ứng dụng bị crash.
-  - Các hàm quản trị CSDL: Quản lý người dùng, giao dịch, ngân sách, nhóm quỹ, chi tiết từng món hàng trong hóa đơn.
+  - Các hàm quản trị CSDL: Quản lý người dùng, giao dịch cá nhân, ngân sách chi tiêu, chi tiết từng món hàng trong hóa đơn.
 
 #### 5. Module Dịch Vụ Cốt Lõi (`backend/core/`)
 - **[`pipeline.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/phase-1-web-demo/backend/core/pipeline.py)**:
   - Xâu chuỗi toàn bộ quy trình: Nhận ảnh $\rightarrow$ Nén ảnh $\rightarrow$ Gọi Multimodal LLM $\rightarrow$ Đối chiếu Regex Validator $\rightarrow$ Trả kết quả chuẩn hóa cho Frontend.
 - **[`wallet_logic.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/phase-1-web-demo/backend/core/wallet_logic.py)**:
-  - Chứa thuật toán chia tiền nhóm: Chia đều (Equal Split), chia theo tỷ lệ %, chia theo từng món cụ thể.
-  - Thuật toán giải quyết công nợ tối thiểu (Minimizing Debt Transactions) giúp giảm số lần chuyển tiền qua lại trong nhóm.
-  - Sinh chuỗi mã QR thanh toán chuẩn VietQR (Napas 24/7).
+  - Thuật toán quản lý thu chi, tính toán số dư và tổng hợp báo cáo chi tiêu cá nhân.
+  - Phân tích hạn mức ngân sách và tính toán phần trăm hoàn thành theo từng danh mục.
 - **[`email_service.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/phase-1-web-demo/backend/core/email_service.py)**:
   - Tích hợp giao thức SMTP gửi email mã OTP xác thực 6 số khi người dùng đăng ký hoặc khôi phục mật khẩu.
   - Có chế độ Mock Fallback khi chưa cấu hình tài khoản Gmail.
@@ -144,16 +143,16 @@ graph TD
 ---
 
 ### 📁 Thư mục `api/` & `run.py`
-- **[`api/index.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/api/index.py)**: Serverless Entry Point chạy trên Vercel. Chứa toàn bộ các RESTful API: `/api/ocr/upload`, `/api/transactions`, `/api/auth/register`, `/api/auth/login`, `/api/advisor/analyze`, `/api/groups`...
+- **[`api/index.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/api/index.py)**: Serverless Entry Point chạy trên Vercel. Chứa toàn bộ các RESTful API: `/api/ocr/upload`, `/api/transactions`, `/api/auth/register`, `/api/auth/login`, `/api/advisor/analyze`...
 - **`run.py`**: Script chạy server cục bộ trên máy tính (chạy cổng `http://localhost:5000`).
 
 ---
 
 ### 📁 Thư mục `tests/` (Hệ Thống Kiểm Thử Tự Động)
-- **[`test_database.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/tests/test_database.py)**: 17 test cases kiểm tra CSDL (tạo người dùng, đăng nhập bảo mật, thêm/sửa/xóa giao dịch, thống kê ngân sách, quỹ nhóm).
+- **[`test_database.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/tests/test_database.py)**: 17 test cases kiểm tra CSDL (tạo người dùng, đăng nhập bảo mật, thêm/sửa/xóa giao dịch, thống kê ngân sách cá nhân).
 - **[`test_email_service.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/tests/test_email_service.py)**: 5 test cases kiểm tra dịch vụ gửi email OTP và fallback an toàn.
-- **[`test_extractor.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/tests/test_extractor.py)**: 22 test cases kiểm tra toàn diện bộ trích xuất hóa đơn: WinMart, Highlands Coffee, Hóa đơn nhà hàng VIP 50 triệu, KiotViet mờ nhăn, và hóa đơn tiền trọ compound tổng kép.
-- **[`test_wallet_logic.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/tests/test_wallet_logic.py)**: 6 test cases kiểm tra thuật toán chia tiền và bù trừ công nợ nhóm.
+- **[`test_extractor.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/tests/test_extractor.py)**: 22 test cases kiểm tra toàn diện bộ trích xuất hóa đơn: WinMart, Highlands Coffee, Hóa đơn nhà hàng VIP 50 triệu, KiotViet mờ nhăn.
+- **[`test_wallet_logic.py`](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/tests/test_wallet_logic.py)**: 6 test cases kiểm tra thuật toán quản lý thu chi và ngân sách cá nhân.
 - 👉 **Tổng cộng: 50/50 test cases đều đạt 100% PASSED.**
 
 ---
