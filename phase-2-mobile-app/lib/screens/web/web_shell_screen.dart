@@ -13,7 +13,7 @@ class WebShellScreen extends StatefulWidget {
 
 class _WebShellScreenState extends State<WebShellScreen> {
   late final WebViewController _controller;
-  String _currentUrl = 'http://192.168.0.108:5000';
+  String _currentUrl = 'https://vi-xinh.vercel.app';
   bool _isLoading = true;
   bool _hasError = false;
   String _errorMessage = '';
@@ -29,11 +29,14 @@ class _WebShellScreenState extends State<WebShellScreen> {
   Future<void> _loadSavedUrl() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString('vixinh_server_url');
-    if (saved != null && saved.isNotEmpty) {
+    // Nếu chưa lưu hoặc lưu dải IP cũ 192.168.x / localhost -> tự động dùng link cloud public
+    if (saved != null && saved.isNotEmpty && !saved.contains('192.168.') && !saved.contains('localhost')) {
       setState(() {
         _currentUrl = saved;
       });
       _controller.loadRequest(Uri.parse(_currentUrl));
+    } else {
+      _controller.loadRequest(Uri.parse('https://vi-xinh.vercel.app'));
     }
   }
 
@@ -106,7 +109,7 @@ class _WebShellScreenState extends State<WebShellScreen> {
             TextField(
               controller: textCtrl,
               decoration: InputDecoration(
-                hintText: 'http://192.168.0.108:5000',
+                hintText: 'https://vi-xinh.vercel.app',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 prefixIcon: const Icon(Icons.link),
               ),
