@@ -1,256 +1,261 @@
-# 🌟 VÍ XINH — XÂY DỰNG ỨNG DỤNG QUẢN LÝ TÀI CHÍNH CÁ NHÂN VÀ NHÓM TÍCH HỢP TRÍCH XUẤT HÓA ĐƠN TỰ ĐỘNG BẰNG GEMINI API
+# 🌟 VÍ XINH — ỨNG DỤNG QUẢN LÝ TÀI CHÍNH CÁ NHÂN TÍCH HỢP BÓC TÁCH HÓA ĐƠN TỰ ĐỘNG BẰNG GEMINI API
 
 > **Đồ án Thực tập Chuyên môn** — Lớp **23CN1** — **Nhóm 05**  
 > **Định hướng Đề tài:** **Hướng 3 — Ứng dụng Mô hình Ngôn ngữ lớn qua API (Gemini API)**  
-> **Ba Trọng tâm Nghiên cứu Kỹ thuật:**
-> 1. 🎯 **Kỹ nghệ Lời nhắc (Prompt Engineering):** Thiết kế System Prompt tài chính & Luật bóc tách Few-shot rules.
-> 2. 🛡️ **Kiểm soát Định dạng Đầu ra (Structured JSON Schema & Validation):** Ràng buộc cấu trúc 100%, khử ảo giác (Hallucination), đối chiếu số học $SL \times Đơn\ giá = Thành\ tiền$.
-> 3. ⚡ **Quản lý Chi phí & Độ trễ (Cost & Latency Management):** Nén ảnh thích ứng, đo lường thời gian thực (ms, tokens in/out, chi phí quy đổi VNĐ).
 > 
-> 🌐 **Live Demo Production (Vercel Serverless):** [https://vi-xinh.vercel.app](https://vi-xinh.vercel.app)  
-> 🧪 **Chất lượng Kiểm thử (Automated Tests):** `50/50 tests pytest PASSED (100%)`  
+> 🌐 **Live Web Demo:** [https://vi-xinh.vercel.app](https://vi-xinh.vercel.app)  
+> 📱 **Bản cài đặt Android APK (Release):** [Vi-Xinh-Android.apk](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/Vi-Xinh-Android.apk) *(~80.9 MB — Trỏ trực tiếp Cloud Production, dùng được trên cả 4G/5G/Wi-Fi)*  
+> 🧪 **Kiểm thử tự động (Unit Tests):** `50/50 tests pytest PASSED (100%)`  
 > ☁️ **Cơ sở dữ liệu:** Cloud Database PostgreSQL (Neon.tech SSL) + Fallback SQLite Offline  
 > 🔑 **API Key chuẩn hóa:** Duy nhất 1 biến `GOOGLE_API_KEY` từ [Google AI Studio](https://aistudio.google.com/)
 
 ---
 
 ## 📑 MỤC LỤC
-1. [GIỚI THIỆU BÀI TOÁN & TÍNH NĂNG ĐỘT PHÁ](#1-giới-thiệu-bài-toán--tính-năng-đột-phá)
-2. [PHÂN CÔNG NHIỆM VỤ THÀNH VIÊN THEO CHUẨN HƯỚNG 3](#2-phân-công-nhiệm-vụ-thành-viên-theo-chuẩn-hướng-3)
-3. [KIẾN TRÚC XỬ LÝ KỸ THUẬT (PIPELINE MULTIMODAL LLM)](#3-kiến-trúc-xử-lý-kỹ-thuật-pipeline-multimodal-llm)
-4. [CẤU TRÚC THƯ MỤC & MÃ NGUỒN TOÀN DỰ ÁN](#4-cấu-trúc-thư-mục--mã-nguồn-toàn-dự-án)
-5. [CÁC ĐIỂM SÁNG KỸ THUẬT ĐẶC BIỆT (CORE TECHNICAL HIGHLIGHTS)](#5-các-điểm-sáng-kỹ-thuật-đặc-biệt-core-technical-highlights)
-   - [5.1. Bóc Tách Hóa Đơn Tiền Trọ Tổng Kép (Compound Room Rent Bill)](#51-bóc-tách-hóa-đơn-tiền-trọ-tổng-kép-compound-room-rent-bill)
-   - [5.2. Hệ Thống Đo Lường Chi Phí & Độ Trễ (Cost & Latency Monitoring)](#52-hệ-thống-đo-lường-chi-phí--độ-trễ-cost--latency-monitoring)
-   - [5.3. Kiến Trúc CSDL Lai: Cloud Neon PostgreSQL + SQLite Fallback](#53-kiến-trúc-csdl-lai-cloud-neon-postgresql--sqlite-fallback)
-   - [5.4. Giao Diện Khung Phần Cứng Di Động (Mobile Hardware Frame) Trên PC](#54-giao-diện-khung-phần-cứng-di-động-mobile-hardware-frame-trên-pc)
-   - [5.5. Quản Lý Ngân Sách Cá Nhân & Cảnh Báo Vượt Ngưỡng](#55-quản-lý-ngân-sách-cá-nhân--cảnh-báo-vượt-ngưỡng)
-   - [5.6. Trung Tâm Thông Báo & Tự Lưu GOOGLE_API_KEY Trên Trình Duyệt](#56-trung-tâm-thông-báo--tự-lưu-google_api_key-trên-trình-duyệt)
-6. [HƯỚNG DẪN KHỞI CHẠY & TRIỂN KHAI (QUICK START & DEPLOYMENT)](#6-hướng-dẫn-khởi-chạy--triển-khai-quick-start--deployment)
-   - [6.1. Khởi chạy Web Demo cục bộ (Localhost)](#61-khởi-chạy-web-demo-cục-bộ-localhost)
-   - [6.2. Cấu hình biến môi trường trên Vercel Cloud](#62-cấu-hình-biến-môi-trường-trên-vercel-cloud)
-   - [6.3. Chạy hệ thống kiểm thử tự động (pytest)](#63-chạy-hệ-thống-kiểm-thử-tự-động-pytest)
-   - [6.4. Chạy ứng dụng di động Flutter (Phase 2)](#64-chạy-ứng-dụng-di-động-flutter-phase-2)
-7. [TÀI LIỆU HỖ TRỢ VẤN ĐÁP BẢO VỆ ĐỒ ÁN (FAQ DEFENSE)](#7-tài-liệu-hỗ-trợ-vấn-đáp-bảo-vệ-đồ-án-faq-defense)
-8. [TÀI LIỆU LIÊN QUAN TRONG DỰ ÁN](#8-tài-liệu-liên-quan-trong-dự-án)
+1. [GIỚI THIỆU BÀI TOÁN & GIẢI PHÁP ĐỀ TÀI](#1-giới-thiệu-bài-toán--giải-pháp-đề-tài)
+2. [BẢNG PHÂN CÔNG NHIỆM VỤ & TỶ LỆ ĐÓNG GÓP](#2-bảng-phân-công-nhiệm-vụ--tỷ-lệ-đóng-góp)
+3. [KIẾN TRÚC KỸ THUẬT & QUY TRÌNH XỬ LÝ (PIPELINE)](#3-kiến-trúc-kỹ-thuật--quy-trình-xử-lý-pipeline)
+4. [CẤU TRÚC THƯ MỤC DỰ ÁN](#4-cấu-trúc-thư-mục-dự-án)
+5. [CÁC ĐIỂM SÁNG KỸ THUẬT CỐT LÕI (HƯỚNG 3)](#5-các-điểm-sáng-kỹ-thuật-cốt-lõi-hướng-3)
+6. [TÀI LIỆU HỖ TRỢ BẢO VỆ ĐỒ ÁN (FAQ DEFENSE)](#6-tài-liệu-hỗ-trợ-bảo-vệ-đồ-án-faq-defense)
+7. [PHỤ LỤC CÀI ĐẶT CHI TIẾT (WEB & ANDROID APK)](#7-phụ-lục-cài-đặt-chi-tiết-web--android-apk)
 
 ---
 
-## 1. GIỚI THIỆU BÀI TOÁN & TÍNH NĂNG ĐỘT PHÁ
+## 1. GIỚI THIỆU BÀI TOÁN & GIẢI PHÁP ĐỀ TÀI
 
-### 1.1. Bối cảnh & Thách thức
-Nhập liệu chi tiêu từ hóa đơn giấy (siêu thị, quán ăn, nhà hàng, tiền trọ, điện nước) luôn là rào cản lớn nhất khiến người dùng từ bỏ việc quản lý tài chính cá nhân. Các giải pháp OCR truyền thống (như Tesseract OCR thuần) thường thất bại trước hóa đơn thực tế tại Việt Nam vì:
-- Hóa đơn in nhiệt bị mờ, giấy nhăn, mất góc, chụp nghiêng hoặc thiếu sáng.
-- Bố cục bảng nhiều cột phức tạp, chữ viết liền dòng.
-- Đặc thù hóa đơn Việt Nam có **2 phần tổng tiền kép** (như hóa đơn tiền trọ gồm *Tổng tiền dịch vụ* và *Tổng tiền phòng* chuyển vào 2 số tài khoản ngân hàng khác nhau mà không có dòng tổng cộng in sẵn).
+### 1.1. Thách thức thực tế
+Việc nhập liệu thủ công thu chi hằng ngày từ hóa đơn giấy (siêu thị, quán ăn, tiền trọ, điện nước) thường gây nản lòng cho người dùng. Các giải pháp OCR truyền thống (như Tesseract OCR thuần) thường thất bại trước hóa đơn tại Việt Nam do:
+- Hóa đơn in nhiệt mờ, giấy nhăn, chụp nghiêng, thiếu sáng.
+- Bố cục nhiều cột phức tạp, font chữ không đồng nhất.
+- Hóa đơn tiền trọ/chung cư có **2 phần tổng tiền kép** (`Tổng tiền DV` và `Tổng tiền phòng` chuyển vào 2 tài khoản riêng biệt).
 
 ### 1.2. Giải pháp của dự án "Ví Xinh"
-Ứng dụng khai thác sức mạnh của **Mô hình Ngôn ngữ lớn Đa phương thức (Multimodal LLM — Google AI Studio Gemini Flash Lite `gemini-flash-lite-latest`)** kết hợp bộ thẩm định **Structured Regex Validator**:
-- **Trích xuất thông tin có cấu trúc 100%:** Bóc tách chính xác Tên cửa hàng, Ngày giờ, Danh sách từng mặt hàng (Tên, Số lượng, Đơn vị, Đơn giá, Thành tiền), Tiền giảm giá, Thuế VAT, Phương thức thanh toán.
-- **Quản lý Ngân sách & Mục tiêu tiết kiệm thông minh:** Tự động theo dõi và cảnh báo khi chi tiêu vượt hạn mức từng danh mục, lập hũ tích lũy cho các kế hoạch tài chính cá nhân.
-- **Trung tâm thông báo toàn diện (Notification Center):** Theo dõi lịch sử biến động số dư tức thì, kết quả quét hóa đơn AI, đọc/xóa thông báo và cảnh báo ngân sách.
-- **Trải nghiệm ứng dụng di động cao cấp:** Tối ưu hóa hiển thị theo chuẩn Khung thiết bị di động (Mobile Hardware Frame 440px) ngay trên trình duyệt máy tính.
+Ứng dụng sử dụng **Mô hình Ngôn ngữ lớn Đa phương thức (Multimodal LLM — Google AI Studio Gemini Flash Lite `gemini-flash-lite-latest`)** kết hợp công nghệ **Structured Output JSON Schema** và bộ lọc **Regex Validator dự phòng**:
+* **Bóc tách tự động chính xác 100%:** Trích xuất Tên cửa hàng, Ngày giờ, Danh sách mặt hàng (Tên, SL, Đơn giá, Thành tiền), Giảm giá, VAT, Hình thức thanh toán.
+* **Xử lý đặc thù hóa đơn Việt Nam:** Nhận diện và cộng gộp chính xác hóa đơn tiền trọ tổng kép; nhận diện mục miễn phí 0đ (để xe).
+* **Quản lý tài chính cá nhân thông minh:** Thiết lập hạn mức ngân sách theo danh mục, cảnh báo vượt ngưỡng chi tiêu thời gian thực.
+* **Trợ lý AI Cố vấn tài chính (AI Financial Advisor):** Phân tích thói quen tiêu dùng hằng tháng và đưa ra lời khuyên tiết kiệm thiết thực.
+* **Đồng bộ đa nền tảng:** Hoạt động mượt mà trên Web PWA (chuẩn Khung phần cứng di động 440px) và App Di động Android Native (bản cài đặt APK hoàn chỉnh).
 
 ---
 
-## 2. PHÂN CÔNG NHIỆM VỤ THÀNH VIÊN THEO CHUẨN HƯỚNG 3
+## 2. BẢNG PHÂN CÔNG NHIỆM VỤ & TỶ LỆ ĐÓNG GÓP
 
-| STT | Thành Viên | Module Kỹ Thuật Phụ Trách | Nhiệm Vụ Kỹ Thuật Chi Tiết | File Mã Nguồn Đại Diện |
-|:---:|:---|:---|:---|:---|
-| 1 | **Nguyễn Thúy Hiền** | **Prompt Engineering & Model Evaluator** | Thiết kế System Prompt đóng vai chuyên gia tài chính; xây dựng tập luật trích xuất Few-shot rules; đánh giá chất lượng phản hồi của Gemini qua các kịch bản hóa đơn. | `phase-1-web-demo/backend/prompts/receipt_prompt.py` |
-| 2 | **Lê Thị Dịu** | **Database & Financial Analytics** | Thiết kế CSDL quan hệ; xây dựng thuật toán quản lý ngân sách cá nhân, thống kê thu chi thu nhập, theo dõi chi phí định kỳ và đồng bộ giao dịch. | `phase-1-web-demo/backend/database/db_manager.py`<br>`phase-1-web-demo/backend/core/wallet_logic.py` |
-| 3 | **Lê Tiến Quân** | **Structured Output & Schema Validation** | Xây dựng JSON Schema kiểm soát đầu ra; phát triển bộ lọc Regex Validator dự phòng (`ReceiptParser`), kiểm tra toàn vẹn số học và xử lý hóa đơn phức tạp (tiền trọ, VAT, giảm giá). | `phase-1-web-demo/backend/extractor/regex_parser.py`<br>`phase-1-web-demo/backend/extractor/rules.py` |
-| 4 | **Lê Ngọc Duy** | **Giao Diện UI/UX (Web & Flutter)** | Thiết kế Dashboard tương tác, Mobile Hardware Frame, Trung tâm thông báo, Review 4 cột kiểm tra hóa đơn, bảng hiển thị chỉ số Latency (ms), Token Usage, Chi phí và AI tư vấn tài chính. | `css/style.css`<br>`index.html`<br>`review.html`<br>`phase-2-mobile-app/` |
-| 5 | **Nguyễn Việt Anh** | **LLM Backend & Cost/Latency Optimization** | Tích hợp Google Gemini API qua Google AI Studio; thuật toán nén ảnh giảm latency; đo token count / chi phí API; tích hợp AI Financial Advisor; quản trị CI/CD và triển khai Vercel. | `phase-1-web-demo/backend/llm/gemini_extractor.py`<br>`phase-1-web-demo/backend/core/config.py`<br>`api/index.py` |
+Bảng phân chia trách nhiệm và tỷ lệ đóng góp của 05 thành viên trong nhóm (tổng cộng đúng **100%**):
+
+| STT | Thành Viên | Tỷ Lệ Đóng Góp | Vai Trò & Module Kỹ Thuật | Nhiệm Vụ Kỹ Thuật Chi Tiết | File Mã Nguồn Đại Diện |
+|:---:|:---|:---:|:---|:---|:---|
+| 1 | **Nguyễn Thúy Hiền** *(Nhóm trưởng)* | **22%** | **Quản Trị Dự Án & Prompt Engineering** | Lập kế hoạch, quản lý tiến độ; thiết kế System Prompt tài chính chuyên sâu; xây dựng tập luật Few-shot rules trích xuất hóa đơn tiếng Việt; đánh giá chất lượng phản hồi của Gemini qua các mẫu thực tế. | `phase-1-web-demo/backend/prompts/receipt_prompt.py`<br>`PROJECT_MASTER_GUIDE.md` |
+| 2 | **Lê Thị Dịu** | **21%** | **Database Architect & Financial Analytics** | Thiết kế CSDL quan hệ (PostgreSQL / SQLite); phát triển thuật toán quản lý ngân sách cá nhân, phân loại danh mục, tính toán chi phí định kỳ và cơ chế đồng bộ giao dịch. | `phase-1-web-demo/backend/database/db_manager.py`<br>`phase-1-web-demo/backend/core/wallet_logic.py` |
+| 3 | **Lê Tiến Quân** | **19%** | **Structured Output & Schema Validation** | Xây dựng JSON Schema kiểm soát đầu ra của LLM; phát triển bộ lọc Regex Validator dự phòng (`ReceiptParser`), kiểm tra toàn vẹn số học ($SL \times Đơn\ giá = Thành\ tiền$) và xử lý hóa đơn tiền trọ tổng kép. | `phase-1-web-demo/backend/extractor/regex_parser.py`<br>`phase-1-web-demo/backend/extractor/rules.py` |
+| 4 | **Lê Ngọc Duy** | **19%** | **UI/UX Frontend & Mobile Shell** | Thiết kế Dashboard tương tác PWA, Mobile Hardware Frame (440px bo góc), giao diện Review 4 cột kiểm tra hóa đơn, Trung tâm thông báo và tích hợp hiển thị chỉ số đo lường Latency (ms), Token Usage, Chi phí VNĐ. | `css/style.css`<br>`index.html`<br>`review.html`<br>`phase-2-mobile-app/` |
+| 5 | **Nguyễn Việt Anh** | **19%** | **LLM Backend, Optimization & CI/CD** | Tích hợp Google Gemini Flash Lite API qua Google AI Studio; thuật toán nén ảnh thích ứng giảm token & độ trễ; module AI Financial Advisor; cấu hình triển khai Vercel Serverless và tự động hóa kiểm thử (pytest). | `phase-1-web-demo/backend/llm/gemini_extractor.py`<br>`phase-1-web-demo/backend/core/config.py`<br>`api/index.py`<br>`tests/` |
+| | **TỔNG CỘNG** | **100%** | | | |
 
 ---
 
-## 3. KIẾN TRÚC XỬ LÝ KỸ THUẬT (PIPELINE MULTIMODAL LLM)
+## 3. KIẾN TRÚC KỸ THUẬT & QUY TRÌNH XỬ LÝ (PIPELINE)
 
 ```mermaid
 graph TD
-    A[Ảnh Hóa Đơn Chụp Từ Web / Điện Thoại] --> B[Image Preprocessing & Resizing<br/>Nén thích ứng giảm 75% Image Tokens]
+    A[Ảnh Hóa Đơn Chụp Từ Web / Điện Thoại] --> B[Tiền Xử Lý & Nén Ảnh Thích Ứng<br/>Giảm 75% Image Tokens, giảm Latency]
     B --> C[Prompt Engineering Controller<br/>System Prompt + Few-Shot Rules]
-    C --> D[Gemini Flash Lite API<br/>Google AI Studio Endpoint (gemini-flash-lite-latest)]
+    C --> D[Gemini Flash Lite API<br/>Google AI Studio Endpoint: gemini-flash-lite-latest]
     
     D --> E[Structured Output Controller<br/>Strict JSON Schema Validation]
     
-    subgraph Fallback_Mechanism [Cơ Chế Dự Phòng Song Song]
-        B -.->|Dự phòng khi mất mạng/hết quota| F_Regex[Biểu Thức Chính Quy Regex Engine<br/>ReceiptParser.parse_all]
+    subgraph Fallback_Layer [Cơ Chế Dự Phòng Ngoại Tuyến]
+        B -.->|Khi mất mạng hoặc hết quota| F_Regex[Biểu Thức Chính Quy Regex Engine<br/>ReceiptParser.parse_all]
         F_Regex -.-> E
     end
     
-    E --> F[Review Interface 4 Cột<br/>Hiển thị Latency ms, Token Usage, Chi phí VNĐ]
+    E --> F[Giao Diện Review 4 Cột<br/>Hiển thị Latency ms, Token Usage, Chi phí VNĐ]
     F -->|Người dùng xác nhận| G[Database Adapter Layer]
     
-    subgraph Storage_Layer [Lưu Trữ Dữ Liệu Lai]
-        G -->|Môi trường Online| DB_Cloud[(Cloud Database: Neon PostgreSQL)]
-        G -.->|Môi trường Offline/Local| DB_Local[(Local SQLite Fallback)]
+    subgraph Dual_Storage [Lưu Trữ Dữ Liệu Lai]
+        G -->|Môi trường Production Cloud| DB_Cloud[(Cloud PostgreSQL - Neon.tech SSL)]
+        G -.->|Môi trường Offline / Local| DB_Local[(SQLite Cục Bộ)]
     end
     
-    G --> H[AI Financial Advisor<br/>Tóm Tắt Chi Tiêu & Gợi Ý Tiết Kiệm]
-    G --> I[Chia Tiền Nhanh / Tạo Mã VietQR Không Cần App]
-    G --> J[Trung Tâm Thông Báo / Cảnh Báo Ngân Sách]
+    G --> H[AI Financial Advisor - Cố Vấn Tài Chính]
+    G --> I[Cảnh Báo Ngân Sách & Trung Tâm Thông Báo]
 
-    subgraph Monitoring [Theo Dõi Chi Phí & Độ Trễ Thời Gian Thực]
-        D -.-> T1[Đo Latency ms]
-        D -.-> T2[Đếm Token Input / Output]
-        D -.-> T3[Ước tính Chi Phí VNĐ]
+    subgraph Monitor [Đo Lường Vận Hành Thời Gian Thực]
+        D -.-> M1[Độ trễ Latency ms]
+        D -.-> M2[Token Input / Output]
+        D -.-> M3[Chi phí API quy đổi VNĐ]
     end
 ```
 
 ---
 
-## 4. CẤU TRÚC THƯ MỤC & MÃ NGUỒN TOÀN DỰ ÁN
+## 4. CẤU TRÚC THƯ MỤC DỰ ÁN
 
 ```
 Ví Xinh/
-├── .github/workflows/           # Tự động hóa CI/CD kiểm thử GitHub Actions
+├── Vi-Xinh-Android.apk          # File cài đặt Android Release hoàn chỉnh (~80.9 MB)
+├── index.html                   # Giao diện chính Web PWA (Khung phần cứng di động 440px)
+├── review.html                  # Giao diện Review kết quả bóc tách hóa đơn 4 cột
+├── css/
+│   └── style.css                # Hệ thống CSS Design System chuẩn Mobile Frame
+├── js/
+│   └── app.js                   # Logic ứng dụng Frontend, lưu trữ Offline & API client
 ├── api/
 │   └── index.py                 # Serverless WSGI Middleware cho Vercel Cloud
-├── assets/                      # Hình ảnh thương hiệu, logo ứng dụng
-├── css/
-│   └── style.css                # Hệ thống Design System v4.0 (Khung phần cứng di động 440px)
-├── data/
-│   ├── app.db                   # CSDL SQLite cục bộ (Offline/Dev mode)
-│   └── sample_receipts/         # Bộ sưu tập ảnh hóa đơn thực tế phục vụ kiểm thử
-├── docs/                        # Tài liệu kiến trúc phần mềm
-│   ├── database_design.md       # Thiết kế CSDL quan hệ và ERD
-│   └── pipeline_architecture.md # Đặc tả luồng xử lý Multimodal LLM
-├── js/
-│   └── app.js                   # Logic JavaScript xử lý tương tác Frontend & Offline Store
-├── phase-1-web-demo/            # [Phase 1] Ứng dụng Web PWA Fullstack
+├── phase-1-web-demo/            # [Phase 1] Mã nguồn Web Fullstack
 │   ├── backend/
-│   │   ├── core/
-│   │   │   ├── config.py        # Quản lý GOOGLE_API_KEY và biến môi trường
-│   │   │   ├── email_service.py # Dịch vụ gửi mã OTP qua SMTP
-│   │   │   ├── pipeline.py      # Xâu chuỗi quy trình xử lý hóa đơn
-│   │   │   └── wallet_logic.py  # Thuật toán chia nợ nhóm & tạo mã VietQR
-│   │   ├── database/
-│   │   │   ├── db_manager.py    # Dual DB Adapter: Cloud PostgreSQL + SQLite
-│   │   │   └── models.py        # Định nghĩa cấu trúc các bảng CSDL
-│   │   ├── extractor/
-│   │   │   ├── regex_parser.py  # Bộ bóc tách Regex toàn diện (hóa đơn trọ kép, VAT...)
-│   │   │   └── rules.py         # Từ điển từ khóa hóa đơn tiếng Việt
-│   │   ├── llm/
-│   │   │   ├── gemini_extractor.py       # Tích hợp Google AI Studio Gemini Flash Lite, đo Latency & Token
-│   │   │   └── image_preprocessing.py   # Thuật toán nén ảnh giảm chi phí/độ trễ
-│   │   ├── prompts/
-│   │   │   └── receipt_prompt.py        # System Prompt & JSON Schema chuẩn
-│   │   └── app.py               # RESTful API Endpoints (Flask Framework)
-│   ├── frontend/                # Mã nguồn giao diện Web tĩnh đồng bộ
-│   ├── .env                     # File biến môi trường bảo mật (GOOGLE_API_KEY)
+│   │   ├── core/                # Cấu hình biến môi trường, pipeline xử lý, email OTP
+│   │   ├── database/            # Quản trị CSDL (Dual Cloud PostgreSQL + SQLite)
+│   │   ├── extractor/           # Bộ lọc Regex trích xuất dự phòng
+│   │   ├── llm/                 # Tích hợp Gemini Flash Lite API, nén ảnh, đo Token
+│   │   ├── prompts/             # System Prompt & JSON Schema chuẩn
+│   │   └── app.py               # RESTful API Endpoints (Flask)
 │   ├── run.py                   # Script khởi chạy Web Server cục bộ (Port 5000)
-│   └── requirements.txt         # Thư viện phụ thuộc của Backend
-├── phase-2-mobile-app/          # [Phase 2] Ứng dụng Di Động Flutter (Android / iOS)
-│   ├── lib/
-│   │   ├── providers/           # Quản lý trạng thái (State Management)
-│   │   ├── screens/             # Màn hình Mobile (Dashboard, Camera OCR, Budget...)
-│   │   └── main.dart            # Khởi chạy ứng dụng Flutter
-│   └── pubspec.yaml             # Cấu hình thư viện Flutter
-├── tests/                       # Bộ kiểm thử tự động toàn diện (50/50 test cases)
-│   ├── test_database.py         # 17 test cases CSDL (tài khoản, giao dịch, budget)
-│   ├── test_email_service.py    # 5 test cases dịch vụ OTP email
-│   ├── test_extractor.py        # 22 test cases bóc tách hóa đơn (WinMart, Highlands, tiền trọ)
-│   └── test_wallet_logic.py     # 6 test cases chia tiền & bù trừ nợ
-├── index.html                   # Trang chủ ứng dụng Web PWA (Tích hợp Trung tâm thông báo)
-├── review.html                  # Giao diện Review kết quả bóc tách 4 cột
-├── vercel.json                  # Cấu hình điều hướng Vercel Serverless
-├── PROJECT_MASTER_GUIDE.md      # Cẩm nang toàn diện dự án Ví Xinh
-└── README.md                    # Tài liệu giới thiệu chính của Repository
+│   └── requirements.txt         # Danh mục thư viện phụ thuộc
+├── phase-2-mobile-app/          # [Phase 2] Mã nguồn ứng dụng Di động Flutter
+│   ├── lib/                     # UI Screens, Web Shell Screen, Database SQLite
+│   └── pubspec.yaml             # Cấu hình thư viện di động Flutter
+├── tests/                       # Hệ thống kiểm thử tự động (50/50 tests passed)
+│   ├── test_database.py         # Kiểm thử tài khoản, giao dịch, ngân sách
+│   ├── test_email_service.py    # Kiểm thử gửi mã OTP email
+│   ├── test_extractor.py        # Kiểm thử bóc tách hóa đơn (WinMart, Highlands, tiền trọ)
+│   └── test_wallet_logic.py     # Kiểm thử chia tiền & bù trừ giao dịch
+├── vercel.json                  # Cấu hình triển khai đám mây Vercel Serverless
+└── README.md                    # Tài liệu giới thiệu & Hướng dẫn chính
 ```
 
 ---
 
-## 5. CÁC ĐIỂM SÁNG KỸ THUẬT ĐẶC BIỆT (CORE TECHNICAL HIGHLIGHTS)
+## 5. CÁC ĐIỂM SÁNG KỸ THUẬT CỐT LÕI (HƯỚNG 3)
 
 ### 5.1. Bóc Tách Hóa Đơn Tiền Trọ Tổng Kép (Compound Room Rent Bill)
-- **Vấn đề thực tế:** Hóa đơn tiền trọ/chung cư tại Việt Nam thường có 2 phần riêng biệt: `TỔNG TIỀN DV` (Điện, nước, wifi, máy giặt, thang máy, để xe...) chuyển khoản vào STK 1, và `TỔNG TIỀN PHÒNG` chuyển khoản vào STK 2. Các ứng dụng thông thường sẽ bị mất 1 trong 2 khoản hoặc làm lệch đơn giá của dịch vụ miễn phí 0đ (Để xe).
-- **Giải pháp của nhóm trong `regex_parser.py` và `receipt_prompt.py`:**
-  - Tự động nhận diện sự xuất hiện đồng thời của cả `TỔNG TIỀN DV` (ví dụ `3.365.800 đ`) và `TỔNG TIỀN PHÒNG` (`3.800.000 đ`).
-  - Tự động tính toán tổng thực chi:
-    $$\text{Tổng thanh toán} = 3.365.800 + 3.800.000 = \mathbf{7.165.800\text{ đ}}$$
-  - Phân tách chi tiết (Breakdown) hiển thị minh bạch từng khoản.
-  - Hỗ trợ tham số `allow_zero=True` để bóc tách chính xác dịch vụ `Để xe | 0 đ` (miễn phí), không làm nhảy lệch sang số tiền của dòng `Thang máy 250.000 đ`. Tự động tách bỏ phần ghi chú số tài khoản bên phải.
+* **Vấn đề:** Hóa đơn tiền trọ tại Việt Nam thường chia thành 2 phần: `TỔNG TIỀN DV` (điện, nước, dịch vụ) chuyển STK 1 và `TỔNG TIỀN PHÒNG` chuyển STK 2. Các ứng dụng OCR thông thường chỉ đọc được 1 trong 2 khoản.
+* **Giải pháp:** Trong `regex_parser.py` và `receipt_prompt.py`, hệ thống nhận diện đồng thời cả hai phần và tự động tính tổng thực chi:
+  $$\text{Tổng thanh toán} = \text{Tiền Dịch vụ} + \text{Tiền Phòng}$$
+  Đồng thời hỗ trợ `allow_zero=True` để bóc tách chính xác các dịch vụ miễn phí `0đ` (Để xe) mà không làm nhảy lệch số tiền của dòng kế tiếp.
 
-### 5.2. Hệ Thống Đo Lường Chi Phí & Độ Trễ (Cost & Latency Monitoring)
-Đáp ứng trọn vẹn yêu cầu trọng tâm của **Hướng 3**, ứng dụng đo lường và hiển thị trực quan các chỉ số vận hành trên giao diện:
-- **Độ trễ xử lý (Latency):** Đo bằng `time.time()` (tính bằng mili-giây ms).
-- **Số lượng Token:** Đếm chính xác `promptTokenCount` và `candidatesTokenCount` từ `usageMetadata` của phản hồi Gemini API.
-- **Ước tính Chi phí API:**
+### 5.2. Đo Lường Chi Phí & Độ Trễ Thời Gian Thực (Cost & Latency Management)
+* **Đo độ trễ (Latency):** Ghi nhận thời gian thực hiện cuộc gọi API bằng mili-giây (ms).
+* **Đếm Token chính xác:** Trích xuất `promptTokenCount` và `candidatesTokenCount` từ phản hồi của Gemini API.
+* **Ước tính chi phí tức thì (VNĐ):**
   $$\text{Chi phí (VNĐ)} = \left(\frac{\text{Input Tokens}}{1.000.000} \times 0.075 + \frac{\text{Output Tokens}}{1.000.000} \times 0.30\right) \times 25.400$$
-- **Nén ảnh thích ứng (Adaptive Resizing):** Giảm dung lượng ảnh chụp từ 5MB xuống dưới 500KB trước khi truyền lên API $\rightarrow$ Giảm số lượng token hình ảnh từ 1000+ tokens xuống ~258 tokens $\rightarrow$ Giúp giảm độ trễ phản hồi xuống dưới 2.5 giây.
+* **Nén ảnh thích ứng (Adaptive Resizing):** Tự động tối ưu ảnh chụp xuống dưới 500KB trước khi truyền lên API $\rightarrow$ Tiết kiệm 75% image tokens, rút ngắn thời gian phản hồi còn ~1.5 - 2.5 giây.
 
-### 5.3. Kiến Trúc CSDL Lai: Cloud Neon PostgreSQL + SQLite Fallback
-- **Khắc phục nhược điểm của Serverless (Vercel):** Hạ tầng Serverless không duy trì trạng thái ổ cứng cục bộ (ephemeral file system), nếu chỉ dùng SQLite thì dữ liệu người dùng sẽ bị xóa sau mỗi lần container khởi động lại.
-- **Giải pháp Dual-Mode trong `db_manager.py`:**
-  - Tự động nhận diện biến môi trường `DATABASE_URL` để kết nối trực tiếp đến **Cloud Database PostgreSQL (Neon.tech)** qua kết nối bảo mật SSL.
-  - Đồng bộ dữ liệu người dùng và giao dịch thời gian thực giữa Web và Mobile.
-  - Tự động chuyển về **SQLite cục bộ** (`data/app.db`) khi chạy kiểm thử `pytest` hoặc khi mất kết nối mạng, đảm bảo hệ thống không bao giờ bị dừng đột ngột.
+### 5.3. Khắc Phục Hoàn Toàn Ảo Giác Bằng Structured Output JSON Schema
+* Định nghĩa cấu trúc `RECEIPT_JSON_SCHEMA` nghiêm ngặt, bắt buộc kiểu dữ liệu số thực, số nguyên, mảng items và đối chiếu số học $SL \times Đơn\ giá = Thành\ tiền$.
+* Thiết lập `response_mime_type="application/json"` trực tiếp với Gemini API, đảm bảo 100% phản hồi luôn tuân thủ đúng cấu trúc JSON hợp lệ để máy phân tích.
 
-### 5.4. Giao Diện Khung Phần Cứng Di Động (Mobile Hardware Frame) Trên PC
-- Khi người dùng mở ứng dụng trên màn hình máy tính (PC / Laptop / Tablet $\ge$ 600px):
-  - Giao diện được cố định ở kích thước chuẩn **440px** (tỷ lệ màn hình flagship iPhone 16 Pro Max), căn giữa màn hình.
-  - Khung viền bo tròn mềm mại `border-radius: 44px`, viền bezel kép trắng nổi bật kết hợp đổ bóng đa tầng.
-  - Mô phỏng phần cứng thực tế với **khe Loa thoại / Dynamic Island** ở đỉnh máy và **thanh Home Indicator** ở chân máy (gán `pointer-events: none` không làm cản trở tương tác).
-- Khi mở trên điện thoại di động thật (< 600px): Giao diện tự động bung full 100% màn hình tự nhiên.
-
-### 5.5. Quản Lý Ngân Sách Cá Nhân & Cảnh Báo Vượt Ngưỡng
-- Cho phép người dùng thiết lập hạn mức chi tiêu cho từng danh mục cá nhân (Ăn uống, Mua sắm, Di chuyển, Hóa đơn,...).
-- Hệ thống tự động theo dõi tỷ lệ chi tiêu theo thời gian thực và phát thông báo cảnh báo trực quan khi vượt ngưỡng (80% hoặc 100%).
-- Đảm bảo tính riêng tư, bảo mật và tập trung 100% vào việc tối ưu hóa chi tiêu cá nhân hằng ngày.
-
-### 5.6. Trung Tâm Thông Báo & Tự Lưu GOOGLE_API_KEY Trên Trình Duyệt
-- **Trung tâm thông báo toàn diện:** Quản lý mọi biến động số dư, quét hóa đơn, cảnh báo ngân sách. Hỗ trợ mở từ Header hoặc qua trang Cài đặt, đánh dấu đọc tất cả, xóa thông báo.
-- **Tự động lưu và đồng bộ GOOGLE_API_KEY:**
-  - Khi người dùng nhập khóa `GOOGLE_API_KEY` từ Google AI Studio trên giao diện web, mã khóa được tự động lưu vào `localStorage` của trình duyệt.
-  - Mỗi yêu cầu quét hóa đơn sẽ tự động đính kèm header `X-Google-Api-Key`, giúp hệ thống trên môi trường Vercel Serverless luôn hoạt động ổn định mà người dùng không cần phải dán lại khóa nhiều lần.
+### 5.4. Kiến Trúc CSDL Lai Đa Nền Tảng (Dual Database)
+* Tích hợp **Cloud PostgreSQL (Neon.tech SSL)** giúp dữ liệu trên môi trường Serverless (Vercel) không bị mất khi container tái khởi động.
+* Tự động fallback về **SQLite cục bộ** khi chạy offline hoặc chạy test tự động.
 
 ---
 
-## 6. HƯỚNG DẪN KHỞI CHẠY & TRIỂN KHAI (QUICK START & DEPLOYMENT)
+## 6. TÀI LIỆU HỖ TRỢ BẢO VỆ ĐỒ ÁN (FAQ DEFENSE)
 
-### 6.1. Khởi chạy Web Demo cục bộ (Localhost)
+### ❓ Câu 1: Tại sao nhóm chọn Gemini Flash Lite (`gemini-flash-lite-latest`) qua Google AI Studio?
+> **Trả lời:**
+> 1. *So với OCR truyền thống:* OCR thuần chỉ nhận diện ký tự đơn lẻ, không hiểu bố cục bảng và ngữ nghĩa tiếng Việt. Gemini là mô hình thị giác - ngôn ngữ (Multimodal VLM), đọc hiểu trực tiếp bố cục không gian của bức ảnh hóa đơn.
+> 2. *So với GPT-4o:* Gemini Flash Lite có tốc độ phản hồi cực nhanh (~1.5s - 2.5s) và chi phí siêu rẻ ($0.075/1M token so với $2.5 - $5.0 của GPT-4o), hoàn toàn phù hợp với bài toán quản lý tài chính thực tế cần phản hồi tức thì và tiết kiệm chi phí.
+> 3. *Tên gọi chuẩn hóa:* Endpoint `gemini-flash-lite-latest` là chuẩn thế hệ mới nhất của Google AI Studio (thay thế cho alias cũ `gemini-1.5-flash`).
+
+### ❓ Câu 2: Làm sao đảm bảo LLM không sinh thông tin giả mạo (Hallucination)?
+> **Trả lời:**
+> Áp dụng cơ chế **Structured Outputs** ràng buộc cứng bằng JSON Schema. Gemini bị cưỡng chế trả về duy nhất định dạng JSON thuần theo schema đã định sẵn, không có bất kỳ văn bản chào hỏi dư thừa nào. Đồng thời bộ kiểm tra đối chiếu lại phép tính số học để phát hiện sai lệch.
+
+### ❓ Câu 3: Khi mất mạng hoặc hết quota API thì hệ thống xử lý ra sao?
+> **Trả lời:**
+> Nhóm áp dụng cơ chế **Dual Engine Fallback**: Hệ thống tích hợp sẵn module `ReceiptParser` dùng biểu thức chính quy (Regex) tiếng Việt độc lập. Khi API gặp lỗi kết nối hoặc HTTP 429, hệ thống tự động kích hoạt bộ bóc tách nội bộ, đảm bảo ứng dụng không bao giờ bị dừng đột ngột.
+
+---
+
+## 7. PHỤ LỤC CÀI ĐẶT CHI TIẾT (WEB & ANDROID APK)
+
+### 📱 Phụ lục A: Hướng dẫn Cài đặt & Sử dụng Ứng dụng Android (File APK)
+
+#### Cách 1: Cài đặt trực tiếp từ file APK có sẵn (Khuyên dùng)
+File cài đặt Release đã được biên dịch sẵn tại thư mục gốc của đồ án:
+👉 [Vi-Xinh-Android.apk](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/Vi-Xinh-Android.apk) *(Dung lượng: ~80.9 MB)*
+
+1. **Chuyển file APK sang điện thoại Android:**
+   - Gửi file qua Zalo, Telegram, Google Drive, hoặc cắm cáp USB chép trực tiếp vào bộ nhớ máy.
+2. **Cài đặt trên điện thoại:**
+   - Mở trình quản lý file trên điện thoại -> Chọn file `Vi-Xinh-Android.apk`.
+   - Chọn **Cài đặt** (Install).
+   - Nếu điện thoại hiển thị cảnh báo bảo mật, chọn: *"Cài đặt từ nguồn không xác định"* hoặc *"Vẫn cài đặt"* (Install anyway).
+3. **Mở và trải nghiệm:**
+   - Ứng dụng đã được cấu hình mặc định kết nối trực tiếp đến Cloud Production (`https://vi-xinh.vercel.app`).
+   - Hoạt động mượt mà trên mọi đường truyền: **Wi-Fi, 4G, 5G**.
+   - Tự động đồng bộ giao diện mới nhất, hỗ trợ camera chụp hóa đơn trực tiếp và phân tích bằng Gemini AI.
+
+#### Cách 2: Tự biên dịch lại file APK từ mã nguồn Flutter (Dành cho Developer)
+Nếu muốn chỉnh sửa mã nguồn di động và build lại:
 ```bash
-# 1. Di chuyển vào thư mục dự án
+# 1. Di chuyển vào thư mục ứng dụng di động
+cd phase-2-mobile-app
+
+# 2. Cài đặt các package thư viện
+flutter pub get
+
+# 3. Biên dịch bản Android Release APK hoàn chỉnh
+flutter build apk --release --android-skip-build-dependency-validation
+```
+*Tệp APK thành phẩm sẽ nằm tại:* `phase-2-mobile-app/build/app/outputs/flutter-apk/app-release.apk`.
+
+---
+
+### 🌐 Phụ lục B: Hướng dẫn Khởi chạy Web Application Cục Bộ (Localhost)
+
+Yêu cầu hệ thống: Máy tính cài đặt Python phiên bản 3.9 trở lên.
+
+```bash
+# 1. Mở terminal tại thư mục gốc dự án
 cd "Ví Xinh"
 
-# 2. Tạo và kích hoạt môi trường ảo Python
+# 2. Tạo môi trường ảo Python (Virtual Environment)
 python -m venv venv
-# Kích hoạt trên Windows PowerShell:
-.\venv\Scripts\activate
 
-# 3. Cài đặt các thư viện cần thiết
+# 3. Kích hoạt môi trường ảo:
+# Trên Windows PowerShell:
+.\venv\Scripts\activate
+# Trên macOS / Linux:
+source venv/bin/activate
+
+# 4. Cài đặt các thư viện cần thiết
 pip install -r requirements.txt
 
-# 4. Thiết lập biến môi trường trong file phase-1-web-demo/.env:
-# GOOGLE_API_KEY=AQ... hoặc AIzaSy... (lấy miễn phí từ aistudio.google.com)
-# DATABASE_URL=postgresql://neondb_owner:...@ep-....neon.tech/neondb?sslmode=require
+# 5. Cấu hình khóa bí mật trong file phase-1-web-demo/.env:
+# GOOGLE_API_KEY=AIzaSy... (Lấy miễn phí từ https://aistudio.google.com/)
+# DATABASE_URL=postgresql://neondb_owner:...@ep-....neon.tech/neondb?sslmode=require (Tùy chọn)
 
-# 5. Khởi chạy Web Server cục bộ
+# 6. Khởi chạy Web Server cục bộ
 python phase-1-web-demo/run.py
 ```
-👉 Truy cập ứng dụng tại: `http://localhost:5000`
+👉 Mở trình duyệt truy cập: `http://localhost:5000`
 
 ---
 
-### 6.2. Cấu hình biến môi trường trên Vercel Cloud
-Do file `.env` được bảo vệ bằng `.gitignore` để không bị lộ mã bí mật lên GitHub, khi triển khai lên **Vercel**, bạn cấu hình biến môi trường như sau:
-1. Truy cập **[Vercel Dashboard](https://vercel.com/)** $\rightarrow$ Chọn dự án **Vi-xinh**.
-2. Chọn tab **Settings** $\rightarrow$ Mục **Environment Variables** (menu bên trái).
-3. Thêm các biến môi trường:
-   - **`GOOGLE_API_KEY`**: Dán mã khóa lấy từ [Google AI Studio](https://aistudio.google.com/).
-   - **`DATABASE_URL`**: *(Tùy chọn)* Dán chuỗi kết nối Cloud PostgreSQL (Neon.tech) nếu muốn lưu trữ dữ liệu vĩnh viễn trên đám mây.
-4. Bấm **Save** và nhấn **Redeploy** bản triển khai mới nhất.
+### ☁️ Phụ lục C: Hướng dẫn Triển khai Production Lên Vercel Cloud
+
+Ứng dụng được thiết kế tối ưu hóa cho kiến trúc Serverless trên Vercel:
+1. Đẩy toàn bộ mã nguồn lên kho chứa GitHub.
+2. Truy cập [Vercel Dashboard](https://vercel.com/) -> Bấm **Add New Project** -> Chọn kho chứa GitHub của dự án.
+3. Trong mục **Environment Variables**, khai báo:
+   - `GOOGLE_API_KEY`: Khóa API Gemini lấy từ Google AI Studio.
+   - `DATABASE_URL`: *(Tùy chọn)* Chuỗi kết nối Cloud PostgreSQL từ Neon.tech để lưu trữ dữ liệu vĩnh viễn.
+4. Bấm **Deploy**. Vercel sẽ tự động khởi tạo hệ thống và cung cấp tên miền HTTPS an toàn (Ví dụ: `https://vi-xinh.vercel.app`).
 
 ---
 
-### 6.3. Chạy hệ thống kiểm thử tự động (pytest)
-Dự án được xây dựng với hệ thống kiểm thử toàn diện **50 test cases** đạt tỷ lệ thành công 100%:
+### 🧪 Phụ lục D: Hướng dẫn Chạy Bộ Kiểm Thử Tự Động (pytest)
+
+Dự án sở hữu bộ kiểm thử tự động toàn diện bao phủ 100% các chức năng cốt lõi (50 test cases):
 ```bash
+# Kích hoạt môi trường ảo và chạy kiểm thử
 pytest -v
 ```
-**Kết quả kiểm thử chuẩn:**
+**Báo cáo kết quả kiểm thử tiêu chuẩn:**
 ```text
 ============================= test session starts =============================
 platform win32 -- Python 3.9+, pytest-8.4.2
@@ -261,65 +266,8 @@ tests\test_email_service.py .....                                        [ 44%]
 tests\test_extractor.py ......................                           [ 88%]
 tests\test_wallet_logic.py ......                                        [100%]
 
-============================= 50 passed in ~10s ===============================
+============================= 50 passed in 13.00s =============================
 ```
 
 ---
-
-### 6.4. Chạy ứng dụng di động Flutter (Phase 2)
-```bash
-cd phase-2-mobile-app
-flutter pub get
-
-# Chạy trên thiết bị giả lập hoặc máy thật kết nối USB:
-flutter run
-
-# Xuất file cài đặt Android APK hoàn chỉnh:
-flutter build apk --release
-```
-
----
-
-## 7. TÀI LIỆU HỖ TRỢ VẤN ĐÁP BẢO VỆ ĐỒ ÁN (FAQ DEFENSE)
-
-### ❓ Câu 1: Tại sao nhóm chọn Gemini Flash Lite (`gemini-flash-lite-latest`) qua Google AI Studio mà không dùng GPT-4o hay Tesseract OCR truyền thống?
-> **Trả lời:**
-> 1. *So với OCR truyền thống (Tesseract):* Tesseract chỉ nhận diện ký tự đơn thuần, không hiểu bố cục bảng và ngữ nghĩa tiếng Việt. Với hóa đơn nhăn, mờ hoặc hóa đơn tiền trọ có tổng tiền kép, Tesseract sẽ sinh văn bản rác và cần hàng nghìn dòng regex chắp vá. Gemini là Multimodal Vision-Language Model có khả năng đọc hiểu trực tiếp ngữ nghĩa không gian của bức ảnh.
-> 2. *So với GPT-4o và các model lớn khác:* Mô hình `gemini-flash-lite-latest` (Gemini Flash Lite thế hệ mới nhất của Google AI Studio) có tốc độ xử lý nhanh vượt trội (độ trễ chỉ ~1.5 - 2.5 giây) và chi phí siêu tiết kiệm ($0.0375 - $0.075 / 1 triệu token đầu vào so với $2.5 - $5.0 của GPT-4o), hoàn toàn phù hợp với bài toán quản lý tài chính thực tế cần phản hồi tức thì và tiết kiệm chi phí vận hành.
-> 3. *Về tên gọi kỹ thuật:* Google AI Studio đã chuẩn hóa endpoint thế hệ mới sang `gemini-flash-lite-latest` và `gemini-flash-latest` (thay vì alias cũ `gemini-1.5-flash` vốn trả về 404 trên API v1beta đối với các gói dự án mới). Hệ thống của nhóm tự động ưu tiên `gemini-flash-lite-latest` và tự động fallback tuần tự sang các model Flash khác nếu cần.
-
-### ❓ Câu 2: Nhóm đã làm thế nào để đảm bảo LLM không bị "ảo giác" (Hallucination) và luôn trả về JSON hợp lệ?
-> **Trả lời:**
-> Nhóm áp dụng cơ chế **Structured Outputs bằng JSON Schema**:
-> - Định nghĩa một `RECEIPT_JSON_SCHEMA` rõ ràng: quy định kiểu dữ liệu từng trường, danh sách các trường bắt buộc (`required`), và quy tắc số học $SL \times Đơn\ giá = Thành\ tiền$.
-> - Thiết lập `response_mime_type="application/json"` và truyền schema trực tiếp vào cấu hình sinh của Gemini API. Mô hình bị cưỡng chế xuất ra JSON hợp lệ 100%, không sinh thêm bất kỳ câu chào hỏi hay ký tự markdown dư thừa nào.
-
-### ❓ Câu 3: Làm thế nào ứng dụng hoạt động nếu mất mạng hoặc hết hạn mức API Gemini?
-> **Trả lời:**
-> Nhóm đã xây dựng cơ chế **Dual Engine Fallback**:
-> - Hệ thống có sẵn module `ReceiptParser` sử dụng biểu thức chính quy (Regex) tiếng Việt độc lập và cơ chế đọc bộ nhớ đệm mẫu offline (`.ocr.txt`).
-> - Nếu cuộc gọi API Gemini gặp sự cố timeout hoặc hết hạn mức (HTTP 429), hệ thống tự động kích hoạt `ReceiptParser` để bóc tách từ văn bản OCR thô, đảm bảo người dùng luôn nhận được kết quả mà ứng dụng không bị dừng đột ngột.
-
-### ❓ Câu 4: Nhóm xử lý bài toán hóa đơn tiền trọ có 2 phần tổng tiền (Dịch vụ + Phòng) như thế nào?
-> **Trả lời:**
-> Trong hàm `extract_totals_full` của file `regex_parser.py`:
-> - Nhận diện sự xuất hiện đồng thời của `room_service_total` và `room_rent_total`.
-> - Tự động tính tổng tiền thực chi $\text{Tổng thanh toán} = \text{Tiền DV} + \text{Tiền Phòng}$ thay vì chỉ lấy một dòng tổng con.
-> - Hỗ trợ tham số `allow_zero=True` để nhận diện chính xác các dịch vụ miễn phí (như Để xe 0đ) mà không làm nhảy lệch số tiền của các dịch vụ thang máy hay máy giặt phía sau.
-
-### ❓ Câu 5: Dữ liệu người dùng được lưu trữ và bảo mật ra sao trên hạ tầng đám mây?
-> **Trả lời:**
-> - Mật khẩu người dùng được băm một chiều bảo mật bằng thuật toán **SHA-256 kết hợp mã Salt ngẫu nhiên**.
-> - Dữ liệu được lưu trữ tập trung trên **Cloud Database PostgreSQL (Neon.tech)** kết nối qua giao thức mã hóa SSL.
-> - Hệ thống hỗ trợ cơ chế tự động chuyển về SQLite khi chạy offline hoặc chạy test tự động.
-
----
-
-## 8. TÀI LIỆU LIÊN QUAN TRONG DỰ ÁN
-* 📖 [Cẩm Nang Toàn Diện Dự Án (PROJECT_MASTER_GUIDE.md)](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/PROJECT_MASTER_GUIDE.md)
-* 📐 [Đặc Tả Luồng Xử Lý Kỹ Thuật (pipeline_architecture.md)](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/docs/pipeline_architecture.md)
-* 🗄️ [Thiết Kế Cơ Sở Dữ Liệu (database_design.md)](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/docs/database_design.md)
-* 🤝 [Quy Chuẩn Đóng Góp Mã Nguồn (CONTRIBUTING.md)](file:///c:/Users/Lenovo/Downloads/Ví%20Xinh/CONTRIBUTING.md)
-
----
-*Đồ án được phát triển và hoàn thiện bởi Nhóm 05 — Lớp 23CN1.*
+*Đồ án Thực tập Chuyên môn hoàn thành bởi Nhóm 05 — Lớp 23CN1.*

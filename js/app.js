@@ -4010,13 +4010,18 @@ async function requestAiSpendingSummary(){
             recurring: S.recurring || [],
             user_name: S.user?.full_name || S.user?.name || 'Bạn'
         };
+        const savedApiKey = localStorage.getItem('vx_google_api_key') || '';
+        const reqHeaders = {
+            'Content-Type': 'application/json',
+            'Bypass-Tunnel-Reminder': 'true'
+        };
+        if (savedApiKey) {
+            reqHeaders['X-Google-Api-Key'] = savedApiKey;
+        }
 
         const res = await fetch('/api/ai/spending-summary?user_id=' + uid, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Bypass-Tunnel-Reminder': 'true'
-            },
+            headers: reqHeaders,
             body: JSON.stringify(payload)
         });
 
