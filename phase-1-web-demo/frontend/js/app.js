@@ -129,6 +129,18 @@ function formatAiAdvice(text){
     escaped = escaped.replace(/\n/g, '<br>');
     return escaped;
 }
+function formatModelDisplayName(raw) {
+    if (!raw) return 'Gemini Flash Lite (AI Studio)';
+    const s = String(raw).trim();
+    const sl = s.toLowerCase();
+    if (sl.includes('flash-lite')) return 'Gemini Flash Lite (AI Studio)';
+    if (sl.includes('flash-latest') || sl === 'gemini-flash') return 'Gemini Flash (AI Studio)';
+    if (sl.includes('2.0-flash')) return 'Gemini 2.0 Flash (AI Studio)';
+    if (sl.includes('1.5-flash')) return 'Gemini 1.5 Flash (AI Studio)';
+    if (sl.includes('1.5-pro')) return 'Gemini 1.5 Pro (AI Studio)';
+    return raw;
+}
+window.formatModelDisplayName = formatModelDisplayName;
 function dateLabel(d){ const t=new Date().toISOString().slice(0,10), y=new Date(Date.now()-864e5).toISOString().slice(0,10); if(d===t)return'Hôm nay'; if(d===y)return'Hôm qua'; const dt=new Date(d),days=['CN','T2','T3','T4','T5','T6','T7']; return`${days[dt.getDay()]}, ${dt.getDate()}/${dt.getMonth()+1}`; }
 function toast(msg,type='info'){ const b=document.getElementById('toastBox'); if(!b)return; const ics={success:'ri-check-line',error:'ri-close-circle-line',info:'ri-information-line',warning:'ri-alert-line'}; const el=document.createElement('div'); el.className=`toast ${type}`; el.innerHTML=`<i class="${ics[type]||ics.info} toast-ic"></i><span class="toast-msg">${msg}</span>`; b.appendChild(el); setTimeout(()=>{el.classList.add('hiding');setTimeout(()=>el.remove(),300)},3000); }
 function togForm(id){document.getElementById(id).classList.toggle('active')}
@@ -3998,13 +4010,18 @@ async function requestAiSpendingSummary(){
             recurring: S.recurring || [],
             user_name: S.user?.full_name || S.user?.name || 'Bạn'
         };
+        const savedApiKey = localStorage.getItem('vx_google_api_key') || '';
+        const reqHeaders = {
+            'Content-Type': 'application/json',
+            'Bypass-Tunnel-Reminder': 'true'
+        };
+        if (savedApiKey) {
+            reqHeaders['X-Google-Api-Key'] = savedApiKey;
+        }
 
         const res = await fetch('/api/ai/spending-summary?user_id=' + uid, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Bypass-Tunnel-Reminder': 'true'
-            },
+            headers: reqHeaders,
             body: JSON.stringify(payload)
         });
 
