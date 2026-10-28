@@ -1,6 +1,6 @@
 """
 Module Regex Extractor - Ví Xinh
-Phụ trách: Thành viên 3 - Lê Tiến Quân
+Phụ trách: Thành viên 4 - Lê Ngọc Duy
 """
 from .regex_parser import ReceiptParser
 

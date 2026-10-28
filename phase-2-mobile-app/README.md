@@ -67,8 +67,8 @@ phase-2-mobile-app/
 |:---|:---|:---|
 | **Thành viên 1** | Model Trích Xuất AI On-Device & Camera Scan | `services/mlkit_ocr_service.dart`, `screens/camera/receipt_scanner_screen.dart` |
 | **Lê Thị Dịu** | CSDL SQLite Local & Logic Quỹ Nhóm | `services/database_helper.dart`, `models/group_model.dart`, logic tính nợ phòng trọ |
-| **Lê Tiến Quân** | Regex Extractor Porting sang Dart | `extractor/dart_receipt_extractor.dart` (xử lý chuỗi cửa hàng, ngày tháng & mục tiền trọ) |
-| **Lê Ngọc Duy** | Thiết Kế Giao Diện UI/UX Flutter | `screens/home/dashboard_screen.dart`, `screens/review/review_receipt_screen.dart`, `core/constants/app_colors.dart` |
+| **Lê Tiến Quân** | Thiết Kế Giao Diện UI/UX Flutter | `screens/home/dashboard_screen.dart`, `screens/review/review_receipt_screen.dart`, `core/constants/app_colors.dart` |
+| **Lê Ngọc Duy** | Regex Extractor Porting sang Dart | `extractor/dart_receipt_extractor.dart` (xử lý chuỗi cửa hàng, ngày tháng & mục tiền trọ) |
 | **Nguyễn Việt Anh** | Cấu hình Build, Providers & Pipeline | `pubspec.yaml`, `providers/wallet_provider.dart`, `main.dart`, xử lý dependencies |
 
 ---

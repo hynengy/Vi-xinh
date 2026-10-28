@@ -11,8 +11,8 @@ Nhằm đảm bảo quá trình làm việc nhóm 05 thành viên trên GitHub k
 - **Nhánh tính năng (`feature/`)**: Mỗi thành viên khi làm nhiệm vụ của mình sẽ tạo branch riêng từ `develop`:
   - `feature/llm-prompt-pipeline`
   - `feature/diu-database-splitbill` (Lê Thị Dịu)
-  - `feature/quan-regex-extractor` (Lê Tiến Quân)
-  - `feature/duy-ui-dashboard` (Lê Ngọc Duy)
+  - `feature/quan-ui-dashboard` (Lê Tiến Quân)
+  - `feature/duy-regex-extractor` (Lê Ngọc Duy)
   - `feature/vietanh-backend-integration` (Nguyễn Việt Anh)
 - **Nhánh sửa lỗi (`bugfix/`)**: `bugfix/fix-receipt-date-parsing`
 

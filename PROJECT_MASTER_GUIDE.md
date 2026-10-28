@@ -45,8 +45,8 @@
 |:---:|:---|:---|:---|:---|
 | 1 | **Nguyễn Thúy Hiền** | **Prompt Engineering & Model Evaluator** | Thiết kế System Prompt đóng vai chuyên gia tài chính; xây dựng tập luật trích xuất Few-shot rules; đánh giá chất lượng phản hồi của Gemini qua các kịch bản hóa đơn. | `backend/prompts/receipt_prompt.py` |
 | 2 | **Lê Thị Dịu** | **Database & Financial Analytics** | Thiết kế CSDL quan hệ lưu trữ JSON hóa đơn; thuật toán quản lý ngân sách cá nhân, thống kê thu chi, chi phí định kỳ và đồng bộ giao dịch. | `backend/database/db_manager.py`<br>`backend/core/wallet_logic.py` |
-| 3 | **Lê Tiến Quân** | **Structured Output & Schema Validation** | Xây dựng JSON Schema kiểm soát đầu ra; phát triển bộ lọc Regex Validator dự phòng (`ReceiptParser`), kiểm tra toàn vẹn số học và xử lý hóa đơn phức tạp (tiền trọ, VAT, giảm giá). | `backend/extractor/regex_parser.py`<br>`backend/extractor/rules.py` |
-| 4 | **Lê Ngọc Duy** | **Giao Diện UI/UX (Web & Flutter)** | Thiết kế Dashboard tương tác, bảng Review 4 cột kiểm tra hóa đơn, bảng hiển thị chỉ số đo lường Latency (ms), Token Usage, Chi phí và AI tư vấn tài chính. | `frontend/index.html`<br>`review.html`<br>`phase-2-mobile-app/` |
+| 3 | **Lê Tiến Quân** | **Giao Diện UI/UX (Web & Flutter)** | Thiết kế Dashboard tương tác, bảng Review 4 cột kiểm tra hóa đơn, bảng hiển thị chỉ số đo lường Latency (ms), Token Usage, Chi phí và AI tư vấn tài chính. | `frontend/index.html`<br>`review.html`<br>`phase-2-mobile-app/` |
+| 4 | **Lê Ngọc Duy** | **Structured Output & Schema Validation** | Xây dựng JSON Schema kiểm soát đầu ra; phát triển bộ lọc Regex Validator dự phòng (`ReceiptParser`), kiểm tra toàn vẹn số học và xử lý hóa đơn phức tạp (tiền trọ, VAT, giảm giá). | `backend/extractor/regex_parser.py`<br>`backend/extractor/rules.py` |
 | 5 | **Nguyễn Việt Anh** | **LLM Backend & Cost/Latency Optimization** | Tích hợp Google Gemini API; thuật toán nén ảnh giảm latency; đo token count / chi phí API; tích hợp AI Financial Advisor; quản trị CI/CD và triển khai Vercel. | `backend/llm/gemini_extractor.py`<br>`backend/llm/image_preprocessing.py`<br>`api/index.py` |
 
 ---

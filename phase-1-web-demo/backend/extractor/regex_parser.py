@@ -1,6 +1,6 @@
 """
 Bộ Phân Tích & Bóc Tách Thông Tin Hóa Đơn, Món Ăn & Tiền Trọ Toàn Diện Bằng Regex
-Phụ trách: Thành viên 3 - Lê Tiến Quân
+Phụ trách: Thành viên 4 - Lê Ngọc Duy
 Nhiệm vụ: Trích xuất chính xác Tên nhà hàng/cửa hàng, Hotline, Địa chỉ, Ngày tháng, Tổng tiền, Món ăn & Đơn giá
 """
 import re

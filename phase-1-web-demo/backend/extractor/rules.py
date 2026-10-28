@@ -1,6 +1,6 @@
 """
 Tập Luật Biểu Thức Chính Quy (Regex Rules) Cho Bóc Tách Hóa Đơn & Phiếu Chi
-Phụ trách: Thành viên 3 - Lê Tiến Quân
+Phụ trách: Thành viên 4 - Lê Ngọc Duy
 Nhiệm vụ: Định nghĩa các mẫu regex để bắt Tên quán, Hotline, Địa chỉ, Ngày tháng, Tổng tiền, Món ăn
 """
 import re

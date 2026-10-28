@@ -1,6 +1,6 @@
 """
 Unit Test Cho Bộ Bóc Tách Regex (Extractor)
-Phụ trách: Thành viên 3 (Lê Tiến Quân) & Toàn nhóm kiểm thử
+Phụ trách: Thành viên 4 (Lê Ngọc Duy) & Toàn nhóm kiểm thử
 """
 import pytest
 import sys

@@ -1,6 +1,6 @@
 """
 Ứng Dụng Web Server & REST API "Ví Xinh"
-Phối hợp kỹ thuật: Thành viên 5 (Nguyễn Việt Anh) & Thành viên 4 (Lê Ngọc Duy)
+Phối hợp kỹ thuật: Thành viên 5 (Nguyễn Việt Anh) & Thành viên 3 (Lê Tiến Quân)
 """
 import os
 import uuid
